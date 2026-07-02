@@ -1,7 +1,11 @@
 # Work Logs - Milestone 1
 
 ## Ripunjay Kumar (Roll Number: 21F3002511)
-
+- Conducted a comprehensive literature review on existing deep learning-based wildfire detection models, platforms, and public satellite datasets (*Sentinel-2, Landsat-8/9, MODIS, VIIRS*).
+- Identified critical research gaps in current academic and commercial solutions, specifically the over-reliance on post-ignition detection, single-source imagery, and the lack of temporal context.
+- Defined the project's technical evaluation methodology, establishing classical/deep learning baselines, industry benchmarks (*NASA FIRMS, Copernicus EMS*), and a "better safe than sorry" primary metric strategy prioritizing Accuracy and Recall.
+- Synthesized the extensive project report into a highly structured, concise 10-slide academic presentation layout designed for effective stakeholder communication.
+- Engineered the narrative flow and technical storytelling of the pitch deck, ensuring a clear, logical progression from problem statement to our proposed multimodal AI framework and its operational boundaries.
 
 ## Lakshay Garg (Roll Number: 21F3001076)
 - Authored the Problem Statement and its subtopics — core problem, scope, stakeholders, limitations, and objectives — framing the project around predicting wildfire risk *before* ignition (24–48h lead time) rather than post-ignition detection.
@@ -14,7 +18,6 @@
 - Documented critical research gaps and extracted actionable insights to help guide and improve our own approach.
 
 ## Lakshmi Sruthi K (Roll Number: 21F1005626)
-
 
 
 
