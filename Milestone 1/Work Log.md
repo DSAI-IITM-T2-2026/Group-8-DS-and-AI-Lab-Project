@@ -7,7 +7,8 @@
 
 
 ## Roushan Kumar Singh (Roll Number: 23F1002240)
-
+- Conducted a thorough review of past works in this field, specifically analyzing the methodologies they employed.
+- Documented critical research gaps and extracted actionable insights to help guide and improve our own approach.
 
 ## Lakshmi Sruthi K (Roll Number: 21F1005626)
 
@@ -28,6 +29,6 @@
 |--|--|--|
 |Ripunjay Kumar|21F3002511||
 |Lakshay Garg|21F3001076||
-|Roushan Kumar Singh|23F1002240||
+|Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626||
 |R Aditya|21F1004839|✅|
