@@ -8,7 +8,6 @@ Despite such identifiable precursor conditions, current wildfire management syst
 -   Ground reporting after fire outbreak
 -   Emergency response after fire spread
     
-
 This results in delayed intervention and reduced ability to prevent large-scale damage.
 
 ### Core Problem:
@@ -24,7 +23,6 @@ The system uses three main data components:
 -   Environmental data (temporal input):  Includes temperature, humidity, wind speed, and rainfall, representing atmospheric conditions influencing fire risk.
 
 ## Who does it affect?
-
 The impact of wildfire prediction and early warning systems spans multiple stakeholders:
 
 -   Forest and wildlife protection departments
@@ -36,7 +34,6 @@ The impact of wildfire prediction and early warning systems spans multiple stake
 -   Government policy makers and climate monitoring bodies
 
 ## What our Limitations Might Be
-
 The proposed system has the following limitations:
 -   The model predicts probabilistic wildfire risk, not exact ignition time or cause
 -   Geographic scope is limited by data availability and resolution of satellite imagery
@@ -44,7 +41,6 @@ The proposed system has the following limitations:
 -   Historical disaster reports are used only for labeling and validation, not as direct model inputs
 
 ## Our Core Objectives
-
 - Develop a multimodal dataset integrating satellite imagery, environmental data, and historical disaster records
 - Design a spatio-temporal deep learning model for wildfire risk prediction
 - Predict wildfire risk 24 to 48 hours before potential ignition events
@@ -57,7 +53,6 @@ The proposed system has the following limitations:
 
 
 ## Literature Review & Existing Solutions
-
 Wildfire detection research has shifted from simple **threshold-based thermal detection** toward **deep learning models** built on multispectral satellite imagery. Most studies draw on freely available data from *Sentinel-2, Landsat-8/9, MODIS, VIIRS,* and *NASA FIRMS*, using architectures such as CNNs, U-Net, DeepLabV3+, Vision Transformers, and attention-based models.
 
 Across the literature, a clear pattern emerges: deep learning models now regularly achieve **90%+ accuracy**, and some, like *MobileNetV2* on Sentinel-2 imagery, reach near-perfect F1 scores with fast inference. Operationally, *NASA FIRMS* remains the backbone of real-world alerting, using MODIS/VIIRS thermal hotspots to deliver near real-time detection. However, nearly every study shares the same shortcomings — reliance on a **single image or single region**, **no temporal modeling**, and detection that only happens *after* a fire has already ignited. Commercial and institutional platforms like Copernicus EMS, Google Earth Engine, and OroraTech extend this further with mapping and processing power, but none combine prediction, multi-source fusion, and accessibility in one system.
@@ -71,7 +66,6 @@ Across the literature, a clear pattern emerges: deep learning models now regular
 
 
 ### Strengths, Weaknesses & Research Gaps
-
 The field's **strengths** are well established: high detection accuracy from deep learning, global coverage via free satellite imagery, automated large-area surveillance, and mature, well-tested segmentation architectures.
 
 Its **weaknesses**, however, define the research opportunity. Most methods use *only* optical or thermal imagery, rarely fusing it with weather, terrain, or atmospheric data. Temporal evolution is almost never modeled, cloud cover still degrades optical performance, explainability is minimal, and top-performing models are often computationally heavy.
@@ -86,7 +80,6 @@ These weaknesses translate directly into research gaps:
 - **False alarm rates are high**: use attention-guided multimodal fusion.
 
 ## Our Proposed Framework
-
 1. **Multi-modal fusion** of free Earth observation sources.
 2. **Spatio-temporal learning**, replacing single frame prediction.
 3. **Vegetation stress indices** fused with thermal anomalies.
@@ -106,7 +99,6 @@ Compared to existing work, this framework adds atmospheric pollutants, strengthe
 
 
 ## References
-
 1. [Brief Report on Forest Fire incident in Uttarakhand as on 04th April, 2021 at 2000 Hrs](https://www.ndmindia.mha.gov.in/ndmi/viewUploadedDocument?uid=D112)
 2. [Deep Learning Approaches for Wildland Fires Using Satellite Remote Sensing Data.](https://doi.org/10.3390/fire6050192)
 3. [Deep Learning Approaches for Wildland Fires Remote Sensing: Classification, Detection and Segmentation.](https://doi.org/10.3390/rs15071821)
@@ -114,3 +106,11 @@ Compared to existing work, this framework adds atmospheric pollutants, strengthe
 5. [Uni-temporal Sentinel-2 Imagery for Wildfire Detection Using Deep Learning Semantic Segmentation Models, 2023.](https://doi.org/10.1080/19475705.2023.2196370)
 6. [Comparative Analysis of CNN Architectures for Satellite-Based Forest Fire Detection, 2025.](https://www.sciencedirect.com/science/article/abs/pii/S2352938525002927)
 7. [Copernicus Sentinel Documentation.](https://emergency.copernicus.eu/)
+
+## Signatures
+|Member|Roll Number|Signature Commit|
+|Ripunjay Kumar|21F3002511||
+|Lakshay Garg|21F3001076||
+|Roushan Kumar Singh|23F1002240||
+|Lakshmi Sruthi K|21F1005626||
+|R Aditya|21F1004839||
