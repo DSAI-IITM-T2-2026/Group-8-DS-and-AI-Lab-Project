@@ -4,6 +4,9 @@
 
 
 ## Lakshay Garg (Roll Number: 21F3001076)
+- Authored the Problem Statement and its subtopics — core problem, scope, stakeholders, limitations, and objectives — framing the project around predicting wildfire risk *before* ignition (24–48h lead time) rather than post-ignition detection.
+- Defined project scope and limitations and identified the full stakeholder set, anchoring the motivation in a real Indian case (April 2021 Uttarakhand forest fire / NDMA incident report).
+- Formulated the core objectives and evaluation-metric framing, ensuring each objective aligns with the problem statement.
 
 
 ## Roushan Kumar Singh (Roll Number: 23F1002240)
@@ -28,7 +31,7 @@
 |Member|Roll Number|Signature Commit|
 |--|--|--|
 |Ripunjay Kumar|21F3002511||
-|Lakshay Garg|21F3001076||
+|Lakshay Garg|21F3001076|✅|
 |Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626||
 |R Aditya|21F1004839|✅|
