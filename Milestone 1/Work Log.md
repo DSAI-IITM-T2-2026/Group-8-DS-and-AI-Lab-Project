@@ -33,7 +33,7 @@
 ## Signatures
 |Member|Roll Number|Signature Commit|
 |--|--|--|
-|Ripunjay Kumar|21F3002511||
+|Ripunjay Kumar|21F3002511|✅|
 |Lakshay Garg|21F3001076|✅|
 |Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626||
