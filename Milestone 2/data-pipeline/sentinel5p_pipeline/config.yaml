@@ -1,0 +1,40 @@
+ee_project: "your-gee-project-id"
+
+aoi:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+
+temporal:
+  start_year: 2025
+  end_year: 2016
+  step_days: 5
+
+sentinel5p:
+  products:
+    - name: "AER_AI"
+      collection: "COPERNICUS/S5P/OFFL/L3_AER_AI"
+      source_band: "absorbing_aerosol_index"
+      output_band: "AerosolIndex"
+    - name: "CO"
+      collection: "COPERNICUS/S5P/OFFL/L3_CO"
+      source_band: "CO_column_number_density"
+      output_band: "CO"
+    - name: "NO2"
+      collection: "COPERNICUS/S5P/OFFL/L3_NO2"
+      source_band: "NO2_column_number_density"
+      output_band: "NO2"
+  composite: "mean"
+  export_scale_m: 1000
+
+logic_mode: "confirmed"
+
+export:
+  gcs_bucket: "your-bucket-name"
+  gcs_prefix: "wildfire_satellite"
+  max_pixels: 1000000000000
+
+progress:
+  local_file: "sentinel5p_progress.json"
+  gcs_metadata_prefix: "wildfire_satellite/metadata"
