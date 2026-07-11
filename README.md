@@ -13,3 +13,7 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
 - **Data Pipeline — Copernicus DEM GLO-30:** [`Milestone 2/data Pipeline/copernicus-dem-30m/`](Milestone%202/data%20Pipeline/copernicus-dem-30m/)
   - Code for acquiring and processing GLO-30 terrain data (California)
   - Processed data on GCS: `gs://dsai-lab-project/wildfire_satellite/dem/2021-2025/california/`
+
+- **Data Pipeline — ERA5:** [`Milestone 2/data Pipeline/ERA5/`](Milestone%202/data%20Pipeline/ERA5/)
+  - Code for acquiring and processing ECMWF ERA5 reanalysis weather data (California)
+  - Raw data on GCS: `gs://dsai-lab-project/wildfire_satellite/era5/raw/`

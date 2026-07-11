@@ -1,0 +1,11 @@
+cdsapi>=0.7.0
+xarray>=2024.1.0
+dask>=2024.1.0
+pandas>=2.0.0
+numpy>=1.24.0
+netCDF4>=1.6.0
+tqdm>=4.66.0
+matplotlib>=3.8.0
+PyYAML>=6.0
+scipy>=1.11.0
+google-cloud-storage>=2.14.0

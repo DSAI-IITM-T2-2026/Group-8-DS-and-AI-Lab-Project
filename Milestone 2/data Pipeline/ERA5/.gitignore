@@ -1,0 +1,25 @@
+# Local pipeline outputs (data lives on GCS — see README.md)
+outputs/
+uploads/
+*.nc
+*.netcdf
+
+# CDS credentials — never commit API keys
+.cdsapirc
+.cdsapirc_*
+credentials/*.cdsapirc
+credentials/account[0-9]*.cdsapirc
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Docs / OS / IDE
+*.docx
+.DS_Store
+.idea/
+.vscode/
