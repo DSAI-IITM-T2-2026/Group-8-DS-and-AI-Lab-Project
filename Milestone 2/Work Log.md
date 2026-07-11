@@ -44,11 +44,24 @@
 - Worked on the FIRMS wildfire dataset for the California wildfire prediction pipeline. Extracted daily FIRMS GeoTIFF label rasters, reviewed the dataset structure and bands such as T21 and confidence, and examined how daily fire detections should be converted into binary fire/no-fire labels.
 - Visualized this data in GEE and then created a script to export 10 years of FIRMS data to GCS bucket.
 
+## Lakshay Garg (Roll Number: 21F3001076)
+### Unified EDA, Preprocessing (Kaggle Notebook)
+- Built the consolidated Milestone 2 notebook that loads and validates all six data
+  sources (FIRMS, Landsat-8, Sentinel-2, Sentinel-5P, ERA5, Copernicus DEM) from GCS,
+  confirming real band structures, coverage windows, and data quality issues against
+  the original plan.
+- Implemented the full EDA suite — class imbalance, fire-event lifecycle validation,
+  coverage timeline, and spatial clustering of fire detections.
+- Validated the NDVI/LST-vs-fire-label relationship on real fused data, including a
+  land-cover fairness correction, and reported findings honestly.
+- Designed the spatial/temporal fusion strategy (reference grid choice, forward-fill
+  for slow-revisit sources, correct ERA5 daily aggregation)
+
 ## Signatures
 |Member|Roll Number|Signature Commit|
 |--|--|--|
 |Ripunjay Kumar|21F3002511|✅|
-|Lakshay Garg|21F3001076||
+|Lakshay Garg|21F3001076|✅|
 |Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626|✅|
 |R Aditya|21F1004839||
