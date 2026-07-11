@@ -306,6 +306,6 @@ Hosted processed dataset on Kaggle: [https://www.kaggle.com/datasets/lakshayiitm
 |--|--|--|
 |Ripunjay Kumar|21F3002511|✅|
 |Lakshay Garg|21F3001076||
-|Roushan Kumar Singh|23F1002240||
+|Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626||
 |R Aditya|21F1004839||
