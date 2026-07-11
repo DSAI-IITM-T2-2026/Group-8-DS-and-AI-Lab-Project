@@ -10,7 +10,9 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
 
 ### Milestone 2
 
-- Work log: [`Milestone 2/Work Log.md`](Milestone%202/Work%20Log.md)
+- Report and work log: [`Milestone 2/`](Milestone%202/)
+  - [`Report.md`](Milestone%202/Report.md)
+  - [`Work Log.md`](Milestone%202/Work%20Log.md)
 
 - **Data Pipeline — Copernicus DEM GLO-30:** [`Milestone 2/data-pipeline/copernicus-dem-30m/`](Milestone%202/data-pipeline/copernicus-dem-30m/)
   - Code for acquiring and processing GLO-30 terrain data (California)
