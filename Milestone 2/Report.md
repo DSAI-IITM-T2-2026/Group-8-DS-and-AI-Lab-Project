@@ -299,7 +299,7 @@ dataset_metadata.json records, per source, the confirmed structure facts establi
 
 ### 4.3 Hosted Processed Dataset
 
-*Link to the hosted processed dataset (e.g., Kaggle): [ADD LINK HERE ONCE THE PROCESSED DATASET HAS BEEN PUBLISHED]*
+Hosted processed dataset on Kaggle: [https://www.kaggle.com/datasets/lakshayiitmds/wildfire-processed-data](https://www.kaggle.com/datasets/lakshayiitmds/wildfire-processed-data)
 
 ## Signatures
 |Member|Roll Number|Signature Commit|
