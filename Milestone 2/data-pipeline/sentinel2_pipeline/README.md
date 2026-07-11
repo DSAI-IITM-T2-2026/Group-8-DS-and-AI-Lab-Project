@@ -28,6 +28,41 @@ Fetches `COPERNICUS/S2_SR_HARMONIZED` over the California AOI, in 5-day windows,
 across a configured date range, cloud-filters and masks each window, builds a
 median composite, and exports it as a GeoTIFF to Google Cloud Storage.
 
+## Data location
+
+Exported Sentinel-2 GeoTIFFs are stored on GCS under:
+
+```
+gs://dsai-lab-project/wildfire_satellite/raw/sentinel2/
+```
+
+| Path | Contents |
+|------|----------|
+| `gs://dsai-lab-project/wildfire_satellite/raw/sentinel2/` | Cloud-masked median composites (`s2_{date}.tif`) |
+
+**GCS project:** `iitm-dsai-lab`  
+**Bucket:** `dsai-lab-project`  
+**Prefix:** `wildfire_satellite/raw/sentinel2`
+
+Parent raw folder (all satellite sources):
+
+```
+gs://dsai-lab-project/wildfire_satellite/raw/
+├── sentinel2/
+├── sentinel5p/
+└── landsat/
+```
+
+### List / download from GCS
+
+```bash
+gsutil ls gs://dsai-lab-project/wildfire_satellite/raw/sentinel2/
+
+gsutil -m cp -r \
+  gs://dsai-lab-project/wildfire_satellite/raw/sentinel2/ \
+  ./data/raw/sentinel2/
+```
+
 ## Setup
 ```bash
 python -m venv .venv

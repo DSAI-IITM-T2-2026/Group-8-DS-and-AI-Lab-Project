@@ -31,6 +31,41 @@ one multi-band image, and exports it as a GeoTIFF to Google Cloud Storage.
 Missing product bands in a partial window are written as **masked nodata**
 (not numeric zeros).
 
+## Data location
+
+Exported Sentinel-5P GeoTIFFs are stored on GCS under:
+
+```
+gs://dsai-lab-project/wildfire_satellite/raw/sentinel5p/
+```
+
+| Path | Contents |
+|------|----------|
+| `gs://dsai-lab-project/wildfire_satellite/raw/sentinel5p/` | Mean composites (`s5p_{date}.tif`) — AerosolIndex, CO |
+
+**GCS project:** `iitm-dsai-lab`  
+**Bucket:** `dsai-lab-project`  
+**Prefix:** `wildfire_satellite/raw/sentinel5p`
+
+Parent raw folder (all satellite sources):
+
+```
+gs://dsai-lab-project/wildfire_satellite/raw/
+├── sentinel2/
+├── sentinel5p/
+└── landsat/
+```
+
+### List / download from GCS
+
+```bash
+gsutil ls gs://dsai-lab-project/wildfire_satellite/raw/sentinel5p/
+
+gsutil -m cp -r \
+  gs://dsai-lab-project/wildfire_satellite/raw/sentinel5p/ \
+  ./data/raw/sentinel5p/
+```
+
 ## Setup
 ```bash
 python -m venv .venv
