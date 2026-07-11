@@ -21,6 +21,10 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
   - Code for acquiring and processing ECMWF ERA5 reanalysis weather data (California)
   - Raw data on GCS: `gs://dsai-lab-project/wildfire_satellite/era5/raw/`
 
+- **Data Pipeline — FIRMS:** [`Milestone 2/data-pipeline/FIRMS/`](Milestone%202/data-pipeline/FIRMS/)
+  - Code for acquiring and processing FIRMS fire label data (California)
+  - Raw data on GCS: `gs://wildfire-detection-first/firms_daily_geotiff/`
+
 #### Milestone 2 — sample figures
 
 From the [Dataset Preparation Report](Milestone%202/Report.md):
