@@ -69,7 +69,7 @@ Configuration → Tile identification → Download → Validate → Merge → Cl
 ## Setup
 
 ```bash
-cd "Milestone 1/copernicus-dem"
+cd "Milestone 2/data Pipeline/copernicus-dem-30m"
 pip install -r requirements.txt
 ```
 
@@ -126,7 +126,7 @@ python upload_to_gcs.py --dry-run
 ## Project structure
 
 ```
-copernicus-dem/
+Milestone 2/data Pipeline/copernicus-dem-30m/
 ├── config.yaml           # Study area, processing, GCS upload settings
 ├── requirements.txt
 ├── run_pipeline.py       # Main pipeline entry point
