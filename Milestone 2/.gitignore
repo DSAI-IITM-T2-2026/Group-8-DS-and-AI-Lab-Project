@@ -1,0 +1,8 @@
+# Local / Word source (converted to Report.md)
+*.docx
+*.doc
+
+# Python
+__pycache__/
+*.py[cod]
+.DS_Store
