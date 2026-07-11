@@ -10,9 +10,8 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
 
 ### Milestone 2
 
-- Report and work log: [`Milestone 2/`](Milestone%202/)
-  - [`Report.md`](Milestone%202/Report.md)
-  - [`Work Log.md`](Milestone%202/Work%20Log.md)
+- Report: [`Milestone 2/Report.md`](Milestone%202/Report.md) (figures in [`report-images/`](Milestone%202/report-images/))
+- Work log: [`Milestone 2/Work Log.md`](Milestone%202/Work%20Log.md)
 
 - **Data Pipeline — Copernicus DEM GLO-30:** [`Milestone 2/data-pipeline/copernicus-dem-30m/`](Milestone%202/data-pipeline/copernicus-dem-30m/)
   - Code for acquiring and processing GLO-30 terrain data (California)
@@ -21,3 +20,17 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
 - **Data Pipeline — ERA5:** [`Milestone 2/data-pipeline/ERA5/`](Milestone%202/data-pipeline/ERA5/)
   - Code for acquiring and processing ECMWF ERA5 reanalysis weather data (California)
   - Raw data on GCS: `gs://dsai-lab-project/wildfire_satellite/era5/raw/`
+
+#### Milestone 2 — sample figures
+
+From the [Dataset Preparation Report](Milestone%202/Report.md):
+
+| FIRMS bands | Data coverage | DEM terrain layers |
+|-------------|---------------|--------------------|
+| ![FIRMS confidence / brightness / detection](Milestone%202/report-images/figure-01.png) | ![Confirmed year-by-year coverage](Milestone%202/report-images/figure-08.png) | ![Copernicus DEM terrain layers](Milestone%202/report-images/figure-07.png) |
+
+| ERA5 correlations | NDVI fire vs no-fire | Fire density |
+|-------------------|----------------------|--------------|
+| ![ERA5 variable correlation matrix](Milestone%202/report-images/figure-06.png) | ![NDVI fire vs no-fire](Milestone%202/report-images/figure-10.png) | ![FIRMS spatial density](Milestone%202/report-images/figure-09.png) |
+
+See all 14 figures in [`Milestone 2/report-images/`](Milestone%202/report-images/) and the full write-up in [`Report.md`](Milestone%202/Report.md).
