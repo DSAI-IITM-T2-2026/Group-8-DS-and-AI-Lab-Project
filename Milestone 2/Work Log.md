@@ -38,11 +38,17 @@
 - All three datasets (Sentinel-2, Sentinel-5P, and Landsat-8) are now available in the GCS bucket for further processing.
 
 
+## Lakshmi Sruthi K (Roll Number: 21F1005626)
+
+- Explored Google Earth Engine for available datasets and contributed in finalizing the datasets.
+- Worked on the FIRMS wildfire dataset for the California wildfire prediction pipeline. Extracted daily FIRMS GeoTIFF label rasters, reviewed the dataset structure and bands such as T21 and confidence, and examined how daily fire detections should be converted into binary fire/no-fire labels.
+- Visualized this data in GEE and then created a script to export 10 years of FIRMS data to GCS bucket.
+
 ## Signatures
 |Member|Roll Number|Signature Commit|
 |--|--|--|
 |Ripunjay Kumar|21F3002511|✅|
 |Lakshay Garg|21F3001076||
 |Roushan Kumar Singh|23F1002240|✅|
-|Lakshmi Sruthi K|21F1005626||
+|Lakshmi Sruthi K|21F1005626|✅|
 |R Aditya|21F1004839||
