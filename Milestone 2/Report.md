@@ -299,16 +299,13 @@ dataset_metadata.json records, per source, the confirmed structure facts establi
 
 ### 4.3 Hosted Processed Dataset
 
-*Link to the hosted processed dataset (e.g., Kaggle): [ADD LINK HERE ONCE THE PROCESSED DATASET HAS BEEN PUBLISHED]*
+Hosted processed dataset on Kaggle: [https://www.kaggle.com/datasets/lakshayiitmds/wildfire-processed-data](https://www.kaggle.com/datasets/lakshayiitmds/wildfire-processed-data)
 
-Note: as of this notebook, the full X/y fusion pipeline in Section 5 had been validated on worked examples (Section 3.8/2.9) but not yet run end-to-end across the full split to produce final saved arrays. Complete that run, publish the processed/ directory as a Kaggle Dataset (or equivalent), and insert the resulting link above before submission.
-
-## 5. Summary of Open Items Before Submission
-
-- Resolve the Landsat 8 coverage discrepancy (144–264 tiles confirmed, all effectively 2024–2025, vs. progress-file claims of 2016+ coverage) with the data-source team, and lock the final joint training window accordingly.
-
-- Decide whether the wildfire_vnp09ga_firms TFRecord source (a different bucket) should replace the raw GeoTIFF FIRMS pipeline used here.
-
-- Run the full fusion + split pipeline end-to-end to produce final saved train/val/test arrays, then publish and link the hosted dataset (Section 4.3).
-
-- Carry the NDVI/LST vs. fire-label correlation caveat (Section 2.9.1) into the modeling milestone so weak pixel-level linear correlation isn't overstated as strong standalone predictive power.
+## Signatures
+|Member|Roll Number|Signature Commit|
+|--|--|--|
+|Ripunjay Kumar|21F3002511|✅|
+|Lakshay Garg|21F3001076||
+|Roushan Kumar Singh|23F1002240|✅|
+|Lakshmi Sruthi K|21F1005626||
+|R Aditya|21F1004839||

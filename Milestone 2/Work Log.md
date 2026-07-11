@@ -37,16 +37,12 @@
 ### Output
 - All three datasets (Sentinel-2, Sentinel-5P, and Landsat-8) are now available in the GCS bucket for further processing.
 
-### Repository hygiene
-- Standardized the Milestone 2 layout by renaming `data Pipeline` → `data-pipeline` and updating all related README paths/links.
-- Ensured credentials templates are committed without API keys, and that pipeline outputs remain on GCS rather than in the Git history.
-
 
 ## Signatures
 |Member|Roll Number|Signature Commit|
 |--|--|--|
 |Ripunjay Kumar|21F3002511|✅|
 |Lakshay Garg|21F3001076||
-|Roushan Kumar Singh|23F1002240||
+|Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626||
 |R Aditya|21F1004839||
