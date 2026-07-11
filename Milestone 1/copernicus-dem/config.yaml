@@ -1,0 +1,46 @@
+study_area:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+
+dataset:
+  name: "Copernicus DEM GLO-30"
+  resolution_m: 30
+  bucket: "copernicus-dem-30m"
+  base_url: "https://copernicus-dem-30m.s3.eu-central-1.amazonaws.com"
+  arc_seconds: 1
+
+output:
+  base_dir: "DEM"
+
+processing:
+  workers: 4
+  download_retries: 3
+  retry_delay_seconds: 5
+  expected_crs: "EPSG:4326"
+  nodata_value: -32768
+
+terrain:
+  hillshade:
+    azimuth: 315
+    altitude: 45
+  tpi:
+    radius_pixels: 5
+
+logging:
+  level: "INFO"
+
+upload:
+  destination: "gcs"
+  gcs_project_id: "iitm-dsai-lab"
+  gcs_bucket: "dsai-lab-project"
+  gcs_prefix: "wildfire_satellite"
+  # GCS path: gs://{bucket}/{prefix}/dem/2021-2025/california/
+  year_range: "2021-2025"
+  region: "california"
+  include_raw: false
+  include_merged: false
+  include_clipped: true
+  include_terrain: true
+  include_metadata: true

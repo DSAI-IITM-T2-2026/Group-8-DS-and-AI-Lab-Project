@@ -1,0 +1,19 @@
+# Local DEM outputs (data lives on GCS — see README.md)
+DEM/
+*.tif
+*.tiff
+*.vrt
+*.part
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
