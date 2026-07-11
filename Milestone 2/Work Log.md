@@ -57,6 +57,13 @@
 - Designed the spatial/temporal fusion strategy (reference grid choice, forward-fill
   for slow-revisit sources, correct ERA5 daily aggregation)
 
+
+## R Aditya (Roll Number: 21F1004839)
+- Brainstormed selection of dataset and extraction methodologies.
+- Formulated final data structure relevant to the ingestion to the model.
+- Extracted Sentinel-2 and Sentinel-5P for image provessing arm of the model.
+- Collated insights and extractions for reporting.
+
 ## Signatures
 |Member|Roll Number|Signature Commit|
 |--|--|--|
@@ -64,4 +71,4 @@
 |Lakshay Garg|21F3001076|✅|
 |Roushan Kumar Singh|23F1002240|✅|
 |Lakshmi Sruthi K|21F1005626|✅|
-|R Aditya|21F1004839||
+|R Aditya|21F1004839|✅️|
