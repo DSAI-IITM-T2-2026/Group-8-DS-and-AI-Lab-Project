@@ -1,0 +1,30 @@
+ee_project: "your-gee-project-id"
+
+aoi:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+
+temporal:
+  start_year: 2025
+  end_year: 2016
+  step_days: 5
+
+sentinel2:
+  collection: "COPERNICUS/S2_SR_HARMONIZED"
+  bands: ["B2", "B3", "B4", "B8", "B11", "B12"]
+  cloud_filter_pct: 40
+  export_scale_m: 100
+  composite: "median"
+
+logic_mode: "confirmed"
+
+export:
+  gcs_bucket: "your-bucket-name"
+  gcs_prefix: "wildfire_satellite"
+  max_pixels: 1000000000000
+
+progress:
+  local_file: "sentinel2_progress.json"
+  gcs_metadata_prefix: "wildfire_satellite/metadata"

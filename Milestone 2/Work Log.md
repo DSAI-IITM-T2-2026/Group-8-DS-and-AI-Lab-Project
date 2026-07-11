@@ -20,6 +20,23 @@
 - Documented the pipeline, variables, and GCS data location in the ERA5 README; excluded local data, secrets, and planning docs from version control.
 - Organized the code under `Milestone 2/data-pipeline/ERA5/` and updated the repository README to link both Milestone 2 data pipelines.
 
+## Roushan Kumar Singh (Roll Number: 23F1002240)
+
+### Sentinel-2
+- Built a data fetch pipeline for Sentinel-2 imagery over the target AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+### Sentinel-5P
+- Built a data fetch pipeline for Sentinel-5P (TROPOMI) imagery over the same AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+### Landsat-8
+- Built a data fetch pipeline for Landsat-8/9 imagery over the same AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+### Output
+- All three datasets (Sentinel-2, Sentinel-5P, and Landsat-8) are now available in the GCS bucket for further processing.
+
 ### Repository hygiene
 - Standardized the Milestone 2 layout by renaming `data Pipeline` → `data-pipeline` and updating all related README paths/links.
 - Ensured credentials templates are committed without API keys, and that pipeline outputs remain on GCS rather than in the Git history.

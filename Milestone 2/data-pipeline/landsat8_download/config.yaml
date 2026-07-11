@@ -1,0 +1,25 @@
+gee:
+  project: "project-id"   # personal project (fresh EE quota) — compute runs here
+area:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+temporal:
+  start_year: 2025                # most recent (descending starts here)
+  end_year: 2016                  # oldest (descending stops here)
+  step_days: 5
+  window_days: 10
+  order: descending
+landsat:
+  collections: ["LANDSAT/LC08/C02/T1_L2", "LANDSAT/LC09/C02/T1_L2"]
+  bands: ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "ST_B10"]
+  cloud_filter_pct: 40
+  cloud_mask: "QA_PIXEL"
+  export_scale_m: 100
+  composite: "median"
+export:
+  destination: "gcs"
+  gcs_bucket: "bucket-name"
+  gcs_prefix: "bucket-prefix"
+  max_concurrent_tasks: 15           # confirmed restricted-mode project — only 1 task runs at a time anyway
