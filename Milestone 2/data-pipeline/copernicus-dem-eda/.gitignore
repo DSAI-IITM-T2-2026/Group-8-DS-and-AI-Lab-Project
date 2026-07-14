@@ -1,0 +1,11 @@
+# Local GeoTIFF outputs — stored on GCS, not in Git
+*.tif
+*.tiff
+
+# Python / OS
+__pycache__/
+*.py[cod]
+.DS_Store
+.ipynb_checkpoints/
+.venv/
+venv/

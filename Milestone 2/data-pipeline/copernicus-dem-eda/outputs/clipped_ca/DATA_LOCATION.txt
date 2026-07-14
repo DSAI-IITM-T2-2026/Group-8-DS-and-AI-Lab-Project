@@ -1,0 +1,14 @@
+# Clipped California DEM GeoTIFFs are stored on GCS (not in this repo).
+#
+# gs://dsai-lab-project/wildfire_satellite/dem/2021-2025/california/eda/clipped_ca/
+#
+# Files:
+#   elevation_ca.tif
+#   slope_ca.tif
+#   aspect_ca.tif
+#   hillshade_ca.tif
+#   tri_ca.tif
+#   tpi_ca.tif
+#
+# Download:
+#   gsutil -m cp "gs://dsai-lab-project/wildfire_satellite/dem/2021-2025/california/eda/clipped_ca/*.tif" .
