@@ -1,0 +1,14 @@
+{
+  "boundary": "California state polygon (Census TIGER)",
+  "not_bbox": true,
+  "downsample_factor": 10,
+  "layers": [
+    "elevation",
+    "slope",
+    "aspect",
+    "hillshade",
+    "tri",
+    "tpi"
+  ],
+  "sample_rows": 500000
+}
