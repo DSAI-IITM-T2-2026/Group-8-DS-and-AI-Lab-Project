@@ -1,0 +1,53 @@
+# Dual-branch CNN: Sentinel-2 patches + ERA5/DEM tabular features
+
+task:
+  history_days: 7
+  lead_days: 1
+  firms_confidence_min: 30
+
+temporal:
+  start_date: "2018-05-01"
+  end_date: "2021-11-30"
+  fire_season_months: [5, 6, 7, 8, 9, 10, 11]
+
+split:
+  train_end: "2019-12-31"
+  val_end: "2020-12-31"
+  # test: 2021
+
+sampling:
+  neg_pos_ratio: 4.0
+  random_seed: 42
+  max_train: 25000
+  max_val: 8000
+  max_test: 8000
+  hard_negative: true
+
+patch:
+  size: 64
+  bands: 6
+  # Monthly S2 mosaics on GCS (4 tiles / month)
+  gcs_prefix: "gs://dsai-lab-project/wildfire_satellite/raw/sentinel2"
+  vsigs_prefix: "/vsigs/dsai-lab-project/wildfire_satellite/raw/sentinel2"
+
+paths:
+  mvp_output_dir: "../mvp_era5_dem/outputs"
+  california_geojson: "data/california.geojson"
+  output_dir: "outputs"
+  patches_dir: "outputs/patches"
+  tiles_dir: "outputs/s2_tiles"   # temp cache when using --download-tiles
+  manifest: "outputs/manifest.parquet"
+
+model:
+  cnn_embed_dim: 128
+  mlp_embed_dim: 64
+  dropout: 0.2
+  epochs: 15
+  batch_size: 32
+  lr: 0.001
+  weight_decay: 0.0001
+  num_workers: 0
+  random_seed: 42
+
+alerts:
+  top_k: 25

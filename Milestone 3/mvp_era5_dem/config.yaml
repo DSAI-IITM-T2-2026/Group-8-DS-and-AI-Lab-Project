@@ -1,0 +1,67 @@
+# MVP: next-day wildfire risk on ERA5 0.25° cells (ERA5 + DEM → tabular → LightGBM)
+
+task:
+  history_days: 7
+  lead_days: 1
+  firms_confidence_min: 30
+
+aoi:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+
+# Default window for Milestone 3 fusion backbone (cnn_lstm_fusion). Override via CLI.
+# Previous cnn_s2_mvp used 2018–2021 — pass those dates explicitly if rebuilding that baseline.
+temporal:
+  start_date: "2022-05-01"
+  end_date: "2025-11-30"
+
+paths:
+  dem_cells: "data/era5_grid_dem_features.parquet"
+  output_dir: "outputs"
+  cache_dir: "outputs/cache"
+
+gcs:
+  era5_prefix: "gs://dsai-lab-project/wildfire_satellite/era5/raw"
+  firms_prefix: "gs://wildfire-detection-first/firms_daily_geotiff"
+  # rasterio /vsigs/ path (anonymous read; set GS_NO_SIGN_REQUEST=YES)
+  firms_vsigs_prefix: "/vsigs/wildfire-detection-first/firms_daily_geotiff"
+
+era5:
+  resolution_deg: 0.25
+  # Variables after opening the CDS zip (instant + accum members)
+  instant_vars:
+    - t2m
+    - d2m
+    - sp
+    - u10
+    - v10
+    - i10fg
+    - swvl1
+    - swvl2
+    - cvh
+    - cvl
+    - lai_hv
+    - lai_lv
+    - blh
+  accum_vars:
+    - tp
+
+split:
+  # Calendar split on label_date (forecasting-safe)
+  # Train: 2022–2023 | Val: 2024 | Test: 2025
+  train_end: "2023-12-31"
+  val_end: "2024-12-31"
+  # test: after val_end through temporal.end_date
+
+model:
+  random_seed: 42
+  num_boost_round: 400
+  early_stopping_rounds: 40
+  learning_rate: 0.05
+  num_leaves: 63
+  min_data_in_leaf: 50
+  feature_fraction: 0.85
+  bagging_fraction: 0.85
+  bagging_freq: 1

@@ -1,0 +1,11 @@
+# Generated data & local artifacts (rebuild from GCS — see README)
+outputs/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.pt
+*.joblib
+*.npy
+.pytest_cache/

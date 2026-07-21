@@ -13,6 +13,18 @@ AI-Powered Wildfire Early Detection and Alerting System — DSAI Lab Project (II
 - Report: [`Milestone 2/Report.md`](Milestone%202/Report.md) (figures in [`report-images/`](Milestone%202/report-images/))
 - Work log: [`Milestone 2/Work Log.md`](Milestone%202/Work%20Log.md)
 
+### Milestone 3
+
+Modeling code (datasets rebuild from GCS — large `outputs/` are gitignored):
+
+- Overview + reproduce steps: [`Milestone 3/README.md`](Milestone%203/README.md)
+- **CNN + LSTM (+ optional S5P)** — main M3 model: [`cnn_lstm_fusion/`](Milestone%203/cnn_lstm_fusion/)  
+  Split: train 2022–2023 / val 2024 / test 2025
+- Dual-branch CNN baseline: [`cnn_s2_mvp/`](Milestone%203/cnn_s2_mvp/)
+- Tabular ERA5 + DEM backbone: [`mvp_era5_dem/`](Milestone%203/mvp_era5_dem/)
+
+### Milestone 2 — data pipelines
+
 - **Data Pipeline — Copernicus DEM GLO-30:** [`Milestone 2/data-pipeline/copernicus-dem-30m/`](Milestone%202/data-pipeline/copernicus-dem-30m/)
   - Code for acquiring and processing GLO-30 terrain data (California)
   - Processed data on GCS: `gs://dsai-lab-project/wildfire_satellite/dem/2021-2025/california/`
