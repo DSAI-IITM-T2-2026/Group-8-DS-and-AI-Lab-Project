@@ -1,0 +1,12 @@
+# Local rebuild artifacts — do not commit multi-GB caches/patches
+outputs/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.npy
+.pytest_cache/
+
+# Released checkpoints live under artifacts/ (tracked).
+# Do not put multi-GB patches under artifacts/.

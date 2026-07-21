@@ -63,7 +63,7 @@ flowchart TB
   end
 
   subgraph L3 [3. Train / evaluate]
-    C1[Train CNNLSTMFusion]
+    C1[Train MultimodalFusion or CNNLSTMFusion]
     C2[Early-stop on val PR-AUC]
     C3[Isotonic calibration on val]
     C4[Test metrics ROC / PR]
@@ -85,7 +85,7 @@ flowchart TB
 | Raw rasters / weather | GCS buckets | No (too large) |
 | Code + DEM cell table | `Milestone 3/*` | Yes |
 | Built patches / caches / checkpoints | `*/outputs/` | No by default |
-| Released weights for teammates | `cnn_lstm_fusion/artifacts/` | Yes (small) |
+| Released weights for teammates | `*/artifacts/` | Yes (small) |
 
 ---
 
@@ -336,3 +336,101 @@ flowchart LR
 6. **Gitignores on `outputs/`** — keep repo small; publish small `artifacts/` for inference.
 
 For runbooks see [`README.md`](README.md) and [`cnn_lstm_fusion/README.md`](cnn_lstm_fusion/README.md).
+
+---
+
+## 11. Full multimodal hybrid — `MultimodalFusion`
+
+Newer stack in [`multimodal_fusion/`](multimodal_fusion/). Same prediction unit / split / labels as §1; adds **S5P CNN patches** and **S2 / S5P numerical** branches.
+
+### 11.1 Architecture
+
+```mermaid
+flowchart TB
+  subgraph vision [Vision]
+    S2I["S2 6×64×64"] --> S2CNN[SmallCNN]
+    S2CNN --> Zs2["z_s2 128-d"]
+    S5I["S5P 2×64×64"] --> S5CNN[SmallCNN]
+    S5CNN --> Zs5["z_s5p 64-d"]
+  end
+  subgraph temporal [Weather]
+    SEQ["ERA5+DEM 7×27"] --> LSTM[Era5LSTM]
+    LSTM --> Zl["z_lstm 64-d"]
+  end
+  subgraph tabular [Numerical]
+    S2N["S2 19-d 5-day features"] --> S2MLP[TabularMLP]
+    S2MLP --> Zn2["z_s2n 64-d"]
+    S5N["S5P 9-d AAI/CO"] --> S5MLP[TabularMLP]
+    S5MLP --> Zn5["z_s5n 32-d"]
+  end
+  Zs2 --> CAT[Concat]
+  Zs5 --> CAT
+  Zl --> CAT
+  Zn2 --> CAT
+  Zn5 --> CAT
+  CAT --> HEAD["FC 64 → logit"]
+  HEAD --> OUT[p_fire / calibrated %]
+```
+
+| Branch | Input | Embed | Toggle (`config.yaml`) |
+|--------|-------|-------|------------------------|
+| S2 CNN | monthly mosaic patch | 128 | `use_s2_patches` |
+| S5P CNN | monthly mosaic patch (2 bands) | 64 | `use_s5p_patches` |
+| LSTM | 7-day ERA5+DEM | 64 | always on |
+| S2 MLP | band means/stds + indices | 64 | `use_s2_numerical` |
+| S5P MLP | AAI/CO stats | 32 | `use_s5p_numerical` |
+
+Training: `BCEWithLogitsLoss` + `pos_weight`, Adam, best **val PR-AUC**, isotonic calibration on val.
+
+### 11.2 Extra preprocessing (beyond §4)
+
+**S5P patches** (`build_s5p_patches.py`) — same month forward-fill + group-by-mosaic pattern as S2, but `2×64×64` from S5P monthly GeoTIFFs.
+
+**Numerical features** (`build_numerical_features.py`):
+
+```mermaid
+flowchart TD
+  MAN[manifest samples] --> IDX[Build window indexes]
+  IDX --> DL[Cache GCS CSVs → parquet]
+  DL --> SP[Spatial join via era5_to_feature_grid]
+  SP --> S2J[Nearest 5-day S2 window ≤ D]
+  SP --> S5J[Daily S5P + forward-fill ≤ 7d]
+  S2J --> COL["s2n_* columns"]
+  S5J --> COL2["s5n_* columns"]
+  COL --> MAN2[Updated manifest.parquet]
+  COL2 --> MAN2
+```
+
+| Family | Bucket | Cadence | Typical columns |
+|--------|--------|---------|-----------------|
+| S2 numerical | `gs://sentinel-2-data-2016-2025/sentinel2_features_v3/` | 5-day windows | B2–B12 mean/std, NDVI, NDMI, NBR, … |
+| S5P numerical | `gs://sentinel-2-2016-2025/sentinel5p_features_daily/` | daily (mostly 2025) | AAI/CO mean/max/std, valid fractions |
+
+Join key: ERA5 `cell_id` ↔ feature-grid cell via `data/era5_to_feature_grid.parquet`.
+
+### 11.3 Pipeline commands
+
+```bash
+export GS_NO_SIGN_REQUEST=YES
+cd Milestone\ 3/mvp_era5_dem && python build_dataset.py --start 2022-05-01 --end 2025-11-30 --fire-season
+cd ../multimodal_fusion
+python build_dataset.py --download-tiles
+python build_s5p_patches.py --download-tiles
+python build_sequences.py
+python build_numerical_features.py
+python train.py
+python map_predictions.py
+```
+
+### 11.4 Released weights & example metrics
+
+| Path | Contents |
+|------|----------|
+| `multimodal_fusion/artifacts/multimodal_full_2022_2025/` | `best.pt`, calibrator, seq + S2/S5P numerical norms, `metrics.json` |
+
+| Split | ROC-AUC | PR-AUC |
+|-------|---------|--------|
+| Val (raw, best ckpt) | ~0.83 | ~0.57 |
+| Test calibrated | ~0.83 | ~0.53 |
+
+Patches / sequences / numerical caches stay in gitignored `outputs/` (~tens of GB). Teammates clone code + `artifacts/`, rebuild inputs from GCS, then load weights (see [`multimodal_fusion/README.md`](multimodal_fusion/README.md)).

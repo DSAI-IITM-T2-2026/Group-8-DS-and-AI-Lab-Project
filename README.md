@@ -19,8 +19,9 @@ Modeling code (datasets rebuild from GCS — large `outputs/` are gitignored):
 
 - Overview + reproduce steps: [`Milestone 3/README.md`](Milestone%203/README.md)
 - **Full ML lifecycle architecture (diagrams):** [`Milestone 3/ARCHITECTURE.md`](Milestone%203/ARCHITECTURE.md)
-- **CNN + LSTM (+ optional S5P)** — main M3 model: [`cnn_lstm_fusion/`](Milestone%203/cnn_lstm_fusion/)  
-  Split: train 2022–2023 / val 2024 / test 2025 · released weights: [`artifacts/`](Milestone%203/cnn_lstm_fusion/artifacts/)
+- **Full multimodal hybrid** (S2 CNN + S5P CNN + LSTM + numerical MLPs): [`multimodal_fusion/`](Milestone%203/multimodal_fusion/)  
+  Split: train 2022–2023 / val 2024 / test 2025 · released weights: [`artifacts/`](Milestone%203/multimodal_fusion/artifacts/)
+- **CNN + LSTM (+ optional S5P scalar):** [`cnn_lstm_fusion/`](Milestone%203/cnn_lstm_fusion/) · weights: [`artifacts/`](Milestone%203/cnn_lstm_fusion/artifacts/)
 - Dual-branch CNN baseline: [`cnn_s2_mvp/`](Milestone%203/cnn_s2_mvp/)
 - Tabular ERA5 + DEM backbone: [`mvp_era5_dem/`](Milestone%203/mvp_era5_dem/)
 

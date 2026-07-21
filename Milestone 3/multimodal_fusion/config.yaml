@@ -1,0 +1,123 @@
+# Multimodal fusion: S2 CNN + S5P CNN + ERA5 LSTM + S2/S5P numerical MLPs
+# New project — does not modify cnn_lstm_fusion
+
+task:
+  history_days: 7
+  lead_days: 1
+  firms_confidence_min: 30
+
+temporal:
+  start_date: "2022-05-01"
+  end_date: "2025-11-30"
+  fire_season_months: [5, 6, 7, 8, 9, 10, 11]
+
+split:
+  train_years: [2022, 2023]
+  val_year: 2024
+  test_year: 2025
+  train_end: "2023-12-31"
+  val_end: "2024-12-31"
+
+sampling:
+  neg_pos_ratio: 4.0
+  random_seed: 42
+  max_train: 25000
+  max_val: 8000
+  max_test: 8000
+  hard_negative: true
+
+# S2 image patches (monthly mosaics)
+patch:
+  size: 64
+  bands: 6
+  gcs_prefix: "gs://dsai-lab-project/wildfire_satellite/raw/sentinel2"
+  vsigs_prefix: "/vsigs/dsai-lab-project/wildfire_satellite/raw/sentinel2"
+
+# S5P image patches (monthly mosaics, 2 bands)
+patch_s5p:
+  size: 64
+  bands: 2
+  gcs_prefix: "gs://dsai-lab-project/wildfire_satellite/raw/sentinel5p"
+  vsigs_prefix: "/vsigs/dsai-lab-project/wildfire_satellite/raw/sentinel5p"
+
+paths:
+  mvp_output_dir: "../mvp_era5_dem/outputs"
+  california_geojson: "data/california.geojson"
+  output_dir: "outputs"
+  patches_dir: "outputs/patches"
+  s5p_patches_dir: "outputs/s5p_patches"
+  sequences_dir: "outputs/sequences"
+  tiles_dir: "outputs/s2_tiles"
+  s5p_tiles_dir: "outputs/s5p_tiles"
+  cache_dir: "outputs/cache"
+  manifest: "outputs/manifest.parquet"
+  grid_map: "data/era5_to_feature_grid.parquet"
+
+sources:
+  sentinel2_patches: true
+  sentinel5p_patches: true
+  era5_dem: true
+  s2_features:
+    enabled: true
+    project_id: "iitm-bs-mlops-500106"
+    gcs_bucket: "sentinel-2-data-2016-2025"
+    gcs_prefix: "sentinel2_features_v3"
+    # Core spectral columns (means + key indices); rest optional
+    columns:
+      - B2_mean
+      - B3_mean
+      - B4_mean
+      - B8_mean
+      - B11_mean
+      - B12_mean
+      - B2_std
+      - B3_std
+      - B4_std
+      - B8_std
+      - B11_std
+      - B12_std
+      - NDVI_mean
+      - NDMI_mean
+      - NBR_mean
+      - NDWI_mean
+      - EVI_mean
+      - cloud_percentage
+      - valid_fraction
+  s5p_features:
+    enabled: true
+    project_id: "project-815eaf36-ef08-42e9-963"
+    gcs_bucket: "sentinel-2-2016-2025"
+    gcs_prefix: "sentinel5p_features_daily"
+    forward_fill_max_days: 7
+    columns:
+      - s5p_aai_mean
+      - s5p_aai_max
+      - s5p_aai_std
+      - s5p_aai_valid_fraction
+      - s5p_co_mean
+      - s5p_co_max
+      - s5p_co_std
+      - s5p_co_valid_fraction
+      - s5p_data_available
+
+model:
+  cnn_embed_dim: 128
+  s5p_cnn_embed_dim: 64
+  lstm_embed_dim: 64
+  lstm_hidden: 64
+  s2_num_embed_dim: 64
+  s5p_num_embed_dim: 32
+  dropout: 0.2
+  epochs: 15
+  batch_size: 32
+  lr: 0.001
+  weight_decay: 0.0001
+  num_workers: 0
+  random_seed: 42
+  use_s2_patches: true
+  use_s5p_patches: true
+  use_s2_numerical: true
+  use_s5p_numerical: true
+
+alerts:
+  top_k: 25

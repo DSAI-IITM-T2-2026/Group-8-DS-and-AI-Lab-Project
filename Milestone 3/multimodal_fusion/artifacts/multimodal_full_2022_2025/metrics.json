@@ -1,0 +1,25 @@
+{
+  "flags": {
+    "use_s2_patches": true,
+    "use_s5p_patches": true,
+    "use_s2_numerical": true,
+    "use_s5p_numerical": true
+  },
+  "val_raw": {
+    "roc_auc": 0.8317668395679703,
+    "pr_auc": 0.5687468956942151
+  },
+  "val_calibrated": {
+    "roc_auc": 0.8340117655723291,
+    "pr_auc": 0.5588641009827346
+  },
+  "test_raw": {
+    "roc_auc": 0.8320713065259725,
+    "pr_auc": 0.5458920532612899
+  },
+  "test_calibrated": {
+    "roc_auc": 0.8312779258077299,
+    "pr_auc": 0.5311012831182492
+  },
+  "best_val_pr_auc": 0.5687468956942151
+}
