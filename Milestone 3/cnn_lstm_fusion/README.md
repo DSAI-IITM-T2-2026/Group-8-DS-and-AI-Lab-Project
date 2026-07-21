@@ -80,6 +80,14 @@ python train.py --use-sentinel5p
 
 Retrain from scratch when flipping S5P on/off (fusion head width changes).
 
+## Released checkpoint
+
+Teammates can load trained weights without a full retrain:
+
+`artifacts/cnn_lstm_s5p_2022_2025/` — `best.pt`, `calibrator.joblib`, norm stats, `metrics.json`
+
+(Test calibrated ≈ ROC 0.80 / PR 0.49.) Full patches still require `build_dataset.py`.
+
 ## Layout
 
 ```text

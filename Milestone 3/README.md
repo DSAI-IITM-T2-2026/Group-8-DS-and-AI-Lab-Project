@@ -46,6 +46,8 @@ GCS sources used:
 - FIRMS: `gs://wildfire-detection-first/firms_daily_geotiff/`
 - DEM cells: shipped in `mvp_era5_dem/data/era5_grid_dem_features.parquet`
 
-**Not in git:** `outputs/` (patches, sequences, caches, checkpoints), `.venv/`.
+**Not in git:** `outputs/` (patches, sequences, caches).  
 
-See each project’s `README.md` for details.
+**In git (for teammates):** `artifacts/cnn_lstm_s5p_2022_2025/` — `best.pt`, calibrator, norm stats, metrics (~620 KB).
+
+See each project’s `README.md` and the full lifecycle diagrams in [`ARCHITECTURE.md`](ARCHITECTURE.md).
