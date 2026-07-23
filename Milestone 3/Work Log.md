@@ -30,10 +30,6 @@
 - ⁠Identified FIRMS parameter and threshold to be used for identifying whether a day is a fire day based on actual fire events dataset.
 
 
-## R Aditya (Roll Number: 21F1004839)
-
-- 
-
 ---
 
 
