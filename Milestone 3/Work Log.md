@@ -19,7 +19,9 @@
 
 ## Roushan Kumar Singh (Roll Number: 23F1002240)
 
-- 
+- Developed a data pipeline to fetch and process numeric data from Sentinel-2 and Sentinel-5P datasets, enabling a streamlined workflow for downstream analysis and model development.
+- Conducted experiments with multimodal models, focusing on hyperparameter tuning to evaluate the impact of different configurations on model performance and identify optimal settings.
+- Performed exploratory analysis and iterative testing to validate the data pipeline and assess model behavior under various parameter combinations.
 
 
 
