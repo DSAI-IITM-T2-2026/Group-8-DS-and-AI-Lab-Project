@@ -10,7 +10,10 @@
 
 ## Ripunjay Kumar (Roll Number: 21F3002511)
 
-- 
+- ⁠Designed and documented the Milestone 3 ML lifecycle (⁠ ARCHITECTURE.md ⁠): next-day cell-day fire risk, ERA5 0.25° grid, FIRMS labels, train/val/test protocol.
+- ⁠Built the tabular baseline pipeline ⁠ mvp_era5_dem/ ⁠ (ERA5 + DEM → LightGBM).
+- ⁠Implemented progressive fusion models: ⁠ cnn_s2_mvp/ ⁠, ⁠ cnn_lstm_fusion/ ⁠ (CNN + LSTM ± S5P), and full hybrid ⁠ multimodal_fusion/ ⁠ (S2/S5P CNNs + LSTM + numerical MLPs).
+- Released checkpoints and metrics under ⁠ cnn_lstm_fusion/artifacts/ ⁠ and ⁠ multimodal_fusion/artifacts/ ⁠; added map/prediction scripts and project READMEs.
 
 
 
