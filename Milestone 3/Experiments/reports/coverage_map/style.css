@@ -1,0 +1,234 @@
+/* Theme tokens — host vars preferred; :root = standalone fallback */
+:root {
+  --background: #171717;
+  --foreground: #f5f5f5;
+  --muted-foreground: #999;
+  --border: #2a2a2a;
+  --destructive: #a65b35;
+  --viz-series-1: #74afe2;
+  --viz-series-2: #9b8fd9;
+  --aoi-stroke: #e6c35c;
+  --land-wash: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #f4f4f2;
+    --foreground: #171717;
+    --muted-foreground: #666;
+    --border: #d8d8d4;
+    --destructive: #b45309;
+    --viz-series-1: #2563a8;
+    --viz-series-2: #6d5bb8;
+    --aoi-stroke: #a16207;
+    --land-wash: color-mix(in srgb, var(--foreground) 4%, transparent);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+#viz-root {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  color: var(--foreground);
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.viz-row label {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.input {
+  min-width: 148px;
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+}
+
+.legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+.legend i,
+.legend b,
+.legend em {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  font-style: normal;
+  font-weight: normal;
+}
+
+.leg-absent { background: var(--destructive); opacity: 0.75; }
+.leg-complete { background: var(--viz-series-1); opacity: 0.9; }
+.leg-s5p {
+  background: transparent;
+  border: 2px solid var(--viz-series-2);
+  box-sizing: border-box;
+}
+.leg-aoi {
+  background: transparent;
+  border: 2px solid var(--aoi-stroke);
+  box-sizing: border-box;
+}
+
+#map {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Map layers — colors via CSS classes (not attr fill=var()) */
+#map .ca-fill {
+  fill: var(--land-wash);
+  stroke: none;
+}
+
+#map .extent-fill {
+  stroke: var(--background);
+  stroke-width: 0.8;
+  fill: var(--viz-series-1);
+}
+
+#map .extent-fill.is-absent { fill: var(--destructive); }
+#map .extent-fill.is-partial { fill: var(--viz-series-1); }
+#map .extent-fill.is-complete { fill: var(--viz-series-1); }
+
+#map .s5p-ring {
+  fill: none;
+  stroke: var(--viz-series-2);
+  stroke-width: 3.5;
+  vector-effect: non-scaling-stroke;
+}
+
+#map .s5p-ring.is-off { stroke-opacity: 0; }
+#map .s5p-ring.is-on { stroke-opacity: 0.85; }
+
+#map .ca-outline {
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+#map .aoi-box {
+  fill: none;
+  stroke: var(--aoi-stroke);
+  stroke-width: 1.8;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+#map .intended-box {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.45;
+  vector-effect: non-scaling-stroke;
+}
+
+#map .label-text {
+  fill: var(--muted-foreground);
+  font-size: 12px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.window-strip {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.strip-block h3 {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  min-width: 2rem;
+  padding: 4px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  background: transparent;
+  opacity: 0.35;
+}
+
+.chip.on-s2 {
+  opacity: 1;
+  background: color-mix(in srgb, var(--viz-series-1) 26%, transparent);
+  border-color: color-mix(in srgb, var(--viz-series-1) 50%, var(--border));
+}
+
+.chip.on-s5p {
+  opacity: 1;
+  background: color-mix(in srgb, var(--viz-series-2) 26%, transparent);
+  border-color: color-mix(in srgb, var(--viz-series-2) 50%, var(--border));
+}
+
+.chip.empty {
+  opacity: 0.4;
+  color: var(--muted-foreground);
+}
+
+.summary {
+  margin: 14px 0 4px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}

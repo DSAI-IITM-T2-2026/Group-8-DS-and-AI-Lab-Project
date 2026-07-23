@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>California coverage explorer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="viz-root">
+    <div class="viz-row">
+      <label for="selector">Month</label>
+      <select id="selector" class="input" aria-label="Select month"></select>
+      <span class="legend" aria-hidden="true">
+        <i class="leg-absent"></i> S2 absent
+        <b class="leg-complete"></b> S2 present
+        <em class="leg-aoi"></em> locked AOI
+        <i class="leg-s5p"></i> S5P ring
+      </span>
+    </div>
+
+    <svg id="map" role="img" aria-label="California Sentinel coverage map"></svg>
+
+    <div class="window-strip" id="windowStrip" aria-live="polite"></div>
+    <p class="summary" id="summary">Loading…</p>
+    <p class="meta" id="meta"></p>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

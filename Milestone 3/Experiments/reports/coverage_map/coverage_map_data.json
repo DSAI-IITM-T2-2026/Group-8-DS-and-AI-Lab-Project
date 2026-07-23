@@ -1,0 +1,2723 @@
+{
+  "aoi_bounds": {
+    "west": -124.25,
+    "south": 32.75,
+    "east": -114.25,
+    "north": 42.0
+  },
+  "csv_grid_extent": {
+    "west": -124.406,
+    "south": 32.533,
+    "east": -114.135,
+    "north": 42.013,
+    "nrows": 413115,
+    "note": "Measured from S5P sample window; S2 uses same grid_id/lat-lon"
+  },
+  "per_source_bounds": {
+    "FIRMS": {
+      "west": -124.4885320732833,
+      "south": 32.52799643796787,
+      "east": -114.13095684738522,
+      "north": 42.01420583827002
+    },
+    "Sentinel-2": {
+      "west": -124.4103786435649,
+      "south": 32.529793068536115,
+      "east": -114.12916021681697,
+      "north": 42.125596933500844
+    },
+    "Sentinel-5P": {
+      "west": -124.41666685055374,
+      "south": 32.52799643796788,
+      "east": -114.12197369454404,
+      "north": 42.13098682520556
+    },
+    "ERA5": {
+      "west": -124.25,
+      "south": 32.75,
+      "east": -114.25,
+      "north": 42.0
+    },
+    "DEM": {
+      "west": -124.41013888888888,
+      "south": 32.52986111111111,
+      "east": -114.1298611111111,
+      "north": 42.01013888888889
+    },
+    "Sentinel-2-CSV": {
+      "west": -124.406,
+      "south": 32.533,
+      "east": -114.135,
+      "north": 42.013
+    },
+    "Sentinel-5P-CSV": {
+      "west": -124.406,
+      "south": 32.533,
+      "east": -114.135,
+      "north": 42.013
+    }
+  },
+  "binding_edges": {
+    "west": "ERA5",
+    "south": "ERA5",
+    "east": "ERA5",
+    "north": "ERA5"
+  },
+  "windows": [
+    "2025-01",
+    "2025-02",
+    "2025-03",
+    "2025-04",
+    "2025-05",
+    "2025-06",
+    "2025-07",
+    "2025-08",
+    "2025-09",
+    "2025-10",
+    "2025-11"
+  ],
+  "s2_windows_by_month": {
+    "2025-01": [
+      {
+        "window": 1,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=001/features.csv",
+        "present": true,
+        "size": 298340646
+      },
+      {
+        "window": 2,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=002/features.csv",
+        "present": true,
+        "size": 330298152
+      },
+      {
+        "window": 3,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=003/features.csv",
+        "present": true,
+        "size": 332724184
+      },
+      {
+        "window": 4,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=004/features.csv",
+        "present": true,
+        "size": 315802343
+      },
+      {
+        "window": 5,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=005/features.csv",
+        "present": true,
+        "size": 273641722
+      },
+      {
+        "window": 6,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=01/window=006/features.csv",
+        "present": true,
+        "size": 212806906
+      }
+    ],
+    "2025-02": [
+      {
+        "window": 7,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=007/features.csv",
+        "present": true,
+        "size": 205232342
+      },
+      {
+        "window": 8,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=008/features.csv",
+        "present": true,
+        "size": 279477747
+      },
+      {
+        "window": 9,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=009/features.csv",
+        "present": true,
+        "size": 129890495
+      },
+      {
+        "window": 10,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=010/features.csv",
+        "present": true,
+        "size": 310124233
+      },
+      {
+        "window": 11,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=011/features.csv",
+        "present": true,
+        "size": 290999928
+      },
+      {
+        "window": 12,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=02/window=012/features.csv",
+        "present": true,
+        "size": 225835076
+      }
+    ],
+    "2025-03": [
+      {
+        "window": 13,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=013/features.csv",
+        "present": true,
+        "size": 276154643
+      },
+      {
+        "window": 14,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=014/features.csv",
+        "present": true,
+        "size": 196534376
+      },
+      {
+        "window": 15,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=015/features.csv",
+        "present": true,
+        "size": 207136433
+      },
+      {
+        "window": 16,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=016/features.csv",
+        "present": true,
+        "size": 289935653
+      },
+      {
+        "window": 17,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=017/features.csv",
+        "present": true,
+        "size": 280419259
+      },
+      {
+        "window": 18,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=03/window=018/features.csv",
+        "present": true,
+        "size": 267912877
+      }
+    ],
+    "2025-04": [
+      {
+        "window": 19,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=019/features.csv",
+        "present": true,
+        "size": 263021461
+      },
+      {
+        "window": 20,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=020/features.csv",
+        "present": true,
+        "size": 296723789
+      },
+      {
+        "window": 21,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=021/features.csv",
+        "present": true,
+        "size": 246130742
+      },
+      {
+        "window": 22,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=022/features.csv",
+        "present": true,
+        "size": 332616293
+      },
+      {
+        "window": 23,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=023/features.csv",
+        "present": true,
+        "size": 239546650
+      },
+      {
+        "window": 24,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=04/window=024/features.csv",
+        "present": true,
+        "size": 264034869
+      }
+    ],
+    "2025-05": [
+      {
+        "window": 25,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=025/features.csv",
+        "present": true,
+        "size": 299480540
+      },
+      {
+        "window": 26,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=026/features.csv",
+        "present": true,
+        "size": 317303872
+      },
+      {
+        "window": 27,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=027/features.csv",
+        "present": true,
+        "size": 325327356
+      },
+      {
+        "window": 28,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=028/features.csv",
+        "present": true,
+        "size": 330748456
+      },
+      {
+        "window": 29,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=029/features.csv",
+        "present": true,
+        "size": 295167141
+      },
+      {
+        "window": 30,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=05/window=030/features.csv",
+        "present": true,
+        "size": 287075994
+      }
+    ],
+    "2025-06": [
+      {
+        "window": 31,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=031/features.csv",
+        "present": true,
+        "size": 289803457
+      },
+      {
+        "window": 32,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=032/features.csv",
+        "present": true,
+        "size": 293313543
+      },
+      {
+        "window": 33,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=033/features.csv",
+        "present": true,
+        "size": 325633434
+      },
+      {
+        "window": 34,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=034/features.csv",
+        "present": true,
+        "size": 322393850
+      },
+      {
+        "window": 35,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=035/features.csv",
+        "present": true,
+        "size": 329580672
+      },
+      {
+        "window": 36,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=06/window=036/features.csv",
+        "present": true,
+        "size": 330823327
+      }
+    ],
+    "2025-07": [
+      {
+        "window": 37,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=037/features.csv",
+        "present": true,
+        "size": 321047459
+      },
+      {
+        "window": 38,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=038/features.csv",
+        "present": true,
+        "size": 333843046
+      },
+      {
+        "window": 39,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=039/features.csv",
+        "present": true,
+        "size": 298630494
+      },
+      {
+        "window": 40,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=040/features.csv",
+        "present": true,
+        "size": 313799559
+      },
+      {
+        "window": 41,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=041/features.csv",
+        "present": true,
+        "size": 323359995
+      },
+      {
+        "window": 42,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=07/window=042/features.csv",
+        "present": true,
+        "size": 333262886
+      }
+    ],
+    "2025-08": [
+      {
+        "window": 43,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=043/features.csv",
+        "present": true,
+        "size": 326507648
+      },
+      {
+        "window": 44,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=044/features.csv",
+        "present": true,
+        "size": 264556689
+      },
+      {
+        "window": 45,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=045/features.csv",
+        "present": true,
+        "size": 325179671
+      },
+      {
+        "window": 46,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=046/features.csv",
+        "present": true,
+        "size": 334475819
+      },
+      {
+        "window": 47,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=047/features.csv",
+        "present": true,
+        "size": 285360053
+      },
+      {
+        "window": 48,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=08/window=048/features.csv",
+        "present": true,
+        "size": 329998083
+      }
+    ],
+    "2025-09": [
+      {
+        "window": 49,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=049/features.csv",
+        "present": true,
+        "size": 320611116
+      },
+      {
+        "window": 50,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=050/features.csv",
+        "present": true,
+        "size": 307706979
+      },
+      {
+        "window": 51,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=051/features.csv",
+        "present": true,
+        "size": 327473031
+      },
+      {
+        "window": 52,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=052/features.csv",
+        "present": true,
+        "size": 289557454
+      },
+      {
+        "window": 53,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=053/features.csv",
+        "present": true,
+        "size": 281724763
+      },
+      {
+        "window": 54,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=09/window=054/features.csv",
+        "present": true,
+        "size": 323743881
+      }
+    ],
+    "2025-10": [
+      {
+        "window": 55,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=055/features.csv",
+        "present": true,
+        "size": 333638712
+      },
+      {
+        "window": 56,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=056/features.csv",
+        "present": true,
+        "size": 318393595
+      },
+      {
+        "window": 57,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=057/features.csv",
+        "present": true,
+        "size": 208393644
+      },
+      {
+        "window": 58,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=058/features.csv",
+        "present": true,
+        "size": 323568496
+      },
+      {
+        "window": 59,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=059/features.csv",
+        "present": true,
+        "size": 248026123
+      },
+      {
+        "window": 60,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=060/features.csv",
+        "present": true,
+        "size": 306034211
+      },
+      {
+        "window": 61,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=10/window=061/features.csv",
+        "present": true,
+        "size": 293153300
+      }
+    ],
+    "2025-11": [
+      {
+        "window": 62,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=062/features.csv",
+        "present": true,
+        "size": 315625018
+      },
+      {
+        "window": 63,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=063/features.csv",
+        "present": true,
+        "size": 267427996
+      },
+      {
+        "window": 64,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=064/features.csv",
+        "present": true,
+        "size": 135079537
+      },
+      {
+        "window": 65,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=065/features.csv",
+        "present": true,
+        "size": 298349006
+      },
+      {
+        "window": 66,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=066/features.csv",
+        "present": true,
+        "size": 287398003
+      },
+      {
+        "window": 67,
+        "path": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3/year=2025/month=11/window=067/features.csv",
+        "present": true,
+        "size": 275638254
+      }
+    ]
+  },
+  "s5p_windows_by_month": {
+    "2025-01": [
+      {
+        "window": 1,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=001/features.csv",
+        "present": true,
+        "size": 70853141
+      },
+      {
+        "window": 2,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=002/features.csv",
+        "present": true,
+        "size": 72329871
+      },
+      {
+        "window": 3,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=003/features.csv",
+        "present": true,
+        "size": 67618323
+      },
+      {
+        "window": 4,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=004/features.csv",
+        "present": true,
+        "size": 64923210
+      },
+      {
+        "window": 5,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=005/features.csv",
+        "present": true,
+        "size": 69581396
+      },
+      {
+        "window": 6,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=006/features.csv",
+        "present": true,
+        "size": 74123549
+      },
+      {
+        "window": 7,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=007/features.csv",
+        "present": true,
+        "size": 72688421
+      },
+      {
+        "window": 8,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=008/features.csv",
+        "present": true,
+        "size": 73553759
+      },
+      {
+        "window": 9,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=009/features.csv",
+        "present": true,
+        "size": 77297961
+      },
+      {
+        "window": 10,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=010/features.csv",
+        "present": true,
+        "size": 77997319
+      },
+      {
+        "window": 11,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=011/features.csv",
+        "present": true,
+        "size": 78825162
+      },
+      {
+        "window": 12,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=012/features.csv",
+        "present": true,
+        "size": 77560419
+      },
+      {
+        "window": 13,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=013/features.csv",
+        "present": true,
+        "size": 74267057
+      },
+      {
+        "window": 14,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=014/features.csv",
+        "present": true,
+        "size": 73891445
+      },
+      {
+        "window": 15,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=015/features.csv",
+        "present": true,
+        "size": 78213188
+      },
+      {
+        "window": 16,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=016/features.csv",
+        "present": true,
+        "size": 77535826
+      },
+      {
+        "window": 17,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=017/features.csv",
+        "present": true,
+        "size": 77622069
+      },
+      {
+        "window": 18,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=018/features.csv",
+        "present": true,
+        "size": 75803443
+      },
+      {
+        "window": 19,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=019/features.csv",
+        "present": true,
+        "size": 76877637
+      },
+      {
+        "window": 20,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=020/features.csv",
+        "present": true,
+        "size": 77613940
+      },
+      {
+        "window": 21,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=021/features.csv",
+        "present": true,
+        "size": 78136388
+      },
+      {
+        "window": 22,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=022/features.csv",
+        "present": true,
+        "size": 76112540
+      },
+      {
+        "window": 23,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=023/features.csv",
+        "present": true,
+        "size": 75285383
+      },
+      {
+        "window": 24,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=024/features.csv",
+        "present": true,
+        "size": 71520283
+      },
+      {
+        "window": 25,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=025/features.csv",
+        "present": true,
+        "size": 71953295
+      },
+      {
+        "window": 26,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=026/features.csv",
+        "present": true,
+        "size": 77670758
+      },
+      {
+        "window": 27,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=027/features.csv",
+        "present": true,
+        "size": 77538153
+      },
+      {
+        "window": 28,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=028/features.csv",
+        "present": true,
+        "size": 77258591
+      },
+      {
+        "window": 29,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=029/features.csv",
+        "present": true,
+        "size": 76488551
+      },
+      {
+        "window": 30,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=030/features.csv",
+        "present": true,
+        "size": 73861904
+      },
+      {
+        "window": 31,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=01/window=031/features.csv",
+        "present": true,
+        "size": 62427754
+      }
+    ],
+    "2025-02": [
+      {
+        "window": 32,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=032/features.csv",
+        "present": true,
+        "size": 69424356
+      },
+      {
+        "window": 33,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=033/features.csv",
+        "present": true,
+        "size": 70002561
+      },
+      {
+        "window": 34,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=034/features.csv",
+        "present": true,
+        "size": 65145137
+      },
+      {
+        "window": 35,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=035/features.csv",
+        "present": true,
+        "size": 70394781
+      },
+      {
+        "window": 36,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=036/features.csv",
+        "present": true,
+        "size": 76889361
+      },
+      {
+        "window": 37,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=037/features.csv",
+        "present": true,
+        "size": 75628349
+      },
+      {
+        "window": 38,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=038/features.csv",
+        "present": true,
+        "size": 75995143
+      },
+      {
+        "window": 39,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=039/features.csv",
+        "present": true,
+        "size": 75042849
+      },
+      {
+        "window": 40,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=040/features.csv",
+        "present": true,
+        "size": 73646855
+      },
+      {
+        "window": 41,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=041/features.csv",
+        "present": true,
+        "size": 71690877
+      },
+      {
+        "window": 42,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=042/features.csv",
+        "present": true,
+        "size": 72508406
+      },
+      {
+        "window": 43,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=043/features.csv",
+        "present": true,
+        "size": 71928738
+      },
+      {
+        "window": 44,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=044/features.csv",
+        "present": true,
+        "size": 66395833
+      },
+      {
+        "window": 45,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=045/features.csv",
+        "present": true,
+        "size": 77932923
+      },
+      {
+        "window": 46,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=046/features.csv",
+        "present": true,
+        "size": 66098953
+      },
+      {
+        "window": 47,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=047/features.csv",
+        "present": true,
+        "size": 71628694
+      },
+      {
+        "window": 48,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=048/features.csv",
+        "present": true,
+        "size": 66440762
+      },
+      {
+        "window": 49,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=049/features.csv",
+        "present": true,
+        "size": 70323779
+      },
+      {
+        "window": 50,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=050/features.csv",
+        "present": true,
+        "size": 75430843
+      },
+      {
+        "window": 51,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=051/features.csv",
+        "present": true,
+        "size": 72535359
+      },
+      {
+        "window": 52,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=052/features.csv",
+        "present": true,
+        "size": 69635711
+      },
+      {
+        "window": 53,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=053/features.csv",
+        "present": true,
+        "size": 69110948
+      },
+      {
+        "window": 54,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=054/features.csv",
+        "present": true,
+        "size": 71605225
+      },
+      {
+        "window": 55,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=055/features.csv",
+        "present": true,
+        "size": 73584309
+      },
+      {
+        "window": 56,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=056/features.csv",
+        "present": true,
+        "size": 75693817
+      },
+      {
+        "window": 57,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=057/features.csv",
+        "present": true,
+        "size": 75620806
+      },
+      {
+        "window": 58,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=058/features.csv",
+        "present": true,
+        "size": 65443811
+      },
+      {
+        "window": 59,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=02/window=059/features.csv",
+        "present": true,
+        "size": 71496213
+      }
+    ],
+    "2025-03": [
+      {
+        "window": 60,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=060/features.csv",
+        "present": true,
+        "size": 73079209
+      },
+      {
+        "window": 61,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=061/features.csv",
+        "present": true,
+        "size": 75776173
+      },
+      {
+        "window": 62,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=062/features.csv",
+        "present": true,
+        "size": 74592282
+      },
+      {
+        "window": 63,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=063/features.csv",
+        "present": true,
+        "size": 76546670
+      },
+      {
+        "window": 64,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=064/features.csv",
+        "present": true,
+        "size": 64706081
+      },
+      {
+        "window": 65,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=065/features.csv",
+        "present": true,
+        "size": 76747545
+      },
+      {
+        "window": 66,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=066/features.csv",
+        "present": true,
+        "size": 75933075
+      },
+      {
+        "window": 67,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=067/features.csv",
+        "present": true,
+        "size": 74491265
+      },
+      {
+        "window": 68,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=068/features.csv",
+        "present": true,
+        "size": 72563470
+      },
+      {
+        "window": 69,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=069/features.csv",
+        "present": true,
+        "size": 67337596
+      },
+      {
+        "window": 70,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=070/features.csv",
+        "present": true,
+        "size": 73247297
+      },
+      {
+        "window": 71,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=071/features.csv",
+        "present": true,
+        "size": 67710389
+      },
+      {
+        "window": 72,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=072/features.csv",
+        "present": true,
+        "size": 74415247
+      },
+      {
+        "window": 73,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=073/features.csv",
+        "present": true,
+        "size": 75559415
+      },
+      {
+        "window": 74,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=074/features.csv",
+        "present": true,
+        "size": 73073579
+      },
+      {
+        "window": 75,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=075/features.csv",
+        "present": true,
+        "size": 69437778
+      },
+      {
+        "window": 76,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=076/features.csv",
+        "present": true,
+        "size": 74588961
+      },
+      {
+        "window": 77,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=077/features.csv",
+        "present": true,
+        "size": 76285703
+      },
+      {
+        "window": 78,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=078/features.csv",
+        "present": true,
+        "size": 67358769
+      },
+      {
+        "window": 79,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=079/features.csv",
+        "present": true,
+        "size": 70492060
+      },
+      {
+        "window": 80,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=080/features.csv",
+        "present": true,
+        "size": 72998863
+      },
+      {
+        "window": 81,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=081/features.csv",
+        "present": true,
+        "size": 71454869
+      },
+      {
+        "window": 82,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=082/features.csv",
+        "present": true,
+        "size": 76176345
+      },
+      {
+        "window": 83,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=083/features.csv",
+        "present": true,
+        "size": 74017407
+      },
+      {
+        "window": 84,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=084/features.csv",
+        "present": true,
+        "size": 73943114
+      },
+      {
+        "window": 85,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=085/features.csv",
+        "present": true,
+        "size": 74856549
+      },
+      {
+        "window": 86,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=086/features.csv",
+        "present": true,
+        "size": 76136112
+      },
+      {
+        "window": 87,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=087/features.csv",
+        "present": true,
+        "size": 76362911
+      },
+      {
+        "window": 88,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=088/features.csv",
+        "present": true,
+        "size": 74654723
+      },
+      {
+        "window": 89,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=089/features.csv",
+        "present": true,
+        "size": 76448833
+      },
+      {
+        "window": 90,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=03/window=090/features.csv",
+        "present": true,
+        "size": 72756610
+      }
+    ],
+    "2025-04": [
+      {
+        "window": 91,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=091/features.csv",
+        "present": true,
+        "size": 75606797
+      },
+      {
+        "window": 92,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=092/features.csv",
+        "present": true,
+        "size": 76175651
+      },
+      {
+        "window": 93,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=093/features.csv",
+        "present": true,
+        "size": 76621279
+      },
+      {
+        "window": 94,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=094/features.csv",
+        "present": true,
+        "size": 72525076
+      },
+      {
+        "window": 95,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=095/features.csv",
+        "present": true,
+        "size": 71599582
+      },
+      {
+        "window": 96,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=096/features.csv",
+        "present": true,
+        "size": 71441657
+      },
+      {
+        "window": 97,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=097/features.csv",
+        "present": true,
+        "size": 74347555
+      },
+      {
+        "window": 98,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=098/features.csv",
+        "present": true,
+        "size": 76948711
+      },
+      {
+        "window": 99,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=099/features.csv",
+        "present": true,
+        "size": 73605631
+      },
+      {
+        "window": 100,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=100/features.csv",
+        "present": true,
+        "size": 71324171
+      },
+      {
+        "window": 101,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=101/features.csv",
+        "present": true,
+        "size": 72030889
+      },
+      {
+        "window": 102,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=102/features.csv",
+        "present": true,
+        "size": 76413995
+      },
+      {
+        "window": 103,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=103/features.csv",
+        "present": true,
+        "size": 77689725
+      },
+      {
+        "window": 104,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=104/features.csv",
+        "present": true,
+        "size": 72975511
+      },
+      {
+        "window": 105,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=105/features.csv",
+        "present": true,
+        "size": 69295411
+      },
+      {
+        "window": 106,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=106/features.csv",
+        "present": true,
+        "size": 75056691
+      },
+      {
+        "window": 107,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=107/features.csv",
+        "present": true,
+        "size": 72795618
+      },
+      {
+        "window": 108,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=108/features.csv",
+        "present": true,
+        "size": 74516365
+      },
+      {
+        "window": 109,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=109/features.csv",
+        "present": true,
+        "size": 76802991
+      },
+      {
+        "window": 110,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=110/features.csv",
+        "present": true,
+        "size": 74595477
+      },
+      {
+        "window": 111,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=111/features.csv",
+        "present": true,
+        "size": 76744058
+      },
+      {
+        "window": 112,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=112/features.csv",
+        "present": true,
+        "size": 75776818
+      },
+      {
+        "window": 113,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=113/features.csv",
+        "present": true,
+        "size": 78085331
+      },
+      {
+        "window": 114,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=114/features.csv",
+        "present": true,
+        "size": 75826451
+      },
+      {
+        "window": 115,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=115/features.csv",
+        "present": true,
+        "size": 70744389
+      },
+      {
+        "window": 116,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=116/features.csv",
+        "present": true,
+        "size": 71743281
+      },
+      {
+        "window": 117,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=117/features.csv",
+        "present": true,
+        "size": 71361283
+      },
+      {
+        "window": 118,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=118/features.csv",
+        "present": true,
+        "size": 76944232
+      },
+      {
+        "window": 119,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=119/features.csv",
+        "present": true,
+        "size": 77534005
+      },
+      {
+        "window": 120,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=04/window=120/features.csv",
+        "present": true,
+        "size": 75127217
+      }
+    ],
+    "2025-05": [
+      {
+        "window": 121,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=121/features.csv",
+        "present": true,
+        "size": 75305757
+      },
+      {
+        "window": 122,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=122/features.csv",
+        "present": true,
+        "size": 78182996
+      },
+      {
+        "window": 123,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=123/features.csv",
+        "present": true,
+        "size": 71018012
+      },
+      {
+        "window": 124,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=124/features.csv",
+        "present": true,
+        "size": 72744551
+      },
+      {
+        "window": 125,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=125/features.csv",
+        "present": true,
+        "size": 73905327
+      },
+      {
+        "window": 126,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=126/features.csv",
+        "present": true,
+        "size": 73492260
+      },
+      {
+        "window": 127,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=127/features.csv",
+        "present": true,
+        "size": 77341065
+      },
+      {
+        "window": 128,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=128/features.csv",
+        "present": true,
+        "size": 77574825
+      },
+      {
+        "window": 129,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=129/features.csv",
+        "present": true,
+        "size": 76242261
+      },
+      {
+        "window": 130,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=130/features.csv",
+        "present": true,
+        "size": 78215011
+      },
+      {
+        "window": 131,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=131/features.csv",
+        "present": true,
+        "size": 74232987
+      },
+      {
+        "window": 132,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=132/features.csv",
+        "present": true,
+        "size": 73937843
+      },
+      {
+        "window": 133,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=133/features.csv",
+        "present": true,
+        "size": 78950797
+      },
+      {
+        "window": 134,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=134/features.csv",
+        "present": true,
+        "size": 77306772
+      },
+      {
+        "window": 135,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=135/features.csv",
+        "present": true,
+        "size": 78042995
+      },
+      {
+        "window": 136,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=136/features.csv",
+        "present": true,
+        "size": 75177591
+      },
+      {
+        "window": 137,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=137/features.csv",
+        "present": true,
+        "size": 74727494
+      },
+      {
+        "window": 138,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=138/features.csv",
+        "present": true,
+        "size": 78135582
+      },
+      {
+        "window": 139,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=139/features.csv",
+        "present": true,
+        "size": 78185082
+      },
+      {
+        "window": 140,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=140/features.csv",
+        "present": true,
+        "size": 78277201
+      },
+      {
+        "window": 141,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=141/features.csv",
+        "present": true,
+        "size": 78421073
+      },
+      {
+        "window": 142,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=142/features.csv",
+        "present": true,
+        "size": 76697117
+      },
+      {
+        "window": 143,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=143/features.csv",
+        "present": true,
+        "size": 77900023
+      },
+      {
+        "window": 144,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=144/features.csv",
+        "present": true,
+        "size": 77746736
+      },
+      {
+        "window": 145,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=145/features.csv",
+        "present": true,
+        "size": 77469543
+      },
+      {
+        "window": 146,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=146/features.csv",
+        "present": true,
+        "size": 76839209
+      },
+      {
+        "window": 147,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=147/features.csv",
+        "present": true,
+        "size": 76600411
+      },
+      {
+        "window": 148,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=148/features.csv",
+        "present": true,
+        "size": 74713893
+      },
+      {
+        "window": 149,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=149/features.csv",
+        "present": true,
+        "size": 77715784
+      },
+      {
+        "window": 150,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=150/features.csv",
+        "present": true,
+        "size": 78585963
+      },
+      {
+        "window": 151,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=05/window=151/features.csv",
+        "present": true,
+        "size": 76970107
+      }
+    ],
+    "2025-06": [
+      {
+        "window": 152,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=152/features.csv",
+        "present": true,
+        "size": 72858163
+      },
+      {
+        "window": 153,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=153/features.csv",
+        "present": true,
+        "size": 77324423
+      },
+      {
+        "window": 154,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=154/features.csv",
+        "present": true,
+        "size": 76497212
+      },
+      {
+        "window": 155,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=155/features.csv",
+        "present": true,
+        "size": 77922885
+      },
+      {
+        "window": 156,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=156/features.csv",
+        "present": true,
+        "size": 77578975
+      },
+      {
+        "window": 157,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=157/features.csv",
+        "present": true,
+        "size": 77483061
+      },
+      {
+        "window": 158,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=158/features.csv",
+        "present": true,
+        "size": 76665153
+      },
+      {
+        "window": 159,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=159/features.csv",
+        "present": true,
+        "size": 75977669
+      },
+      {
+        "window": 160,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=160/features.csv",
+        "present": true,
+        "size": 77247285
+      },
+      {
+        "window": 161,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=161/features.csv",
+        "present": true,
+        "size": 78693549
+      },
+      {
+        "window": 162,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=162/features.csv",
+        "present": true,
+        "size": 79040757
+      },
+      {
+        "window": 163,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=163/features.csv",
+        "present": true,
+        "size": 77278539
+      },
+      {
+        "window": 164,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=164/features.csv",
+        "present": true,
+        "size": 78150660
+      },
+      {
+        "window": 165,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=165/features.csv",
+        "present": true,
+        "size": 73667462
+      },
+      {
+        "window": 166,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=166/features.csv",
+        "present": true,
+        "size": 77907060
+      },
+      {
+        "window": 167,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=167/features.csv",
+        "present": true,
+        "size": 78766523
+      },
+      {
+        "window": 168,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=168/features.csv",
+        "present": true,
+        "size": 77206209
+      },
+      {
+        "window": 169,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=169/features.csv",
+        "present": true,
+        "size": 77398951
+      },
+      {
+        "window": 170,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=170/features.csv",
+        "present": true,
+        "size": 78260038
+      },
+      {
+        "window": 171,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=171/features.csv",
+        "present": true,
+        "size": 77652449
+      },
+      {
+        "window": 172,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=172/features.csv",
+        "present": true,
+        "size": 77384895
+      },
+      {
+        "window": 173,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=173/features.csv",
+        "present": true,
+        "size": 77811515
+      },
+      {
+        "window": 174,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=174/features.csv",
+        "present": true,
+        "size": 75873638
+      },
+      {
+        "window": 175,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=175/features.csv",
+        "present": true,
+        "size": 76546881
+      },
+      {
+        "window": 176,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=176/features.csv",
+        "present": true,
+        "size": 78171798
+      },
+      {
+        "window": 177,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=177/features.csv",
+        "present": true,
+        "size": 78754765
+      },
+      {
+        "window": 178,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=178/features.csv",
+        "present": true,
+        "size": 78966749
+      },
+      {
+        "window": 179,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=179/features.csv",
+        "present": true,
+        "size": 77426559
+      },
+      {
+        "window": 180,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=180/features.csv",
+        "present": true,
+        "size": 78266744
+      },
+      {
+        "window": 181,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=06/window=181/features.csv",
+        "present": true,
+        "size": 78376275
+      }
+    ],
+    "2025-07": [
+      {
+        "window": 182,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=182/features.csv",
+        "present": true,
+        "size": 76360688
+      },
+      {
+        "window": 183,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=183/features.csv",
+        "present": true,
+        "size": 77615893
+      },
+      {
+        "window": 184,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=184/features.csv",
+        "present": true,
+        "size": 75324467
+      },
+      {
+        "window": 185,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=185/features.csv",
+        "present": true,
+        "size": 77592097
+      },
+      {
+        "window": 186,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=186/features.csv",
+        "present": true,
+        "size": 79199782
+      },
+      {
+        "window": 187,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=187/features.csv",
+        "present": true,
+        "size": 78858556
+      },
+      {
+        "window": 188,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=188/features.csv",
+        "present": true,
+        "size": 78428763
+      },
+      {
+        "window": 189,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=189/features.csv",
+        "present": true,
+        "size": 77959373
+      },
+      {
+        "window": 190,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=190/features.csv",
+        "present": true,
+        "size": 77640733
+      },
+      {
+        "window": 191,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=191/features.csv",
+        "present": true,
+        "size": 78234886
+      },
+      {
+        "window": 192,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=192/features.csv",
+        "present": true,
+        "size": 78573718
+      },
+      {
+        "window": 193,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=193/features.csv",
+        "present": true,
+        "size": 78325983
+      },
+      {
+        "window": 194,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=194/features.csv",
+        "present": true,
+        "size": 78513735
+      },
+      {
+        "window": 195,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=195/features.csv",
+        "present": true,
+        "size": 77259339
+      },
+      {
+        "window": 196,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=196/features.csv",
+        "present": true,
+        "size": 78550342
+      },
+      {
+        "window": 197,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=197/features.csv",
+        "present": true,
+        "size": 79027471
+      },
+      {
+        "window": 198,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=198/features.csv",
+        "present": true,
+        "size": 77596395
+      },
+      {
+        "window": 199,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=199/features.csv",
+        "present": true,
+        "size": 77017545
+      },
+      {
+        "window": 200,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=200/features.csv",
+        "present": true,
+        "size": 78272629
+      },
+      {
+        "window": 201,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=201/features.csv",
+        "present": true,
+        "size": 78538142
+      },
+      {
+        "window": 202,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=202/features.csv",
+        "present": true,
+        "size": 78036469
+      },
+      {
+        "window": 203,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=203/features.csv",
+        "present": true,
+        "size": 78487891
+      },
+      {
+        "window": 204,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=204/features.csv",
+        "present": true,
+        "size": 78972483
+      },
+      {
+        "window": 205,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=205/features.csv",
+        "present": true,
+        "size": 77707003
+      },
+      {
+        "window": 206,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=206/features.csv",
+        "present": true,
+        "size": 75872805
+      },
+      {
+        "window": 207,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=207/features.csv",
+        "present": true,
+        "size": 77988140
+      },
+      {
+        "window": 208,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=208/features.csv",
+        "present": true,
+        "size": 78732457
+      },
+      {
+        "window": 209,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=209/features.csv",
+        "present": true,
+        "size": 78493525
+      },
+      {
+        "window": 210,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=210/features.csv",
+        "present": true,
+        "size": 78574271
+      },
+      {
+        "window": 211,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=211/features.csv",
+        "present": true,
+        "size": 76204703
+      },
+      {
+        "window": 212,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=07/window=212/features.csv",
+        "present": true,
+        "size": 78095066
+      }
+    ],
+    "2025-08": [
+      {
+        "window": 213,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=213/features.csv",
+        "present": true,
+        "size": 79048195
+      },
+      {
+        "window": 214,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=214/features.csv",
+        "present": true,
+        "size": 78943753
+      },
+      {
+        "window": 215,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=215/features.csv",
+        "present": true,
+        "size": 78858505
+      },
+      {
+        "window": 216,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=216/features.csv",
+        "present": true,
+        "size": 76859231
+      },
+      {
+        "window": 217,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=217/features.csv",
+        "present": true,
+        "size": 77751496
+      },
+      {
+        "window": 218,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=218/features.csv",
+        "present": true,
+        "size": 76169979
+      },
+      {
+        "window": 219,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=219/features.csv",
+        "present": true,
+        "size": 77939624
+      },
+      {
+        "window": 220,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=220/features.csv",
+        "present": true,
+        "size": 78909831
+      },
+      {
+        "window": 221,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=221/features.csv",
+        "present": true,
+        "size": 78365481
+      },
+      {
+        "window": 222,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=222/features.csv",
+        "present": true,
+        "size": 76313887
+      },
+      {
+        "window": 223,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=223/features.csv",
+        "present": true,
+        "size": 77747592
+      },
+      {
+        "window": 224,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=224/features.csv",
+        "present": true,
+        "size": 78149037
+      },
+      {
+        "window": 225,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=225/features.csv",
+        "present": true,
+        "size": 78912553
+      },
+      {
+        "window": 226,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=226/features.csv",
+        "present": true,
+        "size": 78832331
+      },
+      {
+        "window": 227,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=227/features.csv",
+        "present": true,
+        "size": 76933321
+      },
+      {
+        "window": 228,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=228/features.csv",
+        "present": true,
+        "size": 77948784
+      },
+      {
+        "window": 229,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=229/features.csv",
+        "present": true,
+        "size": 79146561
+      },
+      {
+        "window": 230,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=230/features.csv",
+        "present": true,
+        "size": 78844029
+      },
+      {
+        "window": 231,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=231/features.csv",
+        "present": true,
+        "size": 78974839
+      },
+      {
+        "window": 232,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=232/features.csv",
+        "present": true,
+        "size": 77898141
+      },
+      {
+        "window": 233,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=233/features.csv",
+        "present": true,
+        "size": 76683168
+      },
+      {
+        "window": 234,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=234/features.csv",
+        "present": true,
+        "size": 75329802
+      },
+      {
+        "window": 235,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=235/features.csv",
+        "present": true,
+        "size": 71151987
+      },
+      {
+        "window": 236,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=236/features.csv",
+        "present": true,
+        "size": 75625153
+      },
+      {
+        "window": 237,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=237/features.csv",
+        "present": true,
+        "size": 73489741
+      },
+      {
+        "window": 238,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=238/features.csv",
+        "present": true,
+        "size": 73502369
+      },
+      {
+        "window": 239,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=239/features.csv",
+        "present": true,
+        "size": 77796916
+      },
+      {
+        "window": 240,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=240/features.csv",
+        "present": true,
+        "size": 72684732
+      },
+      {
+        "window": 241,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=241/features.csv",
+        "present": true,
+        "size": 78097735
+      },
+      {
+        "window": 242,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=242/features.csv",
+        "present": true,
+        "size": 78694971
+      },
+      {
+        "window": 243,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=08/window=243/features.csv",
+        "present": true,
+        "size": 77125515
+      }
+    ],
+    "2025-09": [
+      {
+        "window": 244,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=244/features.csv",
+        "present": true,
+        "size": 78340381
+      },
+      {
+        "window": 245,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=245/features.csv",
+        "present": true,
+        "size": 71603153
+      },
+      {
+        "window": 246,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=246/features.csv",
+        "present": true,
+        "size": 78193028
+      },
+      {
+        "window": 247,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=247/features.csv",
+        "present": true,
+        "size": 77920125
+      },
+      {
+        "window": 248,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=248/features.csv",
+        "present": true,
+        "size": 77383125
+      },
+      {
+        "window": 249,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=249/features.csv",
+        "present": true,
+        "size": 77584507
+      },
+      {
+        "window": 250,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=250/features.csv",
+        "present": true,
+        "size": 75303562
+      },
+      {
+        "window": 251,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=251/features.csv",
+        "present": true,
+        "size": 77757553
+      },
+      {
+        "window": 252,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=252/features.csv",
+        "present": true,
+        "size": 77131003
+      },
+      {
+        "window": 253,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=253/features.csv",
+        "present": true,
+        "size": 76703379
+      },
+      {
+        "window": 254,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=254/features.csv",
+        "present": true,
+        "size": 76408374
+      },
+      {
+        "window": 255,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=255/features.csv",
+        "present": true,
+        "size": 78412681
+      },
+      {
+        "window": 256,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=256/features.csv",
+        "present": true,
+        "size": 78737259
+      },
+      {
+        "window": 257,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=257/features.csv",
+        "present": true,
+        "size": 78069211
+      },
+      {
+        "window": 258,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=258/features.csv",
+        "present": true,
+        "size": 78364053
+      },
+      {
+        "window": 259,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=259/features.csv",
+        "present": true,
+        "size": 75900797
+      },
+      {
+        "window": 260,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=260/features.csv",
+        "present": true,
+        "size": 75907034
+      },
+      {
+        "window": 261,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=261/features.csv",
+        "present": true,
+        "size": 67225271
+      },
+      {
+        "window": 262,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=262/features.csv",
+        "present": true,
+        "size": 72475253
+      },
+      {
+        "window": 263,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=263/features.csv",
+        "present": true,
+        "size": 78311079
+      },
+      {
+        "window": 264,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=264/features.csv",
+        "present": true,
+        "size": 72448221
+      },
+      {
+        "window": 265,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=265/features.csv",
+        "present": true,
+        "size": 76327281
+      },
+      {
+        "window": 266,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=266/features.csv",
+        "present": true,
+        "size": 77873716
+      },
+      {
+        "window": 267,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=267/features.csv",
+        "present": true,
+        "size": 75594920
+      },
+      {
+        "window": 268,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=268/features.csv",
+        "present": true,
+        "size": 76061033
+      },
+      {
+        "window": 269,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=269/features.csv",
+        "present": true,
+        "size": 76660347
+      },
+      {
+        "window": 270,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=270/features.csv",
+        "present": true,
+        "size": 73108460
+      },
+      {
+        "window": 271,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=271/features.csv",
+        "present": true,
+        "size": 76247803
+      },
+      {
+        "window": 272,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=272/features.csv",
+        "present": true,
+        "size": 70398527
+      },
+      {
+        "window": 273,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=09/window=273/features.csv",
+        "present": true,
+        "size": 73587133
+      }
+    ],
+    "2025-10": [
+      {
+        "window": 274,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=274/features.csv",
+        "present": true,
+        "size": 78047731
+      },
+      {
+        "window": 275,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=275/features.csv",
+        "present": true,
+        "size": 72304669
+      },
+      {
+        "window": 276,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=276/features.csv",
+        "present": true,
+        "size": 77737280
+      },
+      {
+        "window": 277,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=277/features.csv",
+        "present": true,
+        "size": 78409499
+      },
+      {
+        "window": 278,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=278/features.csv",
+        "present": true,
+        "size": 77714801
+      },
+      {
+        "window": 279,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=279/features.csv",
+        "present": true,
+        "size": 77615131
+      },
+      {
+        "window": 280,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=280/features.csv",
+        "present": true,
+        "size": 76123079
+      },
+      {
+        "window": 281,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=281/features.csv",
+        "present": true,
+        "size": 75711854
+      },
+      {
+        "window": 282,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=282/features.csv",
+        "present": true,
+        "size": 76071363
+      },
+      {
+        "window": 283,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=283/features.csv",
+        "present": true,
+        "size": 73629217
+      },
+      {
+        "window": 284,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=284/features.csv",
+        "present": true,
+        "size": 77494663
+      },
+      {
+        "window": 285,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=285/features.csv",
+        "present": true,
+        "size": 73945903
+      },
+      {
+        "window": 286,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=286/features.csv",
+        "present": true,
+        "size": 69748693
+      },
+      {
+        "window": 287,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=287/features.csv",
+        "present": true,
+        "size": 73240277
+      },
+      {
+        "window": 288,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=288/features.csv",
+        "present": true,
+        "size": 74868757
+      },
+      {
+        "window": 289,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=289/features.csv",
+        "present": true,
+        "size": 77968243
+      },
+      {
+        "window": 290,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=290/features.csv",
+        "present": true,
+        "size": 76926443
+      },
+      {
+        "window": 291,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=291/features.csv",
+        "present": true,
+        "size": 74623721
+      },
+      {
+        "window": 292,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=292/features.csv",
+        "present": true,
+        "size": 75476417
+      },
+      {
+        "window": 293,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=293/features.csv",
+        "present": true,
+        "size": 78933103
+      },
+      {
+        "window": 294,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=294/features.csv",
+        "present": true,
+        "size": 76507356
+      },
+      {
+        "window": 295,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=295/features.csv",
+        "present": true,
+        "size": 72843081
+      },
+      {
+        "window": 296,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=296/features.csv",
+        "present": true,
+        "size": 75129011
+      },
+      {
+        "window": 297,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=297/features.csv",
+        "present": true,
+        "size": 69395487
+      },
+      {
+        "window": 298,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=298/features.csv",
+        "present": true,
+        "size": 67942430
+      },
+      {
+        "window": 299,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=299/features.csv",
+        "present": true,
+        "size": 74401890
+      },
+      {
+        "window": 300,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=300/features.csv",
+        "present": true,
+        "size": 76613273
+      },
+      {
+        "window": 301,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=301/features.csv",
+        "present": true,
+        "size": 77185329
+      },
+      {
+        "window": 302,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=302/features.csv",
+        "present": true,
+        "size": 73979936
+      },
+      {
+        "window": 303,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=303/features.csv",
+        "present": true,
+        "size": 72343270
+      },
+      {
+        "window": 304,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=10/window=304/features.csv",
+        "present": true,
+        "size": 74595219
+      }
+    ],
+    "2025-11": [
+      {
+        "window": 305,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=305/features.csv",
+        "present": true,
+        "size": 78143567
+      },
+      {
+        "window": 306,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=306/features.csv",
+        "present": true,
+        "size": 75360851
+      },
+      {
+        "window": 307,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=307/features.csv",
+        "present": true,
+        "size": 74103035
+      },
+      {
+        "window": 308,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=308/features.csv",
+        "present": true,
+        "size": 72363562
+      },
+      {
+        "window": 309,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=309/features.csv",
+        "present": true,
+        "size": 68064289
+      },
+      {
+        "window": 310,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=310/features.csv",
+        "present": true,
+        "size": 76422598
+      },
+      {
+        "window": 311,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=311/features.csv",
+        "present": true,
+        "size": 75438023
+      },
+      {
+        "window": 312,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=312/features.csv",
+        "present": true,
+        "size": 74318461
+      },
+      {
+        "window": 313,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=313/features.csv",
+        "present": true,
+        "size": 68709224
+      },
+      {
+        "window": 314,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=314/features.csv",
+        "present": true,
+        "size": 69760255
+      },
+      {
+        "window": 315,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=315/features.csv",
+        "present": true,
+        "size": 61551074
+      },
+      {
+        "window": 316,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=316/features.csv",
+        "present": true,
+        "size": 68304141
+      },
+      {
+        "window": 317,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=317/features.csv",
+        "present": true,
+        "size": 71009247
+      },
+      {
+        "window": 318,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=318/features.csv",
+        "present": true,
+        "size": 70531092
+      },
+      {
+        "window": 319,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=319/features.csv",
+        "present": true,
+        "size": 63293163
+      },
+      {
+        "window": 320,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=320/features.csv",
+        "present": true,
+        "size": 69118370
+      },
+      {
+        "window": 321,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=321/features.csv",
+        "present": true,
+        "size": 72516879
+      },
+      {
+        "window": 322,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=322/features.csv",
+        "present": true,
+        "size": 75926569
+      },
+      {
+        "window": 323,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=323/features.csv",
+        "present": true,
+        "size": 73933803
+      },
+      {
+        "window": 324,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=324/features.csv",
+        "present": true,
+        "size": 71223135
+      },
+      {
+        "window": 325,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=325/features.csv",
+        "present": true,
+        "size": 74299737
+      },
+      {
+        "window": 326,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=326/features.csv",
+        "present": true,
+        "size": 72578766
+      },
+      {
+        "window": 327,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=327/features.csv",
+        "present": true,
+        "size": 74247495
+      },
+      {
+        "window": 328,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=328/features.csv",
+        "present": true,
+        "size": 73877745
+      },
+      {
+        "window": 329,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=329/features.csv",
+        "present": true,
+        "size": 68465766
+      },
+      {
+        "window": 330,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=330/features.csv",
+        "present": true,
+        "size": 76716088
+      },
+      {
+        "window": 331,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=331/features.csv",
+        "present": true,
+        "size": 66963483
+      },
+      {
+        "window": 332,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=332/features.csv",
+        "present": true,
+        "size": 75258725
+      },
+      {
+        "window": 333,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=333/features.csv",
+        "present": true,
+        "size": 71611301
+      },
+      {
+        "window": 334,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=11/window=334/features.csv",
+        "present": true,
+        "size": 67473958
+      }
+    ],
+    "2025-12": [
+      {
+        "window": 335,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=335/features.csv",
+        "present": true,
+        "size": 74545648
+      },
+      {
+        "window": 336,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=336/features.csv",
+        "present": true,
+        "size": 65202889
+      },
+      {
+        "window": 337,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=337/features.csv",
+        "present": true,
+        "size": 68843213
+      },
+      {
+        "window": 338,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=338/features.csv",
+        "present": true,
+        "size": 72495027
+      },
+      {
+        "window": 339,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=339/features.csv",
+        "present": true,
+        "size": 73113517
+      },
+      {
+        "window": 340,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=340/features.csv",
+        "present": true,
+        "size": 73459839
+      },
+      {
+        "window": 341,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=341/features.csv",
+        "present": true,
+        "size": 71827548
+      },
+      {
+        "window": 342,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=342/features.csv",
+        "present": true,
+        "size": 73528157
+      },
+      {
+        "window": 343,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=343/features.csv",
+        "present": true,
+        "size": 75820167
+      },
+      {
+        "window": 344,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=344/features.csv",
+        "present": true,
+        "size": 75198073
+      },
+      {
+        "window": 345,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=345/features.csv",
+        "present": true,
+        "size": 74743863
+      },
+      {
+        "window": 346,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=346/features.csv",
+        "present": true,
+        "size": 75165877
+      },
+      {
+        "window": 347,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=347/features.csv",
+        "present": true,
+        "size": 76034009
+      },
+      {
+        "window": 348,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=348/features.csv",
+        "present": true,
+        "size": 74840655
+      },
+      {
+        "window": 349,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=349/features.csv",
+        "present": true,
+        "size": 71495099
+      },
+      {
+        "window": 350,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=350/features.csv",
+        "present": true,
+        "size": 68535794
+      },
+      {
+        "window": 351,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=351/features.csv",
+        "present": true,
+        "size": 76368994
+      },
+      {
+        "window": 352,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=352/features.csv",
+        "present": true,
+        "size": 68182375
+      },
+      {
+        "window": 353,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=353/features.csv",
+        "present": true,
+        "size": 68373873
+      },
+      {
+        "window": 354,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=354/features.csv",
+        "present": true,
+        "size": 69306993
+      },
+      {
+        "window": 355,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=355/features.csv",
+        "present": true,
+        "size": 66037177
+      },
+      {
+        "window": 356,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=356/features.csv",
+        "present": true,
+        "size": 63354317
+      },
+      {
+        "window": 357,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=357/features.csv",
+        "present": true,
+        "size": 63806329
+      },
+      {
+        "window": 358,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=358/features.csv",
+        "present": true,
+        "size": 65705883
+      },
+      {
+        "window": 359,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=359/features.csv",
+        "present": true,
+        "size": 75107389
+      },
+      {
+        "window": 360,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=360/features.csv",
+        "present": true,
+        "size": 72302061
+      },
+      {
+        "window": 361,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=361/features.csv",
+        "present": true,
+        "size": 75366177
+      },
+      {
+        "window": 362,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=362/features.csv",
+        "present": true,
+        "size": 76593500
+      },
+      {
+        "window": 363,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=363/features.csv",
+        "present": true,
+        "size": 77892882
+      },
+      {
+        "window": 364,
+        "path": "gs://sentinel-2-2016-2025/sentinel5p_features_daily/year=2025/month=12/window=364/features.csv",
+        "present": true,
+        "size": 64308343
+      }
+    ]
+  },
+  "verdict": "Sentinel-2/5P are now tabular CA-grid CSVs (~413k rows/file) with Hive partitions. S2 years on GCS: [2021, 2022, 2023, 2024, 2025]. S5P years on GCS: [2025] (still sparse). Gap counts \u2014 S2 items missing=6, S5P month gaps=108. See missing_for_team.md.",
+  "intended_aoi": {
+    "north": 42.01,
+    "south": 32.53,
+    "west": -124.41,
+    "east": -114.13
+  },
+  "data_mode": "csv_features_v3"
+}
