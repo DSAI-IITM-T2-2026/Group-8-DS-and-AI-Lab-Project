@@ -14,7 +14,8 @@ Full hybrid next-day California wildfire risk model. Does **not** modify `cnn_ls
 
 Split: train **2022–2023** / val **2024** / test **2025** (fire season May–Nov).
 
-Architecture & preprocessing diagrams: [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §11.
+Architecture & preprocessing diagrams: [`../ARCHITECTURE.md`](../ARCHITECTURE.md) §11.  
+**Full experiment report:** [`REPORT.md`](REPORT.md).
 
 ---
 
