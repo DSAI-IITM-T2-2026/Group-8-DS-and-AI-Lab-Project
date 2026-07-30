@@ -17,7 +17,7 @@
 
 ## Roushan Kumar Singh (Roll Number: 23F1002240)
 
-- Audited the prepared numerical archive for D+1 labels, ERA5 through D−5, chronological train/validation/test splits, missing 2021 Sentinel-5P coverage and potential data leakage.
+- Audited the prepared numerical archive for D+1 labels, ERA5 through D−5, chronological train/validation/test splits, and potential data leakage.
 - Implemented and tuned the isolated V1–V5 LightGBM/MLP experiment track, adding causal fire-history and direction-aware features, classifier–ranker blending and hard-negative reranking; retained V4 with 38.33% Recall@25.
 - Added reproducible training/evaluation scripts, 30 tests, metric comparisons, California risk maps and the consolidated Milestone 4 report while excluding large input data, caches, virtual environments and model weights from Git.
 
@@ -27,6 +27,6 @@
 | ------------------- | ----------- | ---------------- |
 | Ripunjay Kumar      | 21F3002511  | ✅               |
 | Lakshay Garg        | 21F3001076  | ✅               |
-| Roushan Kumar Singh | 23F1002240  |               |
+| Roushan Kumar Singh | 23F1002240  |   ✅            |
 | Lakshmi Sruthi K    | 21F1005626  |                |
 | R Aditya            | 21F1004839  |                |
