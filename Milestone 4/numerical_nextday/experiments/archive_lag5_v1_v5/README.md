@@ -30,8 +30,12 @@ tables, virtual environments, or caches are stored in Git.
 
 V4 is the retained model. V5 captures only one additional 2025 positive at
 K=25 and loses recall at K=50, so the extra complexity is not justified.
-See [the consolidated report](reports/EXPERIMENT_REPORT.md) for architectures,
-parameters, validation results, limitations, and the leakage assessment.
+See the submission-ready
+[Milestone 4 report](reports/MILESTONE4_REPORT.md) for the dataset,
+preprocessing, architectures, full training configuration, hyperparameter
+tables, quantitative/qualitative results, artifacts, limitations and leakage
+assessment. The shorter generated summary remains available as
+[`EXPERIMENT_REPORT.md`](reports/EXPERIMENT_REPORT.md).
 
 ## Environment
 
@@ -145,6 +149,27 @@ python scripts/build_experiment_report.py \
   --archive-meta local_data/archive/meta.json \
   --artifact-root local_artifacts/archive_training
 ```
+
+### Regenerate report figures
+
+These commands use saved metrics and scored predictions; they do not retrain
+the models or download data:
+
+```bash
+python scripts/generate_experiment_metrics_charts.py \
+  --artifact-root local_artifacts/archive_training \
+  --comparison-root reports/colleague_side_by_side
+
+python scripts/generate_experiment_risk_maps.py \
+  --predictions local_artifacts/archive_training/lag5_v4_recall25/test_predictions.parquet \
+  --date 2025-10-21 --date 2025-09-02 --date 2025-04-14
+
+# Omit --date for all 365 test days.
+```
+
+The maps intentionally match the shared presentation style: California
+outline, YlOrRd calibrated Confidence %, and blue rings for retrospective
+FIRMS positives.
 
 ## Tests
 
