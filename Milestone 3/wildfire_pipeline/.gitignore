@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+data/cache/
+artifacts/*.pt
+artifacts/*.joblib
+artifacts/*.npz
+artifacts/*.json
+artifacts/alerts/
+logs/
+.DS_Store
