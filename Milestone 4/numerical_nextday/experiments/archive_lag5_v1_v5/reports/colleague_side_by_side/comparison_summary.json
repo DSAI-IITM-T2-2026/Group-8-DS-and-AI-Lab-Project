@@ -1,0 +1,339 @@
+{
+  "buckets": [
+    {
+      "bucket": "fire_season",
+      "colleague_pr_auc": 0.07016741138279757,
+      "colleague_roc_auc": 0.7838287450154496,
+      "our_v4_pr_auc": 0.21672707282658252,
+      "our_v4_roc_auc": 0.8485892155597832,
+      "positives": 1624,
+      "pr_absolute_gain": 0.14655966144378496,
+      "pr_ratio": 3.0887140989743838,
+      "roc_absolute_gain": 0.06476047054433354,
+      "rows": 163968
+    },
+    {
+      "bucket": "jan",
+      "colleague_pr_auc": 0.024580225466001505,
+      "colleague_roc_auc": 0.7171867287874483,
+      "our_v4_pr_auc": 0.1146021712546436,
+      "our_v4_roc_auc": 0.864991624164286,
+      "positives": 260,
+      "pr_absolute_gain": 0.09002194578864209,
+      "pr_ratio": 4.6623726626575195,
+      "roc_absolute_gain": 0.14780489537683772,
+      "rows": 20832
+    },
+    {
+      "bucket": "feb",
+      "colleague_pr_auc": 0.013882472156505992,
+      "colleague_roc_auc": 0.7315249358904313,
+      "our_v4_pr_auc": 0.053682296684417326,
+      "our_v4_roc_auc": 0.7786828418847633,
+      "positives": 115,
+      "pr_absolute_gain": 0.03979982452791134,
+      "pr_ratio": 3.866911892869112,
+      "roc_absolute_gain": 0.047157905994332006,
+      "rows": 18816
+    },
+    {
+      "bucket": "mar",
+      "colleague_pr_auc": 0.027895415689739734,
+      "colleague_roc_auc": 0.7591964100937643,
+      "our_v4_pr_auc": 0.051226768631848454,
+      "our_v4_roc_auc": 0.828453276481314,
+      "positives": 158,
+      "pr_absolute_gain": 0.02333135294210872,
+      "pr_ratio": 1.8363866379195155,
+      "roc_absolute_gain": 0.06925686638754969,
+      "rows": 20832
+    },
+    {
+      "bucket": "dec",
+      "colleague_pr_auc": 0.008302137974308085,
+      "colleague_roc_auc": 0.63830161538172,
+      "our_v4_pr_auc": 0.043772826482356586,
+      "our_v4_roc_auc": 0.7661051315494474,
+      "positives": 118,
+      "pr_absolute_gain": 0.0354706885080485,
+      "pr_ratio": 5.2724763931672305,
+      "roc_absolute_gain": 0.12780351616772734,
+      "rows": 20832
+    }
+  ],
+  "closest_no_fire_history_comparison": {
+    "colleague_absolute_gain": 0.010056731599635979,
+    "colleague_model": "C_mlp_default",
+    "colleague_pr_auc": 0.0865,
+    "colleague_relative_gain_percent": 13.155810590103044,
+    "our_model": "V1 classifier",
+    "our_pr_auc": 0.07644326840036401,
+    "qualification": "V1 is the closest existing test result without explicit FIRMS-history predictors; it is global rather than fire-season-specialized and therefore not architecture-identical."
+  },
+  "fire_season_models": [
+    {
+      "family": "colleague",
+      "model": "Colleague C default LGBM",
+      "positives": 1624,
+      "pr_auc": 0.0701674113827975,
+      "pr_delta_vs_colleague_mlp": -0.016332588617202493,
+      "pr_ratio_vs_colleague_mlp": 0.8111839466219365,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.7838287450154496,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Exact artifact"
+    },
+    {
+      "family": "colleague",
+      "model": "Colleague val-selected LGBM",
+      "positives": 1624,
+      "pr_auc": 0.0756979432842256,
+      "pr_delta_vs_colleague_mlp": -0.010802056715774389,
+      "pr_ratio_vs_colleague_mlp": 0.8751207316095446,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.7924975558954179,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Exact artifact"
+    },
+    {
+      "family": "colleague",
+      "model": "Colleague highest-test LGBM",
+      "positives": 1624,
+      "pr_auc": 0.0795636767136193,
+      "pr_delta_vs_colleague_mlp": -0.006936323286380691,
+      "pr_ratio_vs_colleague_mlp": 0.9198112914869284,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.784619143813453,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Exact artifact; test-selected"
+    },
+    {
+      "family": "colleague",
+      "model": "Colleague C default MLP",
+      "positives": 1624,
+      "pr_auc": 0.0865,
+      "pr_delta_vs_colleague_mlp": 0.0,
+      "pr_ratio_vs_colleague_mlp": 1.0,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.7813,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Rounded to four decimals in the colleague report"
+    },
+    {
+      "family": "ours",
+      "model": "Our V1 classifier",
+      "positives": 1624,
+      "pr_auc": 0.07644326840036401,
+      "pr_delta_vs_colleague_mlp": -0.010056731599635979,
+      "pr_ratio_vs_colleague_mlp": 0.8837372069406245,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.7920974597910316,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Recomputed with colleague metric functions"
+    },
+    {
+      "family": "ours",
+      "model": "Our V2 classifier",
+      "positives": 1624,
+      "pr_auc": 0.184619239805882,
+      "pr_delta_vs_colleague_mlp": 0.098119239805882,
+      "pr_ratio_vs_colleague_mlp": 2.1343264717443007,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.845922180025678,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Recomputed with colleague metric functions"
+    },
+    {
+      "family": "ours",
+      "model": "Our V3 classifier",
+      "positives": 1624,
+      "pr_auc": 0.21071808397552866,
+      "pr_delta_vs_colleague_mlp": 0.12421808397552866,
+      "pr_ratio_vs_colleague_mlp": 2.436047213589927,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.845142934412944,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Recomputed with colleague metric functions"
+    },
+    {
+      "family": "ours",
+      "model": "Our V4 classifier",
+      "positives": 1624,
+      "pr_auc": 0.21672707282658252,
+      "pr_delta_vs_colleague_mlp": 0.13022707282658252,
+      "pr_ratio_vs_colleague_mlp": 2.5055152927928614,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.8485892155597832,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Recomputed with colleague metric functions"
+    },
+    {
+      "family": "ours",
+      "model": "Our V5 base classifier (inherits V4)",
+      "positives": 1624,
+      "pr_auc": 0.21672707282658252,
+      "pr_delta_vs_colleague_mlp": 0.13022707282658252,
+      "pr_ratio_vs_colleague_mlp": 2.5055152927928614,
+      "prevalence": 0.009904371584699454,
+      "roc_auc": 0.8485892155597832,
+      "rows": 163968,
+      "scope": "2025 Apr-Nov",
+      "source_note": "Recomputed with colleague metric functions; V5 reranker excluded from probability comparison"
+    }
+  ],
+  "generated_at_utc": "2026-07-30T16:42:01.586492+00:00",
+  "headline": {
+    "colleague_best_reported_model": "C_mlp_default",
+    "colleague_pr_auc": 0.0865,
+    "colleague_roc_auc": 0.7813,
+    "our_model": "V4 classifier",
+    "our_pr_auc": 0.21672707282658252,
+    "our_roc_auc": 0.8485892155597832,
+    "pr_absolute_gain": 0.13022707282658252,
+    "pr_ratio": 2.5055152927928614,
+    "pr_relative_gain_percent": 150.55152927928614,
+    "roc_absolute_gain": 0.06728921555978318
+  },
+  "limitations": [
+    "The colleague MLP metrics are rounded to four decimals in the report.",
+    "The colleague report does not provide full-period daily top-K recall.",
+    "V2-V5 and the colleague best-test comparisons reuse the 2025 benchmark.",
+    "V4 fire histories require D-1 FIRMS availability at serving time."
+  ],
+  "metric_contract": {
+    "fire_season_months": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "pr_auc": "sklearn.metrics.average_precision_score",
+    "probability_column_for_our_models": "p_fire",
+    "roc_auc": "sklearn.metrics.roc_auc_score",
+    "test_year": 2025
+  },
+  "months": [
+    {
+      "colleague_pr_auc": 0.04044442302328177,
+      "colleague_roc_auc": 0.8054559230402072,
+      "month": 5,
+      "our_v4_pr_auc": 0.08366501980505406,
+      "our_v4_roc_auc": 0.8454782429118681,
+      "positives": 177,
+      "pr_absolute_gain": 0.043220596781772286,
+      "pr_ratio": 2.0686416952194473,
+      "roc_absolute_gain": 0.04002231987166094,
+      "rows": 20832
+    },
+    {
+      "colleague_pr_auc": 0.03857470449664323,
+      "colleague_roc_auc": 0.7908078875038788,
+      "month": 6,
+      "our_v4_pr_auc": 0.04811027570476223,
+      "our_v4_roc_auc": 0.8139691209520261,
+      "positives": 154,
+      "pr_absolute_gain": 0.009535571208119,
+      "pr_ratio": 1.2471975179731782,
+      "roc_absolute_gain": 0.023161233448147356,
+      "rows": 20160
+    },
+    {
+      "colleague_pr_auc": 0.20756687271099392,
+      "colleague_roc_auc": 0.8315441788811365,
+      "month": 7,
+      "our_v4_pr_auc": 0.43997510914731924,
+      "our_v4_roc_auc": 0.8637110389333038,
+      "positives": 233,
+      "pr_absolute_gain": 0.23240823643632533,
+      "pr_ratio": 2.119678845669749,
+      "roc_absolute_gain": 0.03216686005216729,
+      "rows": 20832
+    },
+    {
+      "colleague_pr_auc": 0.09171395438188192,
+      "colleague_roc_auc": 0.7580190291007388,
+      "month": 8,
+      "our_v4_pr_auc": 0.3273856943415734,
+      "our_v4_roc_auc": 0.8670428967390293,
+      "positives": 198,
+      "pr_absolute_gain": 0.23567173995969148,
+      "pr_ratio": 3.569638846651327,
+      "roc_absolute_gain": 0.10902386763829053,
+      "rows": 20832
+    },
+    {
+      "colleague_pr_auc": 0.11131504991571908,
+      "colleague_roc_auc": 0.8043725308373103,
+      "month": 9,
+      "our_v4_pr_auc": 0.3872546534504173,
+      "our_v4_roc_auc": 0.8779447693206744,
+      "positives": 217,
+      "pr_absolute_gain": 0.27593960353469826,
+      "pr_ratio": 3.4789065247118223,
+      "roc_absolute_gain": 0.07357223848336414,
+      "rows": 20160
+    },
+    {
+      "colleague_pr_auc": 0.05337314238061449,
+      "colleague_roc_auc": 0.7801333464177325,
+      "month": 10,
+      "our_v4_pr_auc": 0.0746375608603311,
+      "our_v4_roc_auc": 0.8396470857786217,
+      "positives": 229,
+      "pr_absolute_gain": 0.021264418479716614,
+      "pr_ratio": 1.39841046510014,
+      "roc_absolute_gain": 0.05951373936088922,
+      "rows": 20832
+    },
+    {
+      "colleague_pr_auc": 0.02730175326700756,
+      "colleague_roc_auc": 0.6762208734001682,
+      "month": 11,
+      "our_v4_pr_auc": 0.056413949763751754,
+      "our_v4_roc_auc": 0.7813389711064129,
+      "positives": 165,
+      "pr_absolute_gain": 0.029112196496744194,
+      "pr_ratio": 2.0663123430949923,
+      "roc_absolute_gain": 0.1051180977062447,
+      "rows": 20160
+    }
+  ],
+  "serving_contract": [
+    {
+      "colleague_cutoff": "D-5",
+      "our_v1_cutoff": "D-5",
+      "our_v2_v5_cutoff": "D-5",
+      "source": "ERA5"
+    },
+    {
+      "colleague_cutoff": "latest window_end <= D",
+      "our_v1_cutoff": "latest window_end <= D in archive",
+      "our_v2_v5_cutoff": "latest window_end <= D; stale S2 >15d and S5P >2d masked",
+      "source": "S2/S5P observation window"
+    },
+    {
+      "colleague_cutoff": "not used",
+      "our_v1_cutoff": "not used",
+      "our_v2_v5_cutoff": "history through D-1",
+      "source": "FIRMS as predictor"
+    },
+    {
+      "colleague_cutoff": "D+1",
+      "our_v1_cutoff": "D+1",
+      "our_v2_v5_cutoff": "D+1",
+      "source": "FIRMS target"
+    }
+  ]
+}
