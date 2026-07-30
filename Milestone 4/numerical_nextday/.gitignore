@@ -5,7 +5,6 @@ __pycache__/
 .pytest_cache/
 *.partial
 artifacts/models/
-artifacts/maps/daily/
 artifacts/test_predictions.parquet
 *.joblib
 *.pt
