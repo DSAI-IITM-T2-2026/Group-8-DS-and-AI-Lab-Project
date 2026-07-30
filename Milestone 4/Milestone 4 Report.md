@@ -1,6 +1,5 @@
 # Milestone 4 Report — Numerical Next-Day Wildfire Forecasting
 
-Companion document: [Milestone 4 Work Log](Work%20Log.md).
 
 **Project:** AI-powered wildfire early detection and alerting
 
@@ -1073,20 +1072,8 @@ evaluation, calibrated false-alert costs and monitoring for sensor/data drift.
 
 ![Combined fire-season comparison](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_model_comparison.png)
 
-## 21. Code and contribution map
 
-| Contributor / track | Work included in this report | Code status |
-|---|---|---|
-| Lakshay Garg (21F3001076) | Source-data build, Stage A/B/C features, LightGBM/MLP sweeps, routing, evaluation and maps | Committed under `Milestone 4/numerical_nextday/` |
-| Roushan Kumar Singh (23F1002240) | Archive audit, V1–V5 experiments, causal feature engineering, ranking, Recall@K evaluation, comparisons and report | Committed under `Milestone 4/numerical_nextday/experiments/archive_lag5_v1_v5/` |
-| Ripunjay Kumar (21F3002511) | LagFireNet work recorded in the Milestone 4 work log: dense 1 km lag-consistent model, ConvLSTM/U-Net architecture and training setup | Recorded in `Work Log.md`; its referenced `Milestone 3/wildfire_pipeline/` code is not present in this repository snapshot |
-
-The two numerical codebases described quantitatively in this report are both
-on the `main` branch. They are deliberately kept as separate runnable tracks
-so their source modules, configurations and results do not overwrite one
-another.
-
-## 22. Team sign-off
+## 21. Team sign-off
 
 The signature state below mirrors the Milestone 4 work log. Blank entries are
 left for the respective members; this report does not sign on anyone's behalf.
