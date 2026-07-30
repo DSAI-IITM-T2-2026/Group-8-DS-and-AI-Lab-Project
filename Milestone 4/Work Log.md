@@ -15,6 +15,12 @@
 - Added daily inference (`infer_live.py`) and cluster alert evaluation (`evaluate_alerts.py`); wrote `REPORT.md` documenting the shift from MultimodalFusion (cell risk) to LagFireNet (1 km lag-consistent alerts).
 - Debugged training blockers (empty land mask wiping all modalities; Tversky sum-scale loss stuck near 1.0; disk-blowing full-day caches) and started fire-season training (train 2022–2023 / val 2024).
 
+## Roushan Kumar Singh (Roll Number: 23F1002240)
+
+- Audited the prepared numerical archive for D+1 labels, ERA5 through D−5, chronological train/validation/test splits, missing 2021 Sentinel-5P coverage and potential data leakage.
+- Implemented and tuned the isolated V1–V5 LightGBM/MLP experiment track, adding causal fire-history and direction-aware features, classifier–ranker blending and hard-negative reranking; retained V4 with 38.33% Recall@25.
+- Added reproducible training/evaluation scripts, 30 tests, metric comparisons, California risk maps and the consolidated Milestone 4 report while excluding large input data, caches, virtual environments and model weights from Git.
+
 ## Signatures
 
 | Member              | Roll Number | Signature Commit |
