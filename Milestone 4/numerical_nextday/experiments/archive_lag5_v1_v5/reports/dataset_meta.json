@@ -1,0 +1,131 @@
+{
+  "dataset_name": "california_numerical_nextday_wildfire_lag5",
+  "audit_date": "2026-07-30",
+  "audit_status": "conditionally_ready",
+  "primary_training_stage": "stage_c",
+  "unit": "california_era5_0.25_degree_land_cell_x_forecast_day",
+  "one_liner": "y_fire is the FIRMS outcome on D+1; ERA5 predictors end at D-5.",
+  "target": {
+    "column": "y_fire",
+    "type": "binary",
+    "positive_definition": "at least one qualifying FIRMS pixel in the cell on label_date",
+    "forecast_day_column": "eo_asof_date",
+    "verified_relation": "label_date = eo_asof_date + 1 day"
+  },
+  "timing": {
+    "forecast_day_D": "eo_asof_date",
+    "era5_source_day_column": "feature_end_date",
+    "verified_era5_relation": "feature_end_date = eo_asof_date - 5 days",
+    "era5_lag_days": 5,
+    "naming_note": "In this archive, feature_end_date is the ERA5 source day D-5, not forecast day D."
+  },
+  "splits": {
+    "train": {
+      "label_years": [2019, 2020, 2021, 2022],
+      "rows": 981792,
+      "positives": 13804,
+      "positive_rate": 0.014060004563084646
+    },
+    "val": {
+      "label_years": [2023, 2024],
+      "rows": 491232,
+      "positives": 5536,
+      "positive_rate": 0.011269624128721257
+    },
+    "test": {
+      "label_years": [2025],
+      "rows": 245280,
+      "positives": 2275,
+      "positive_rate": 0.009275114155251141
+    }
+  },
+  "coverage": {
+    "label_date_min": "2019-01-01",
+    "label_date_max": "2025-12-31",
+    "calendar_days": 2557,
+    "cells": 672,
+    "rows": 1718304,
+    "positives": 21615,
+    "positive_rate": 0.012579264204704173,
+    "rows_per_day": 672,
+    "duplicate_cell_label_keys": 0
+  },
+  "stages": {
+    "stage_a": {
+      "description": "ERA5 plus terrain",
+      "feature_count": 33
+    },
+    "stage_b": {
+      "description": "Stage A plus Sentinel-2",
+      "feature_count": 53
+    },
+    "stage_c": {
+      "description": "Stage B plus Sentinel-5P",
+      "feature_count": 63,
+      "feature_columns_file": "stage_c/metadata/feature_columns.json"
+    }
+  },
+  "s5p_2021": {
+    "mode": "placeholder",
+    "rows": 245280,
+    "s5n_available": 0,
+    "s5p_measurement_encoding": "all numeric S5P measurements are zero",
+    "status_column": "s5p_2021_status",
+    "status_value": "placeholder"
+  },
+  "training_contract": {
+    "target_column": "y_fire",
+    "use_exact_feature_allowlist": "stage_c/metadata/feature_columns.json",
+    "never_use_as_features": [
+      "y_fire",
+      "firms_n_pixels",
+      "firms_max_confidence",
+      "label_date",
+      "eo_asof_date",
+      "feature_end_date",
+      "cell_id",
+      "region"
+    ],
+    "missing_value_note": "Stage C feature columns contain no NaN or infinity; source absence is encoded with availability indicators and numeric placeholders.",
+    "class_imbalance_note": "The training positive rate is 1.406%; use class weighting or an imbalance-aware loss and evaluate with PR-AUC in addition to ROC-AUC."
+  },
+  "audit_findings": [
+    {
+      "severity": "warning",
+      "code": "S2_MAX_AGE_EXCEPTION",
+      "detail": "7392 test rows covering 2025-12-21 through 2025-12-31 are marked S2-available with lag 16-26 days, exceeding the documented 15-day limit."
+    },
+    {
+      "severity": "warning",
+      "code": "S5P_MAX_AGE_EXCEPTION",
+      "detail": "6720 training rows covering 10 days in 2020 are marked S5P-available with lag 3-7 days, exceeding the documented 2-day limit."
+    },
+    {
+      "severity": "warning",
+      "code": "S2_UNAVAILABLE_NONZERO_VALUES",
+      "detail": "3360 training rows for 2019-01-01 through 2019-01-05 have s2n_available=0 but retain nonzero S2 measurements."
+    },
+    {
+      "severity": "warning",
+      "code": "SOIL_SMALL_NEGATIVES",
+      "detail": "Small negative ERA5 soil values occur in 46002 swvl1 rows, 45232 swvl2 rows, and 21039 soil_moisture_index rows."
+    },
+    {
+      "severity": "warning",
+      "code": "CONSTANT_FEATURES",
+      "detail": "s5n_s5p_aai_std and s5n_s5p_co_std are constant zero and should be removed or ignored."
+    },
+    {
+      "severity": "compatibility",
+      "code": "REPOSITORY_CONTRACT_MISMATCH",
+      "detail": "The existing numerical_nextday runner expects feature_end_date=D, an era5_source_date column, and separate tune/calibration files; this archive uses eo_asof_date=D and a combined val file."
+    }
+  ],
+  "sha256": {
+    "stage_c/train.parquet": "46623d1b2d2e4315a232257f119aaedeaa21a79460dcda64e0826d947aba22dd",
+    "stage_c/val.parquet": "9918f348467124170103a5f4feab38ef0b9071b8cfa72dba0ae514c284504427",
+    "stage_c/test.parquet": "d975ec61e706c920132e383c028e780ea78c7883640de09a74a869ce809ebb30",
+    "stage_c/metadata/feature_columns.json": "6ec3974e652cfb83c7c691955971570fce8950992e6e7e86c66329150981c408",
+    "stage_c/metadata/dataset_metadata.json": "6c247b0ee00b3449827adc71e152bac71adfbf5b4be4f2660abbc09c67b952a9"
+  }
+}

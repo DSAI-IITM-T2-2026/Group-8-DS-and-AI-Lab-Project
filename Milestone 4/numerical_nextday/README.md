@@ -6,6 +6,13 @@ Plan: [`docs/MILESTONE4_PLAN.md`](../../docs/MILESTONE4_PLAN.md)
 **Split:** train 2019–2022 / val 2023–2024 / test 2025.  
 **Models:** `fire_season` (Apr–Nov) + `jan` / `feb` / `mar` / `dec`.
 
+## Additional experiment track
+
+The independent archive-based V1–V5 experiments are available under
+[`experiments/archive_lag5_v1_v5`](experiments/archive_lag5_v1_v5/README.md).
+They are isolated from this implementation and include source code, tests, and
+lightweight result reports only—no downloaded input data or trained models.
+
 ---
 
 ## Setup

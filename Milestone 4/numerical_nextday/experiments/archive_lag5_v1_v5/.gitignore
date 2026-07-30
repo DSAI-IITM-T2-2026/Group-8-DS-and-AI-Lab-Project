@@ -1,0 +1,30 @@
+# Local Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Input, derived, and downloaded data
+local_data/
+data/*.parquet
+data/*.csv
+outputs/
+cache/
+*.partial
+*.claim.json
+
+# Generated models and experiment outputs
+local_artifacts/
+artifacts/
+*.joblib
+*.pkl
+*.pt
+*.onnx
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
