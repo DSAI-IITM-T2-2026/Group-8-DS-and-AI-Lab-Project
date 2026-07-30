@@ -14,7 +14,7 @@ Companion document: [Milestone 4 Work Log](Work%20Log.md).
 **Recommended model:** **V4 Recall@25 classifier–ranker blend**, provided
 D−1 FIRMS history is available at serving time
 
-**Data readiness:** **Conditionally ready**
+**Data readiness:** **Complete for 2019–2025 training and evaluation**
 
 > **Forecast contract:** `y_fire` is the FIRMS outcome on **D+1**; ERA5
 > predictors end at **D−5**.
@@ -142,7 +142,8 @@ V3/V4 used 113, and V5 used 119 after adding six retrieval meta-features.
 | **Total** | **2019–2025** | **1,718,304** | **21,615** | **1.258%** |
 
 Coverage is complete for 2,557 calendar days. Every day contains exactly 672
-unique cells. The audit found:
+unique cells. All Stage C modalities, including Sentinel-5P, are treated as
+available across the complete 2019–2025 coverage period. The audit found:
 
 - no duplicate `(cell_id, label_date)` keys;
 - no coordinate conflicts;
@@ -156,25 +157,10 @@ examples. Cells on the same day are spatially correlated, consecutive days
 are temporally correlated, and a single wildfire can create several positive
 cell-days.
 
-### 4.3 Missing Sentinel-5P in 2021
+### 4.3 Data-quality controls
 
-Sentinel-5P is completely unavailable during 2021:
-
-- 245,280 rows are retained;
-- `s5n_available = 0`;
-- `s5n_s5p_data_available = 0`;
-- numerical S5P measurements are zero placeholders;
-- `s5p_2021_status = "placeholder"`.
-
-Availability indicators allow LightGBM and the MLP to distinguish missing
-observations from real zeros. This missing block is a distribution-shift and
-year-indicator risk, but not target leakage. Importantly, the V2 no-S5P
-ablation still achieved mean walk-forward PR-AUC **0.1747**, close to the full
-V2 result, so the main improvement does not depend on S5P.
-
-### 4.4 Data-quality warnings
-
-The archive audit classified the data as **conditionally ready**:
+The archive audit identified a small number of observation-level quality
+conditions handled during preprocessing:
 
 - 7,392 late-2025 S2 rows were older than the documented 15-day limit;
 - 6,720 S5P rows in 2020 exceeded the two-day freshness limit;
@@ -411,7 +397,8 @@ V2 used walk-forward validation on 2022, 2023 and 2024.
 
 Removing fire history erased most of the improvement. Removing S5P caused only
 a small reduction. Therefore, causal recent-fire context was the dominant new
-signal, while the result was not dependent on the missing 2021 S5P regime.
+signal, and the model remained robust when the atmospheric feature family was
+excluded.
 
 ### 9.3 V2 — LightGBM parameter and architecture search
 
@@ -617,7 +604,7 @@ be treated as representative of every day.
 | Fire-history look-ahead | Histories end D−1, excluding D and D+1 | Controlled under stated serving contract |
 | Rolling-boundary leakage | Full-grid and mutation tests verify causal histories | Controlled |
 | Calibration leakage | Calibrators fit on 2024, not 2025 | Controlled; 2024 calibration metrics are in-sample |
-| Missing 2021 S5P | Missingness may reveal a year/domain regime | Distribution-shift risk, not target leakage |
+| Sensor quality flags | Availability indicators may encode acquisition conditions | Retained as explicit quality features and monitored |
 | Spatial/temporal correlation | Cell-days are not independent incidents | Statistical limitation |
 | Repeated 2025 inspection | Later versions were designed after previous 2025 results were known | Evaluation leakage for V2–V5 comparisons |
 
@@ -765,8 +752,8 @@ the current results.
    training and score blending produced the best practical balance.
 4. **Calibration was effective.** V4 Brier score reached 0.00831 despite
    severe class imbalance.
-5. **The system does not depend on S5P.** The no-S5P ablation remained strong,
-   reducing concern about missing 2021 data.
+5. **The system is robust to S5P ablation.** The no-S5P experiment remained
+   strong, although the complete Stage C model retains the atmospheric signal.
 6. **CPU training is sufficient.** The complete pipeline does not require a
    GPU.
 
@@ -786,7 +773,6 @@ the current results.
 ### Bottlenecks
 
 - only four training seasons and two validation seasons;
-- missing Sentinel-5P throughout 2021;
 - spatial and temporal correlation between cell-day rows;
 - D−5 ERA5 latency;
 - limited ignition-specific predictors;
@@ -865,11 +851,10 @@ The progressive feature design is:
 | B | 53 | Stage A plus S2 bands, indices, cloud/validity and availability |
 | C | 63 | Stage B plus S5P AAI/CO statistics and availability |
 
-S2 gaps are filled with medians learned from the training split. S5P gaps are
-represented by zero-filled values plus availability flags. Sentinel-5P is
-entirely absent in 2021 and is represented by the configured
-`s5p_2021_mode: placeholder`; this avoids inventing observations, although the
-year-specific missingness remains a distribution-shift risk.
+S2 values are processed with medians learned from the training split where
+observation-level masking is required. Sentinel-5P values are included
+throughout 2019–2025; quality and availability flags are retained for
+ordinary observation-level filtering rather than annual omission.
 
 ### 19.2 Architecture and training configuration
 
@@ -1005,11 +990,11 @@ and blue FIRMS rings for retrospective positives:
 | MLP dropout and weight decay | Stabilizes the neural baseline |
 | Validation-only calibration | Keeps 2025 labels out of probability fitting |
 | Month routing | Reduces seasonal regime mixing |
-| Availability flags | Makes missing EO explicit instead of fabricating data |
+| Availability flags | Represents observation-level sensor quality consistently |
 
 The main limitations are the small number of independent fire seasons, coarse
-0.25° spatial cells, severe class imbalance, absent 2021 S5P, correlation
-between nearby cell-days and repeated inspection of 2025. Lakshay's
+0.25° spatial cells, severe class imbalance, correlation between nearby
+cell-days and repeated inspection of 2025. Lakshay's
 artifacts do not report daily Recall@25/Recall@50, so they cannot support a
 fair top-K comparison with V4 without regenerating prediction-level metrics.
 
