@@ -1,0 +1,146 @@
+project:
+  name: numerical_nextday_wildfire
+  random_seed: 42
+  timezone: America/Los_Angeles
+
+task:
+  target: y_fire
+  label_definition: any_firms_activity
+  lead_days: 1
+  history_days: 7
+  firms_confidence_min: 30
+  era5_lag_days: 5
+  offline_ablation_lag_days: 0
+
+aoi:
+  name: california_land_cells
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+  crs: EPSG:4326
+  resolution_deg: 0.25
+
+temporal:
+  start_date: "2019-01-01"
+  end_date: "2025-12-31"
+  train_years: [2019, 2020, 2021, 2022]
+  tune_years: [2023]
+  calibration_years: [2024]
+  test_years: [2025]
+
+model_buckets:
+  fire_season: [4, 5, 6, 7, 8, 9, 10, 11]
+  jan: [1]
+  feb: [2]
+  mar: [3]
+  dec: [12]
+  winter_fallback: fire_season
+  min_train_positives: 10
+  min_calibration_positives: 5
+
+paths:
+  workspace: "."
+  dem_cells: "data/era5_grid_dem_features.parquet"
+  cache_dir: "outputs/cache"
+  dataset_dir: "outputs/datasets"
+  artifact_dir: "artifacts"
+  manifest_dir: "outputs/manifests"
+  report_dir: "outputs/reports"
+  # Optional read-only seeds from Milestone 3; leave [] on other machines.
+  era5_daily_seed_dirs: []
+  firms_seed_dirs: []
+
+gcs:
+  era5_prefix: "gs://dsai-lab-project/wildfire_satellite/era5/raw"
+  firms_prefix: "gs://wildfire-detection-first/firms_daily_geotiff"
+  firms_vsigs_prefix: "/vsigs/wildfire-detection-first/firms_daily_geotiff"
+  s2_prefix_by_year:
+    "2019": "gs://sentinel-2-2016-2025/sentinel2_features_v3"
+    "2020": "gs://sentinel-2-2016-2025/sentinel2_features_v3"
+    "2021": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3"
+    "2022": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3"
+    "2023": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3"
+    "2024": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3"
+    "2025": "gs://sentinel-2-data-2016-2025/sentinel2_features_v3"
+  s5p_prefix_by_year:
+    "2019": "gs://plated-mechanic-s5p-2016-2025/sentinel5p_features_daily"
+    "2020": "gs://sentinel-5p/sentinel5p_features"
+    "2021": "gs://plated-mechanic-s5p-2016-2025/sentinel5p_features_daily"
+    "2022": "gs://sentinel-5p/sentinel5p_features"
+    "2023": "gs://sentinel-2-2016-2025/sentinel5p_features_daily"
+    "2024": "gs://sentinel-2-2016-2025/sentinel5p_features_daily"
+    "2025": "gs://sentinel-2-2016-2025/sentinel5p_features_daily"
+
+era5:
+  instant_vars:
+    [t2m, d2m, sp, u10, v10, i10fg, swvl1, swvl2, cvh, cvl, lai_hv, lai_lv, blh]
+  accum_vars: [tp]
+
+features:
+  max_age_days:
+    s2: 15
+    s5p: 2
+  s2:
+    - B2_mean
+    - B3_mean
+    - B4_mean
+    - B8_mean
+    - B11_mean
+    - B12_mean
+    - NDVI_mean
+    - NDVI_std
+    - NDMI_mean
+    - NDMI_std
+    - NBR_mean
+    - NDWI_mean
+    - EVI_mean
+    - SAVI_mean
+    - MSAVI_mean
+    - valid_fraction
+    - cloud_percentage
+    - clear_observation_count_mean
+    - evi_valid_fraction
+    - s2_data_available
+  s5p:
+    - s5p_aai_mean
+    - s5p_aai_max
+    - s5p_aai_std
+    - s5p_aai_valid_fraction
+    - s5p_co_mean
+    - s5p_co_max
+    - s5p_co_std
+    - s5p_co_valid_fraction
+    - s5p_data_available
+
+training:
+  num_boost_round: 400
+  early_stopping_rounds: 40
+  learning_rate: 0.05
+  num_leaves: 63
+  min_data_in_leaf: 50
+  feature_fraction: 0.85
+  bagging_fraction: 0.85
+  bagging_freq: 1
+  lambda_l2: 0.0
+  top_k_per_day: 25
+  run_hyperparameter_sweep: true
+  run_mlp: true
+  max_explain_rows: 2000
+  mlp:
+    hidden_layers: [128, 64]
+    max_epochs: 20
+    batch_size: 1024
+    patience: 5
+    learning_rate_init: 0.001
+    alpha: 0.0001
+
+execution:
+  mode: single_machine
+  max_workers: 8
+  eo_read_mode: stream
+  eo_parallel_streams: 2
+  eo_stream_retries: 3
+  allow_missing_s5p: true
+  fail_on_missing_s2: false
+  claim_ttl_hours: 24
