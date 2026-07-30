@@ -3,8 +3,6 @@
 
 **Project:** AI-powered wildfire early detection and alerting
 
-**Presentation:** [Milestone 4 Presentation](Milestone%204%20Presentation.pdf)
-
 **Scope:** Combined Milestone 4 numerical submission:
 `numerical_nextday` Stage A/B/C models and archive lag-5 V1–V5 experiments
 
