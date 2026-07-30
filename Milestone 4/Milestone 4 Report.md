@@ -4,13 +4,15 @@ Companion document: [Milestone 4 Work Log](Work%20Log.md).
 
 **Project:** AI-powered wildfire early detection and alerting
 
-**Experiment track:** Archive lag-5 models V1–V5
+**Scope:** Combined Milestone 4 numerical submission:
+`numerical_nextday` Stage A/B/C models and archive lag-5 V1–V5 experiments
 
 **Submission deadline:** 30 July 2026
 
 **Dataset:** `california_numerical_nextday_wildfire_lag5`
 
-**Recommended model:** **V4 Recall@25 classifier–ranker blend**
+**Recommended model:** **V4 Recall@25 classifier–ranker blend**, provided
+D−1 FIRMS history is available at serving time
 
 **Data readiness:** **Conditionally ready**
 
@@ -29,6 +31,23 @@ Companion document: [Milestone 4 Work Log](Work%20Log.md).
 | Fresh production holdout | Not yet | Only V1 first saw 2025 once; V2–V5 2025 results are descriptive |
 
 ## 2. Executive summary
+
+This report combines the two numerical next-day forecasting implementations
+committed to the repository:
+
+1. **Lakshay Garg's `numerical_nextday` track** builds the source data from
+   GCS/Milestone 3 inputs, progressively adds ERA5+DEM (Stage A), Sentinel-2
+   (Stage B) and Sentinel-5P (Stage C), and compares routed LightGBM and MLP
+   models under an operational ERA5 D−5 cutoff.
+2. **Roushan Kumar Singh's archive lag-5 track** starts from the prepared
+   train/validation/test tables and develops five isolated versions focused on
+   causal feature engineering and daily top-K alert recall.
+
+Both implementations predict `y_fire` on **D+1** using ERA5 no later than
+**D−5**, use the same chronological split, include runnable source and tests,
+and intentionally exclude downloaded inputs and trained weights from Git.
+Section 19 documents Lakshay's pipeline in full; Section 20 gives the
+controlled side-by-side comparison.
 
 Five isolated versions were trained from the supplied local archive without
 repeating GCS downloads:
@@ -525,18 +544,18 @@ population: 163,968 cell-days and 1,624 positives.
 
 | Model | PR-AUC | ROC-AUC |
 |---|---:|---:|
-| Colleague default Stage C LightGBM | 0.070167 | 0.783829 |
-| Colleague default Stage C MLP | 0.086500 | 0.781300 |
+| Lakshay Stage C default LightGBM | 0.070167 | 0.783829 |
+| Lakshay Stage C default MLP | 0.086500 | 0.781300 |
 | Our V1 classifier | 0.076443 | 0.792097 |
 | Our V2 classifier | 0.184619 | 0.845922 |
 | Our V3 classifier | 0.210718 | 0.845143 |
 | **Our V4 classifier** | **0.216727** | **0.848589** |
 
-V4's PR-AUC is 2.51× the colleague MLP on this identical population.
+V4's PR-AUC is 2.51× Lakshay's MLP on this identical population.
 However, this is a best-system comparison, not a pure architecture comparison:
-V2–V5 use causal D−1 FIRMS history while the colleague pipeline does not. If
+V2–V5 use causal D−1 FIRMS history while Lakshay's pipeline does not. If
 explicit FIRMS history is disallowed, V1 is the closest comparison and the
-colleague MLP is better by 0.0101 absolute PR-AUC.
+Stage C MLP is better by 0.0101 absolute PR-AUC.
 
 ![Fair fire-season model comparison](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_model_comparison.png)
 
@@ -796,7 +815,7 @@ the current results.
 8. Monitor PR-AUC, Recall@K, calibration drift, sensor availability and
    false-alert burden after deployment.
 
-## 18. Final conclusion
+## 18. Archive V1–V5 conclusion
 
 Milestone 4 is complete as a training and experimentation milestone. The work
 includes a fully executable lag-aware pipeline, five isolated model versions,
@@ -809,3 +828,289 @@ model to retain. It is a strong experiment under the available data, but it
 should not yet be called production-grade: the 50% Recall@25 target was not
 met, D−1 FIRMS availability must be confirmed, and a fresh independent
 holdout is still required.
+
+## 19. Lakshay Garg track — progressive Stage A/B/C numerical pipeline
+
+This section incorporates the complete `numerical_nextday` work contributed
+by **Lakshay Garg (21F3001076)**. Its code, tests, released metrics and figures
+are committed under [`numerical_nextday/`](numerical_nextday/). The V1–V5
+archive track remains separately runnable under
+[`numerical_nextday/experiments/archive_lag5_v1_v5/`](numerical_nextday/experiments/archive_lag5_v1_v5/).
+
+### 19.1 Dataset and preprocessing
+
+| Item | Stage A/B/C pipeline setting |
+|---|---|
+| Prediction unit | Approximately 672 California ERA5 land cells at 0.25° × day |
+| Label | FIRMS fire on `label_date = D+1`, confidence ≥30 |
+| ERA5 window | Seven daily observations ending D−5 |
+| EO cutoff | Latest S2/S5P window with `window_end ≤ D` |
+| Split | Train 2019–2022 / validation 2023–2024 / test 2025 |
+| Train rows | 981,792 |
+| Validation rows | 491,232 |
+| Test rows | 245,280 |
+| Total rows / positives | 1,718,304 / 21,615 (approximately 1.26%) |
+| Fire-season test | 163,968 rows / 1,624 positives |
+
+The source pipeline reads ERA5, FIRMS, Copernicus DEM and causal numerical
+summaries from Sentinel-2 and Sentinel-5P. FIRMS pixels are thresholded and
+aggregated to a cell-day label. Weather is converted to daily statistics and
+seven-day rollups; terrain is joined statically; satellite features are
+aggregated to the ERA5 grid.
+
+The progressive feature design is:
+
+| Stage | Approximate feature count | Contents |
+|---|---:|---|
+| A | 33 | ERA5 weather, seven-day rollups and DEM/terrain |
+| B | 53 | Stage A plus S2 bands, indices, cloud/validity and availability |
+| C | 63 | Stage B plus S5P AAI/CO statistics and availability |
+
+S2 gaps are filled with medians learned from the training split. S5P gaps are
+represented by zero-filled values plus availability flags. Sentinel-5P is
+entirely absent in 2021 and is represented by the configured
+`s5p_2021_mode: placeholder`; this avoids inventing observations, although the
+year-specific missingness remains a distribution-shift risk.
+
+### 19.2 Architecture and training configuration
+
+The implementation contains two tabular learners and a calendar router:
+
+```mermaid
+flowchart LR
+    A["Stage A: ERA5 D−5 + DEM"] --> B["Stage B: + causal S2"]
+    B --> C["Stage C: + causal S5P"]
+    C --> L["LightGBM"]
+    C --> N["Two-layer MLP"]
+    L --> I["Validation isotonic calibration"]
+    N --> I
+    I --> R["Month router: Apr–Nov / Jan / Feb / Mar / Dec"]
+    R --> O["D+1 confidence map and alerts"]
+```
+
+| Component | Configuration |
+|---|---|
+| LightGBM objective | Binary log-loss |
+| Imbalance | `scale_pos_weight = n_negative / n_positive` |
+| Boosting rounds | 400 maximum |
+| Early stopping | 40 rounds on validation |
+| Default learning rate | 0.05 |
+| Default leaves / min leaf | 63 / 50 |
+| Feature / bagging fraction | 0.85 / 0.85 |
+| Seed | 42 |
+| MLP | Input → 128 hidden units → dropout 0.2 → binary output |
+| MLP loss | `BCEWithLogitsLoss` with positive-class weighting |
+| MLP optimizer | AdamW, learning rate 0.001, weight decay 0.0001 |
+| MLP training | Batch 1,024, maximum 20 epochs, patience 5 |
+| Calibration | Isotonic regression fitted on validation scores only |
+| Model selection | Highest validation PR-AUC |
+| Hardware | CPU sufficient; GPU optional for the MLP |
+
+Separate LightGBM models are routed by the label month: a main Apr–Nov
+`fire_season` model and Jan, Feb, Mar and Dec models, with a fire-season
+fallback when a winter bucket is too sparse.
+
+### 19.3 Hyperparameter experiments
+
+The Stage C fire-season LightGBM one-factor sweep produced:
+
+| Experiment | Changed setting | Val PR-AUC | Test PR-AUC | Test ROC-AUC |
+|---|---|---:|---:|---:|
+| `C_default` | Defaults | 0.0894 | 0.0702 | 0.7838 |
+| `lgbm_lr_03` | Learning rate 0.03 | **0.1021** | 0.0757 | **0.7925** |
+| `lgbm_lr_10` | Learning rate 0.10 | 0.0710 | 0.0464 | 0.7636 |
+| `lgbm_leaves_31` | 31 leaves | 0.0965 | **0.0796** | 0.7846 |
+| `lgbm_leaves_127` | 127 leaves | 0.0907 | 0.0679 | 0.7780 |
+| `lgbm_minleaf_20` | Minimum leaf 20 | 0.0953 | 0.0676 | 0.7853 |
+| `lgbm_ff_07` | Feature fraction 0.70 | 0.0925 | 0.0715 | 0.7847 |
+| `lgbm_bf_07` | Bagging fraction 0.70 | 0.0955 | 0.0767 | 0.7862 |
+| `lgbm_l2_1` | L2 = 1 | 0.0943 | 0.0710 | 0.7847 |
+| `lgbm_l2_5` | L2 = 5 | 0.0953 | 0.0735 | 0.7811 |
+| `lgbm_no_spw` | No positive-class weight | 0.1005 | 0.0691 | 0.7804 |
+
+The defensible selection is `lgbm_lr_03`, because it won on validation.
+`lgbm_leaves_31` is identified separately as the highest test result and was
+not selected retrospectively.
+
+The Stage C MLP sweep produced:
+
+| Experiment | Changed setting | Val PR-AUC | Test PR-AUC | Test ROC-AUC |
+|---|---|---:|---:|---:|
+| `C_mlp_default` | Hidden 128, dropout 0.2 | 0.1003 | **0.0865** | 0.7813 |
+| `mlp_drop_0` | Dropout 0.0 | 0.0999 | 0.0770 | 0.7778 |
+| `mlp_drop_04` | Dropout 0.4 | 0.1006 | 0.0861 | 0.7800 |
+| `mlp_wd_0` | Weight decay 0 | 0.0960 | 0.0773 | 0.7829 |
+| `mlp_wd_1e3` | Weight decay 0.001 | **0.1019** | 0.0865 | 0.7752 |
+| `mlp_lr_3e4` | Learning rate 0.0003 | 0.0980 | 0.0815 | **0.7851** |
+| `mlp_hid_64` | Hidden 64 | 0.1016 | 0.0804 | 0.7832 |
+
+The MLP gains are small and inconsistent across validation and test. Dropout
+and weight decay improve stability, but architecture tuning does not replace
+the larger benefit from adding the EO feature stages.
+
+![Lakshay LightGBM sweep](numerical_nextday/artifacts/figures/metrics_lgbm_hp_sweep.png)
+
+![Lakshay MLP sweep](numerical_nextday/artifacts/figures/metrics_mlp_sweep.png)
+
+### 19.4 Quantitative and qualitative results
+
+The progressive feature ladder on the Apr–Nov 2025 test population is:
+
+| Model | Features | Test PR-AUC | Test ROC-AUC |
+|---|---|---:|---:|
+| Stage A LightGBM | ERA5 + DEM | 0.0302 | 0.7580 |
+| Stage B LightGBM | Stage A + S2 | 0.0433 | 0.7698 |
+| Stage C default LightGBM | Stage B + S5P | 0.0702 | 0.7838 |
+| Stage C `leaves_31` | Best observed test LightGBM | 0.0796 | 0.7846 |
+| Stage C default MLP | Full Stage C | **0.0865** | 0.7813 |
+| Chance PR-AUC | Approximate prevalence | approximately 0.0100 | — |
+
+The Stage C MLP reaches approximately **8.65 times chance PR-AUC**. The
+Stage A→B improvement is 0.0132 absolute PR-AUC, and Stage B→C adds a further
+0.0268, demonstrating that numerical EO context adds useful signal when ERA5
+is stale.
+
+![Lakshay stage ladder](numerical_nextday/artifacts/figures/metrics_stage_ladder.png)
+
+The routed default Stage C LightGBM results are:
+
+| Bucket | Test PR-AUC | Test ROC-AUC | Positives |
+|---|---:|---:|---:|
+| Apr–Nov fire season | 0.0702 | 0.7838 | 1,624 |
+| January | 0.0246 | 0.7172 | 260 |
+| February | 0.0139 | 0.7315 | 115 |
+| March | 0.0279 | 0.7592 | 158 |
+| December | 0.0083 | 0.6383 | 118 |
+
+July is the strongest individual fire-season month (PR-AUC 0.2076,
+ROC-AUC 0.8315). The sparse winter models are much less reliable. A lag-0
+oracle LightGBM reaches PR-AUC 0.0797 and ROC-AUC 0.7943, only a small
+improvement over the best lag-5 LightGBM. This suggests that weather latency
+is a constraint but not the only performance bottleneck.
+
+The released sample maps show calibrated confidence for every California cell
+and blue FIRMS rings for retrospective positives:
+
+![Lakshay sample risk map](numerical_nextday/artifacts/figures/risk_map_sample.png)
+
+### 19.5 Generalization, stability and leakage controls
+
+| Control | Effect |
+|---|---|
+| Split by `label_date` | Prevents random future-to-past row leakage |
+| Assert `label_date − feature_end_date = 6 days` | Enforces D−5 ERA5 for D+1 labels |
+| Require EO `window_end ≤ D` | Prevents future satellite observations |
+| Fit S2 medians on train only | Prevents validation/test distribution leakage |
+| Early stopping | Limits unnecessary boosting rounds |
+| Bagging and feature subsampling | Regularizes LightGBM |
+| MLP dropout and weight decay | Stabilizes the neural baseline |
+| Validation-only calibration | Keeps 2025 labels out of probability fitting |
+| Month routing | Reduces seasonal regime mixing |
+| Availability flags | Makes missing EO explicit instead of fabricating data |
+
+The main limitations are the small number of independent fire seasons, coarse
+0.25° spatial cells, severe class imbalance, absent 2021 S5P, correlation
+between nearby cell-days and repeated inspection of 2025. Lakshay's
+artifacts do not report daily Recall@25/Recall@50, so they cannot support a
+fair top-K comparison with V4 without regenerating prediction-level metrics.
+
+### 19.6 Stage A/B/C artifacts and reproducibility
+
+| Deliverable | Repository path |
+|---|---|
+| Pipeline source | `Milestone 4/numerical_nextday/src/` |
+| Data/train/eval entry point | `Milestone 4/numerical_nextday/scripts/run_pipeline.py` |
+| Configuration | `Milestone 4/numerical_nextday/config.yaml` |
+| Causal/lag tests | `Milestone 4/numerical_nextday/tests/` |
+| Experiment log | `Milestone 4/numerical_nextday/artifacts/experiments_log.csv` |
+| Evaluation metrics | `Milestone 4/numerical_nextday/artifacts/eval_metrics.json` |
+| Feature importance | `Milestone 4/numerical_nextday/artifacts/feature_importance_C_default.json` |
+| Metric charts and sample maps | `Milestone 4/numerical_nextday/artifacts/figures/` |
+| Sample alerts | `Milestone 4/numerical_nextday/artifacts/sample_topk_alerts.csv` |
+
+From `Milestone 4/numerical_nextday`:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+export PYTHONPATH=src GS_NO_SIGN_REQUEST=YES MPLBACKEND=Agg OMP_NUM_THREADS=1
+
+# Build the source cache when it has not been shared locally.
+python scripts/run_pipeline.py run --stage build_data \
+  --years 2019-2025 --months 1-12 --worker local
+
+# Train LightGBM stages, month models and evaluate.
+python scripts/run_pipeline.py run --stage train_all
+
+# Optional MLP and lag-0 experiments.
+bash scripts/run_complete_architecture.sh
+```
+
+Model weights, downloaded GCS data, the large shared cache and local virtual
+environments are intentionally excluded from Git. The committed source and
+small metrics/figures are sufficient to inspect the implementation and
+recreate the outputs when the data cache is available.
+
+## 20. Combined comparison and decision
+
+The fair comparison below uses the identical Apr–Nov 2025 population of
+163,968 cell-days and 1,624 positives:
+
+| Model | Extra causal FIRMS predictors? | PR-AUC | ROC-AUC |
+|---|---|---:|---:|
+| Lakshay Stage C default LightGBM | No | 0.070167 | 0.783829 |
+| Lakshay validation-selected LightGBM | No | 0.075698 | 0.792498 |
+| Lakshay highest-test LightGBM | No | 0.079564 | 0.784619 |
+| **Lakshay Stage C default MLP** | **No** | **0.086500** | 0.781300 |
+| Archive V1 classifier | No | 0.076443 | 0.792097 |
+| Archive V2 classifier | D−1 history | 0.184619 | 0.845922 |
+| Archive V3 classifier | D−1 history | 0.210718 | 0.845143 |
+| **Archive V4 classifier** | **D−1 history** | **0.216727** | **0.848589** |
+
+There are two valid conclusions:
+
+1. **Best-system comparison:** if D−1 FIRMS is available when forecasting on
+   D, V4 improves PR-AUC over Lakshay's MLP by **0.1302 absolute**,
+   **150.6% relative**, or **2.51×**. ROC-AUC improves by 0.0673.
+2. **No-fire-history comparison:** V1 is the closest archive baseline to the
+   Stage A/B/C inputs. Lakshay's MLP is better than V1 by **0.0101 absolute
+   PR-AUC**, or **13.2% relative**.
+
+Therefore V4 is the strongest current alert-ranking system, but it is not
+evidence that its classifier architecture alone is 2.51× better. Most of the
+gain arrives when causal fire-history and neighborhood features are added.
+Lakshay's MLP is the stronger choice among the compared models that do
+not use FIRMS as a predictor.
+
+Neither track is yet production-grade. A final claim needs a frozen 2026 or
+external-geography holdout, verified real-world FIRMS latency, incident-level
+evaluation, calibrated false-alert costs and monitoring for sensor/data drift.
+
+![Combined fire-season comparison](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_model_comparison.png)
+
+## 21. Code and contribution map
+
+| Contributor / track | Work included in this report | Code status |
+|---|---|---|
+| Lakshay Garg (21F3001076) | Source-data build, Stage A/B/C features, LightGBM/MLP sweeps, routing, evaluation and maps | Committed under `Milestone 4/numerical_nextday/` |
+| Roushan Kumar Singh (23F1002240) | Archive audit, V1–V5 experiments, causal feature engineering, ranking, Recall@K evaluation, comparisons and report | Committed under `Milestone 4/numerical_nextday/experiments/archive_lag5_v1_v5/` |
+| Ripunjay Kumar (21F3002511) | LagFireNet work recorded in the Milestone 4 work log: dense 1 km lag-consistent model, ConvLSTM/U-Net architecture and training setup | Recorded in `Work Log.md`; its referenced `Milestone 3/wildfire_pipeline/` code is not present in this repository snapshot |
+
+The two numerical codebases described quantitatively in this report are both
+on the `main` branch. They are deliberately kept as separate runnable tracks
+so their source modules, configurations and results do not overwrite one
+another.
+
+## 22. Team sign-off
+
+The signature state below mirrors the Milestone 4 work log. Blank entries are
+left for the respective members; this report does not sign on anyone's behalf.
+
+| Member | Roll Number | Signature Commit |
+|---|---|---|
+| Ripunjay Kumar | 21F3002511 | ✅ |
+| Lakshay Garg | 21F3001076 | ✅ |
+| Roushan Kumar Singh | 23F1002240 | |
+| Lakshmi Sruthi K | 21F1005626 | |
+| R Aditya | 21F1004839 | |
