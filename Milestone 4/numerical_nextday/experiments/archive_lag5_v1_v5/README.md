@@ -31,7 +31,7 @@ tables, virtual environments, or caches are stored in Git.
 V4 is the retained model. V5 captures only one additional 2025 positive at
 K=25 and loses recall at K=50, so the extra complexity is not justified.
 See the submission-ready
-[Milestone 4 report](reports/MILESTONE4_REPORT.md) for the dataset,
+[Milestone 4 report](../../../Milestone%204%20Report.md) for the dataset,
 preprocessing, architectures, full training configuration, hyperparameter
 tables, quantitative/qualitative results, artifacts, limitations and leakage
 assessment. The shorter generated summary remains available as

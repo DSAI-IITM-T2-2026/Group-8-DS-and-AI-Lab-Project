@@ -1,5 +1,7 @@
 # Milestone 4 Report — Numerical Next-Day Wildfire Forecasting
 
+Companion document: [Milestone 4 Work Log](Work%20Log.md).
+
 **Project:** AI-powered wildfire early detection and alerting
 
 **Experiment track:** Archive lag-5 models V1–V5
@@ -54,7 +56,7 @@ The requested Recall@25 target of 50% was not reached. V4 crosses 50% recall
 at **53 alerts per day**, so the evidence supports approximately
 **Recall@53 = 50%**, not Recall@25 = 50%.
 
-![V1–V5 metric ladder](figures/metrics_stage_ladder.png)
+![V1–V5 metric ladder](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_stage_ladder.png)
 
 ## 3. Task and real-time serving contract
 
@@ -514,7 +516,7 @@ V4 captures 872 of 2,275 positive cell-days at 25 alerts/day. Reaching 50%
 requires 1,138 captures. At K=53, V4 captures 1,138 positives from 19,345
 annual alerts: 5.88% precision and 49.88 false alerts/day.
 
-![Daily Recall@K comparison](figures/metrics_recall_at_k.png)
+![Daily Recall@K comparison](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_recall_at_k.png)
 
 ### 10.3 Fair fire-season context
 
@@ -536,7 +538,7 @@ V2–V5 use causal D−1 FIRMS history while the colleague pipeline does not. If
 explicit FIRMS history is disallowed, V1 is the closest comparison and the
 colleague MLP is better by 0.0101 absolute PR-AUC.
 
-![Fair fire-season model comparison](figures/metrics_model_comparison.png)
+![Fair fire-season model comparison](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/metrics_model_comparison.png)
 
 ## 11. Generalization and training stability
 
@@ -570,7 +572,7 @@ Daily risk maps use:
 Blue rings are ground-truth overlays used after the event for evaluation. They
 are not input to the displayed prediction.
 
-![V4 risk map for 2 September 2025](figures/risk_map_2025-09-02.png)
+![V4 risk map for 2 September 2025](numerical_nextday/experiments/archive_lag5_v1_v5/reports/figures/risk_map_2025-09-02.png)
 
 On 2 September 2025, the test table contained 25 positive cells. The first
 seven V4 alerts below were all positive:

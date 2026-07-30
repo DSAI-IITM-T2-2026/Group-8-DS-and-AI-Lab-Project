@@ -12,8 +12,8 @@ The independent archive-based V1–V5 experiments are available under
 [`experiments/archive_lag5_v1_v5`](experiments/archive_lag5_v1_v5/README.md).
 They are isolated from this implementation and include source code, tests, and
 lightweight result reports only—no downloaded input data or trained models.
-The complete submission write-up is
-[`reports/MILESTONE4_REPORT.md`](experiments/archive_lag5_v1_v5/reports/MILESTONE4_REPORT.md).
+The complete submission write-up is stored beside the Milestone 4 work log:
+[Milestone 4 Report](../Milestone%204%20Report.md).
 
 ---
 
