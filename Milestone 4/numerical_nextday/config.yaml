@@ -25,6 +25,7 @@ paths:
   shared_cache: "outputs/m4_shared_cache"
   artifacts_dir: "artifacts"
   grid_map: "outputs/m4_shared_cache/era5_to_feature_grid.parquet"
+  california_geojson: "data/california.geojson"
 
 gcs:
   era5_prefix: "gs://dsai-lab-project/wildfire_satellite/era5/raw"

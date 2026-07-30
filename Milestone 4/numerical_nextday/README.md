@@ -132,20 +132,41 @@ python scripts/run_pipeline.py run --stage train_all
 
 ---
 
+## Maps & metric charts
+
+**Teammate-style CA outline maps** (Confidence % + blue FIRMS rings):
+
+```bash
+# all ~365 test days → artifacts/maps/daily/risk_YYYY-MM-DD.png  (gitignored)
+python scripts/generate_test_risk_maps.py
+
+# one day / smoke
+python scripts/generate_test_risk_maps.py --date 2025-10-21
+python scripts/generate_test_risk_maps.py --limit 5
+```
+
+**ROC / PR comparison charts** → `artifacts/figures/metrics_*.png`:
+
+```bash
+python scripts/generate_metrics_charts.py
+```
+
+`eval_figures` / `train_all` also regenerates sample CA maps + metric charts into `artifacts/figures/`.
+
+---
+
 ## Outputs layout
 
 ```text
 numerical_nextday/
-  outputs/m4_shared_cache/
-    manifests/claim_lock.jsonl
-    era5_daily/  firms_cells/  s2_cell/  s5p_cell/
-    stage_a|b|c/{all,train,val,test}.parquet
-    stage_*/metadata/{feature_columns,dataset_metadata}.json
-    lag0/…                    # optional lag-0 clone
+  outputs/m4_shared_cache/ …
   artifacts/
     experiments_log.csv
     eval_metrics.json
-    models/  figures/
+    figures/          # sample maps + metrics_*.png + calibration
+    maps/daily/       # ~365 day maps (local; gitignored)
+    models/
+  data/california.geojson
 ```
 
-Do **not** git-commit large caches; keep them local or sync via Drive/USB.
+Do **not** git-commit large caches or `artifacts/maps/daily/`; keep them local or sync via Drive/USB.

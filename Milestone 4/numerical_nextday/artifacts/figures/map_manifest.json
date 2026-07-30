@@ -1,0 +1,30 @@
+{
+  "kept_figures": [
+    "calibration_fire_season.png",
+    "feature_importance_fire_season.png",
+    "metrics_lgbm_hp_sweep.png",
+    "metrics_mlp_sweep.png",
+    "metrics_month_buckets.png",
+    "metrics_monthly_fire_season.png",
+    "metrics_stage_ladder.png",
+    "risk_map_high_activity.png",
+    "risk_map_july_mean.png",
+    "risk_map_july_peak.png",
+    "risk_map_sample.png",
+    "risk_vs_actual.png"
+  ],
+  "highlight_days": {
+    "sample": "2025-10-21",
+    "high_activity": "2025-09-02",
+    "july_peak": "2025-07-06"
+  },
+  "removed_unclear": [
+    "risk_map_july_peak.png",
+    "risk_map_midsummer.png",
+    "risk_map_july_mean.png",
+    "risk_vs_actual_sample.png",
+    "risk_vs_actual_sep02.png",
+    "risk_map_sample_style.png",
+    "map_manifest.json"
+  ]
+}

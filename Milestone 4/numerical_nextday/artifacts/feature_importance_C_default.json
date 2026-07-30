@@ -1,0 +1,336 @@
+{
+  "model": "C_default",
+  "importance_type": "gain",
+  "top20": [
+    {
+      "name": "cvh_mean",
+      "gain": 2701799.8562316895
+    },
+    {
+      "name": "s5n_s5p_co_mean",
+      "gain": 1171266.384185791
+    },
+    {
+      "name": "orographic_index",
+      "gain": 796772.7296447754
+    },
+    {
+      "name": "sp_mean",
+      "gain": 690234.1942138672
+    },
+    {
+      "name": "lai_hv_mean",
+      "gain": 471295.98959350586
+    },
+    {
+      "name": "lai_lv_mean",
+      "gain": 433984.03036499023
+    },
+    {
+      "name": "s5n_available",
+      "gain": 422311.9659423828
+    },
+    {
+      "name": "t2m_max_7d",
+      "gain": 384118.87869262695
+    },
+    {
+      "name": "swvl2_mean",
+      "gain": 225127.17517089844
+    },
+    {
+      "name": "elevation",
+      "gain": 206264.09298706055
+    },
+    {
+      "name": "tpi",
+      "gain": 145282.4776611328
+    },
+    {
+      "name": "s2n_B2_mean",
+      "gain": 120047.31991577148
+    },
+    {
+      "name": "t2m_mean",
+      "gain": 113621.62341308594
+    },
+    {
+      "name": "wind_speed_max_7d",
+      "gain": 109047.92092895508
+    },
+    {
+      "name": "wind_dir_sin",
+      "gain": 106346.72543334961
+    },
+    {
+      "name": "cvl_mean",
+      "gain": 101903.52853393555
+    },
+    {
+      "name": "aspect_sin",
+      "gain": 100211.05920410156
+    },
+    {
+      "name": "hillshade",
+      "gain": 95136.61587524414
+    },
+    {
+      "name": "rh_min_7d",
+      "gain": 92407.86459350586
+    },
+    {
+      "name": "swvl1_mean_7d",
+      "gain": 83661.49789428711
+    }
+  ],
+  "features": [
+    {
+      "name": "cvh_mean",
+      "gain": 2701799.8562316895
+    },
+    {
+      "name": "s5n_s5p_co_mean",
+      "gain": 1171266.384185791
+    },
+    {
+      "name": "orographic_index",
+      "gain": 796772.7296447754
+    },
+    {
+      "name": "sp_mean",
+      "gain": 690234.1942138672
+    },
+    {
+      "name": "lai_hv_mean",
+      "gain": 471295.98959350586
+    },
+    {
+      "name": "lai_lv_mean",
+      "gain": 433984.03036499023
+    },
+    {
+      "name": "s5n_available",
+      "gain": 422311.9659423828
+    },
+    {
+      "name": "t2m_max_7d",
+      "gain": 384118.87869262695
+    },
+    {
+      "name": "swvl2_mean",
+      "gain": 225127.17517089844
+    },
+    {
+      "name": "elevation",
+      "gain": 206264.09298706055
+    },
+    {
+      "name": "tpi",
+      "gain": 145282.4776611328
+    },
+    {
+      "name": "s2n_B2_mean",
+      "gain": 120047.31991577148
+    },
+    {
+      "name": "t2m_mean",
+      "gain": 113621.62341308594
+    },
+    {
+      "name": "wind_speed_max_7d",
+      "gain": 109047.92092895508
+    },
+    {
+      "name": "wind_dir_sin",
+      "gain": 106346.72543334961
+    },
+    {
+      "name": "cvl_mean",
+      "gain": 101903.52853393555
+    },
+    {
+      "name": "aspect_sin",
+      "gain": 100211.05920410156
+    },
+    {
+      "name": "hillshade",
+      "gain": 95136.61587524414
+    },
+    {
+      "name": "rh_min_7d",
+      "gain": 92407.86459350586
+    },
+    {
+      "name": "swvl1_mean_7d",
+      "gain": 83661.49789428711
+    },
+    {
+      "name": "s2n_B2_std",
+      "gain": 83309.55648803711
+    },
+    {
+      "name": "s2n_valid_fraction",
+      "gain": 80560.34268188477
+    },
+    {
+      "name": "s2n_B12_mean",
+      "gain": 79804.55447387695
+    },
+    {
+      "name": "s2n_cloud_percentage",
+      "gain": 79552.99996948242
+    },
+    {
+      "name": "aspect_cos",
+      "gain": 75365.14739990234
+    },
+    {
+      "name": "s2n_B8_mean",
+      "gain": 73581.93579101562
+    },
+    {
+      "name": "s2n_NBR_mean",
+      "gain": 72547.84585571289
+    },
+    {
+      "name": "s2n_EVI_mean",
+      "gain": 69721.341796875
+    },
+    {
+      "name": "blh_mean",
+      "gain": 66408.39614868164
+    },
+    {
+      "name": "swvl1_mean",
+      "gain": 60125.10089111328
+    },
+    {
+      "name": "s5n_s5p_aai_mean",
+      "gain": 56768.08377075195
+    },
+    {
+      "name": "wind_speed_mean",
+      "gain": 51184.46694946289
+    },
+    {
+      "name": "s2n_B11_mean",
+      "gain": 50938.21887207031
+    },
+    {
+      "name": "s2n_NDMI_mean",
+      "gain": 50603.43911743164
+    },
+    {
+      "name": "t2m_max",
+      "gain": 48789.15832519531
+    },
+    {
+      "name": "s2n_B4_mean",
+      "gain": 47258.38098144531
+    },
+    {
+      "name": "s2n_B12_std",
+      "gain": 46713.443939208984
+    },
+    {
+      "name": "tp_sum_7d",
+      "gain": 45314.06918334961
+    },
+    {
+      "name": "i10fg_max_7d",
+      "gain": 44629.92694091797
+    },
+    {
+      "name": "slope",
+      "gain": 43079.48013305664
+    },
+    {
+      "name": "d2m_mean",
+      "gain": 40202.486877441406
+    },
+    {
+      "name": "soil_moisture_index",
+      "gain": 40044.72204589844
+    },
+    {
+      "name": "s2n_B8_std",
+      "gain": 37709.68716430664
+    },
+    {
+      "name": "s2n_NDWI_mean",
+      "gain": 36307.763275146484
+    },
+    {
+      "name": "s2n_NDVI_mean",
+      "gain": 35623.65219116211
+    },
+    {
+      "name": "rh_mean",
+      "gain": 31747.00390625
+    },
+    {
+      "name": "s2n_B3_std",
+      "gain": 31606.002075195312
+    },
+    {
+      "name": "tri",
+      "gain": 30305.106994628906
+    },
+    {
+      "name": "s2n_B4_std",
+      "gain": 30144.65606689453
+    },
+    {
+      "name": "s5n_s5p_co_max",
+      "gain": 29987.391723632812
+    },
+    {
+      "name": "s2n_B11_std",
+      "gain": 29711.83920288086
+    },
+    {
+      "name": "s2n_B3_mean",
+      "gain": 29191.880920410156
+    },
+    {
+      "name": "i10fg_max",
+      "gain": 27318.076141357422
+    },
+    {
+      "name": "s5n_s5p_co_valid_fraction",
+      "gain": 24227.478759765625
+    },
+    {
+      "name": "t2m_min",
+      "gain": 23067.84912109375
+    },
+    {
+      "name": "wind_dir_cos",
+      "gain": 22326.024047851562
+    },
+    {
+      "name": "tp_sum_mm",
+      "gain": 9246.938934326172
+    },
+    {
+      "name": "s5n_s5p_aai_max",
+      "gain": 5248.358978271484
+    },
+    {
+      "name": "s5n_s5p_aai_valid_fraction",
+      "gain": 384.4119873046875
+    },
+    {
+      "name": "s5n_s5p_aai_std",
+      "gain": 0.0
+    },
+    {
+      "name": "s5n_s5p_co_std",
+      "gain": 0.0
+    },
+    {
+      "name": "s5n_s5p_data_available",
+      "gain": 0.0
+    }
+  ]
+}
