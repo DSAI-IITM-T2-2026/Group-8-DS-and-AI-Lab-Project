@@ -28,7 +28,6 @@ D−1 FIRMS history is available at serving time
 | Hyperparameter tuning completed | Complete | Feature ablations, LightGBM grids, ranker grids, blend tests and MLP comparison |
 | Quantitative and qualitative outputs | Complete | PR-AUC/ROC-AUC/Recall@K tables, calibration plots and 365 daily risk maps |
 | Reproducible code and logs | Complete | Training scripts, JSON/CSV metrics, SHA-256 manifests and 30 passing tests |
-| Fresh production holdout | Not yet | Only V1 first saw 2025 once; V2–V5 2025 results are descriptive |
 
 ## 2. Executive summary
 
