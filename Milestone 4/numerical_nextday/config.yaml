@@ -1,0 +1,118 @@
+# Milestone 4 — numerical next-day wildfire (ERA5 lag-5 primary)
+
+task:
+  history_days: 7
+  lead_days: 1
+  era5_lag_days: 5   # primary realtime-compatible; ablation uses 0
+  firms_confidence_min: 30
+
+aoi:
+  north: 42.01
+  south: 32.53
+  west: -124.41
+  east: -114.13
+
+temporal:
+  start_date: "2019-01-01"
+  end_date: "2025-12-31"
+
+paths:
+  # Reuse M3 DEM table (relative to this package root)
+  dem_cells: "../../Milestone 3/mvp_era5_dem/data/era5_grid_dem_features.parquet"
+  mvp_era5_dem_root: "../../Milestone 3/mvp_era5_dem"
+  multimodal_fusion_root: "../../Milestone 3/multimodal_fusion"
+  output_dir: "outputs"
+  shared_cache: "outputs/m4_shared_cache"
+  artifacts_dir: "artifacts"
+  grid_map: "outputs/m4_shared_cache/era5_to_feature_grid.parquet"
+
+gcs:
+  era5_prefix: "gs://dsai-lab-project/wildfire_satellite/era5/raw"
+  firms_prefix: "gs://wildfire-detection-first/firms_daily_geotiff"
+  firms_vsigs_prefix: "/vsigs/wildfire-detection-first/firms_daily_geotiff"
+  s2_by_year:
+    "2018": { bucket: "sentinel-2-2016-2025", prefix: "sentinel2_features_v3" }
+    "2019": { bucket: "sentinel-2-2016-2025", prefix: "sentinel2_features_v3" }
+    "2020": { bucket: "sentinel-2-2016-2025", prefix: "sentinel2_features_v3" }
+    "2021": { bucket: "sentinel-2-data-2016-2025", prefix: "sentinel2_features_v3" }
+    "2022": { bucket: "sentinel-2-data-2016-2025", prefix: "sentinel2_features_v3" }
+    "2023": { bucket: "sentinel-2-data-2016-2025", prefix: "sentinel2_features_v3" }
+    "2024": { bucket: "sentinel-2-data-2016-2025", prefix: "sentinel2_features_v3" }
+    "2025": { bucket: "sentinel-2-data-2016-2025", prefix: "sentinel2_features_v3" }
+  s5p_by_year:
+    "2019": { bucket: "plated-mechanic-s5p-2016-2025", prefix: "sentinel5p_features_daily" }
+    "2020": { bucket: "sentinel-5p", prefix: "sentinel5p_features" }
+    "2021": { bucket: "plated-mechanic-s5p-2016-2025", prefix: "sentinel5p_features_daily" }
+    "2022": { bucket: "sentinel-5p", prefix: "sentinel5p_features" }
+    "2023": { bucket: "sentinel-2-2016-2025", prefix: "sentinel5p_features_daily" }
+    "2024": { bucket: "sentinel-2-2016-2025", prefix: "sentinel5p_features_daily" }
+    "2025": { bucket: "sentinel-2-2016-2025", prefix: "sentinel5p_features_daily" }
+
+s2_features:
+  columns:
+    - B2_mean
+    - B3_mean
+    - B4_mean
+    - B8_mean
+    - B11_mean
+    - B12_mean
+    - B2_std
+    - B3_std
+    - B4_std
+    - B8_std
+    - B11_std
+    - B12_std
+    - NDVI_mean
+    - NDMI_mean
+    - NBR_mean
+    - NDWI_mean
+    - EVI_mean
+    - cloud_percentage
+    - valid_fraction
+
+s5p_features:
+  forward_fill_max_days: 7
+  columns:
+    - s5p_aai_mean
+    - s5p_aai_max
+    - s5p_aai_std
+    - s5p_aai_valid_fraction
+    - s5p_co_mean
+    - s5p_co_max
+    - s5p_co_std
+    - s5p_co_valid_fraction
+    - s5p_data_available
+
+s5p_2021_mode: placeholder   # placeholder | ready
+
+era5:
+  resolution_deg: 0.25
+
+split:
+  train_end: "2022-12-31"
+  val_end: "2024-12-31"
+
+model_buckets:
+  april_bucket: fire_season
+  winter_fallback: fire_season
+  fire_season_months: [4, 5, 6, 7, 8, 9, 10, 11]
+  month_models: [1, 2, 3, 12]
+
+model:
+  random_seed: 42
+  num_boost_round: 400
+  early_stopping_rounds: 40
+  learning_rate: 0.05
+  num_leaves: 63
+  min_data_in_leaf: 50
+  feature_fraction: 0.85
+  bagging_fraction: 0.85
+  bagging_freq: 1
+  mlp:
+    hidden: 128
+    dropout: 0.2
+    lr: 0.001
+    weight_decay: 0.0001
+    epochs: 20
+    batch_size: 1024
+    patience: 5
