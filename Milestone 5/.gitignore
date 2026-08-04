@@ -1,0 +1,4 @@
+# Large Stage C packs for Kaggle upload (rebuild from m4_shared_cache)
+kaggle_datasets/*/all.parquet
+notebook_outputs/
+kaggle_datasets/
