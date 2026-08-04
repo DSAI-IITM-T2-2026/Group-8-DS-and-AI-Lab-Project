@@ -84,7 +84,7 @@ s5p_features:
     - s5p_co_valid_fraction
     - s5p_data_available
 
-s5p_2021_mode: placeholder   # placeholder | ready
+s5p_2021_mode: ready   # placeholder | ready  (ready = use real 2021 S5P in Stage C)
 
 era5:
   resolution_deg: 0.25

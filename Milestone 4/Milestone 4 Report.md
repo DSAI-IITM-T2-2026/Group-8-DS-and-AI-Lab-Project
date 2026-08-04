@@ -1026,8 +1026,12 @@ python scripts/run_pipeline.py run --stage build_data \
 # Train LightGBM stages, month models and evaluate.
 python scripts/run_pipeline.py run --stage train_all
 
-# Optional MLP and lag-0 experiments.
-bash scripts/run_complete_architecture.sh
+# Optional MLP schedule + lag-0 ablation + figures
+# (MLP schedule is also covered inside train_all unless M4_SKIP_MLP=1)
+python scripts/run_pipeline.py run --stage build_lag0_data \
+  --years 2019-2025 --months 1-12 --worker local
+python scripts/run_pipeline.py run --stage train_lag0_ablation
+python scripts/run_pipeline.py run --stage eval_figures
 ```
 
 Model weights, downloaded GCS data, the large shared cache and local virtual
