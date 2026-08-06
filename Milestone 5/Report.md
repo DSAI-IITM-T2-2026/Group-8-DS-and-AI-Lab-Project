@@ -5,16 +5,22 @@
 ## 1. Introduction & Objectives
 
 ### 1.1 Selected Model Checkpoints & Architecture Overview
+
 This evaluation phase benchmarked four distinct model checkpoints developed during Milestone 4 and Milestone 5:
 
-1. LightGBM Dual-Head Model:
-   A dual-head pipeline combining a LightGBM Binary Classifier (`LGBMClassifier`) for absolute probability estimation and a LightGBM LambdaRank Ranker (`LGBMRanker`) for spatial relative risk ordering, calibrated using a post-hoc Logistic Regression model.
-2. Heterogeneous GBDT Ensemble:
+1. **LightGBM Dual-Head Model (with neighbor and same cell fire context)**  
+   A dual-head pipeline combining a LightGBM Binary Classifier (`LGBMClassifier`) for absolute probability estimation and a LightGBM LambdaRank Ranker (`LGBMRanker`) for spatial relative risk ordering, calibrated using a post-hoc Logistic Regression model.  
+   This checkpoint **includes** causal **neighbor** fire-history features (lags and wind-aware upwind/downwind context). **Same-cell** fire persistence features remain excluded.
+
+2. **Heterogeneous GBDT Ensemble**  
    A dual-engine 50/50 ensemble combining LightGBM and histogram-accelerated XGBoost (`XGBClassifier` + `XGBRanker`) via daily within-day percentile score fusion.
-3. Spatial-Temporal Transformer:
+
+3. **Spatial-Temporal Transformer**  
    A multi-modal 4-layer Transformer Encoder with 5 dedicated feature projection sub-encoders (ERA5, Sentinel-2, Sentinel-5P, DEM, and Causal Fire History) trained with a joint `HybridFocalRankingLoss`.
-4. Champion CatBoost Model (Stage C KNN):
-   A CatBoost gradient boosting pipeline (`CatBoostClassifier` + `CatBoostRanker`) operating on precomputed KNN spatial-temporal imputations, trained on 86 pruned features over high & medium fire-prone cells, using a 100% classifier daily percentile score blend.
+
+4. **Champion LightGBM Model (Stage C KNN, with neighbour fire history)**  
+   A LightGBM dual-head pipeline (`LGBMClassifier` + `LGBMRanker`) operating on precomputed KNN spatial-temporal imputations, trained on the pruned environmental feature set over high & medium fire-prone cells.  
+   This checkpoint **excludes** neighbor and same-cell fire-history features (weather, EO, DEM, and ignition/dryness context only), with post-hoc probability calibration and a tuned daily classifier/ranker percentile blend.
 
 ---
 
@@ -85,12 +91,12 @@ The evaluation framework uses six exact quantitative metrics:
 
 ### 3.4 Metric Benchmark Table Across All Model Pipelines
 
-| Metric | LightGBM Dual-Head Model | Spatial-Temporal Transformer | LightGBM + XGBoost Dual-Engine Ensemble | Champion CatBoost Model (Stage C KNN) |
+| Metric | LightGBM Dual-Head Model | Spatial-Temporal Transformer | LightGBM + XGBoost Dual-Engine Ensemble | Champion LightGBM Model (Stage C KNN) (Neighbour history) (May-Nov) |
 | :--- | :--- | :--- | :--- | :--- |
-| **PR-AUC (Primary)** | **0.3524** (Full 672 Grid) | **0.1971** (Validation) / **0.1638** (Test) | **0.2353** (High-Medium Fire Subset) | **0.1930** (Validation) / **0.1400** (Test) |
-| **ROC-AUC** | **0.8981** | **0.7526** | **0.8425** | **0.8171** (Validation) / **0.7687** (Test) |
-| **Recall @ 25 / day** | 43.50% | 39.59% (at p = 0.50) / **97.48%** (at p = 0.30) | **47.21%** (Highest Operational Recall) | **41.81%** (Validation) / **37.66%** (Test) |
-| **Loss Function** | Binary LogLoss + LambdaRank Loss | Hybrid Focal Loss + Pairwise Margin Ranking Loss | Binary LogLoss + NDCG Ranking Loss | Binary LogLoss + CatBoost Pairwise Loss |
+| **PR-AUC (Primary)** | **0.3524** (Full 672 Grid) | **0.1971** (Validation) / **0.1638** (Test) | **0.1905** (High-Medium Fire Subset) | **0.1932** (Validation) / **0.1451** (Test) |
+| **ROC-AUC** | **0.8981** | **0.7526** | **0.8425** | **0.8161** (Validation) / **0.7687** (Test) |
+| **Recall @ 25 / day** | 43.50% | 39.59% (at p = 0.50) / **97.48%** (at p = 0.30) | **41.62%** (Validation) | **41.81%** (Validation) / **37.66%** (Test) |
+| **Loss Function** | Binary LogLoss + LambdaRank Loss | Hybrid Focal Loss + Pairwise Margin Ranking Loss | Binary LogLoss + NDCG Ranking Loss | Binary LogLoss + LambdaRank Loss |
 | **Calibration Method** | Logistic Regression Platt Calibrator | Post-Hoc Sigmoid Logit Calibration | Logistic Regression Platt Calibrator | Logistic Regression Platt Calibrator |
 
 
@@ -99,44 +105,48 @@ The evaluation framework uses six exact quantitative metrics:
 ## 4. Quantitative Performance & Benchmarking
 
 ### 4.1 Test Set Benchmarking & Baseline Comparison
-On the strictly held-out **2025 Test Set** (93,518 cell-days, 1,325 positive events across 437 High & Medium fire-prone cells):
-- **Champion CatBoost Model (`stage_c_knn` / `high_medium_fire`)**:
-  - `PR-AUC`: **0.1400** (0.1400337)
-  - `ROC-AUC`: **0.7687** (0.7686800)
-  - `Recall @ 25`: **37.66%** (0.3766038)
-  - `Recall @ 50`: **47.47%** (0.4747170)
-  - `Precision @ 25`: **9.33%** (0.0932710)
-  - `False Alerts / Day @ 25`: **22.67** (22.668224)
-  - `Log Loss`: **0.06422** (0.0642171)
+On the strictly held-out **2025 Test Set** (93,518 cell-days, 1,325 positive events across 437 High & Medium fire-prone cells; May–Nov; neighbor fire history ON; 86 pruned features; blend classifier 0.3 / ranker 0.7):
+
+- **Champion LightGBM Model (`stage_c_knn` / `high_medium_fire`)**:
+  - `PR-AUC`: **0.1451** (0.1451442)
+  - `ROC-AUC`: **0.7718** (0.7717737)
+  - `Recall @ 25`: **36.38%** (0.3637736)
+  - `Recall @ 50`: **48.23%** (0.4822642)
+  - `Precision @ 25`: **9.01%** (0.0900935)
+  - `False Alerts / Day @ 25`: **22.75** (22.747664)
+  - `Log Loss`: **0.06440** (0.0643988)
 
 - **2023 Validation Set Performance** (93,518 cell-days, 2,083 positive events):
-  - `PR-AUC`: **0.1930** (0.1930235)
-  - `ROC-AUC`: **0.8171** (0.8170670)
-  - `Recall @ 25`: **41.81%** (0.4181469)
-  - `Training PR-AUC`: **0.4203** (0.4203493)
-  - `Train-Validation PR-AUC Gap`: **0.2273** (0.2273257)
+  - `PR-AUC`: **0.1932** (0.1932480)
+  - `ROC-AUC`: **0.8124** (0.8123696)
+  - `Recall @ 25`: **41.48%** (0.4147864)
+  - `Training PR-AUC`: **0.3888** (0.3887531)
+  - `Train-Validation PR-AUC Gap`: **0.1955** (0.1955051)
 
 - **Gain Over Established Baselines**:
-  - Beats **Naive Constant Rate Baseline** (`PR-AUC = 0.0093`) by **15.1x higher PR-AUC** on 2025 Test Set (**20.8x higher PR-AUC** on 2023 Validation Set).
-  - Beats **Persistence Baseline** (`PR-AUC = 0.0412`) by **3.4x higher PR-AUC** on 2025 Test Set (**4.7x higher PR-AUC** on 2023 Validation Set).
+  - Beats **Naive Constant Rate Baseline** (`PR-AUC = 0.0093`) by **15.6x higher PR-AUC** on 2025 Test Set (**20.8x higher PR-AUC** on 2023 Validation Set).
+  - Beats **Persistence Baseline** (`PR-AUC = 0.0412`) by **3.5x higher PR-AUC** on 2025 Test Set (**4.7x higher PR-AUC** on 2023 Validation Set).
 
 ### 4.2 Subgroup & Slice Analysis Summary Table
 
-Evaluated on the 2023 Validation Set (93,518 rows, 2,083 positives) using `Wildfire_Training_CatBoost.ipynb`:
+Evaluated on the 2023 Validation Set (93,518 rows, 2,083 positives) using `Wildfire_Training.ipynb` (Champion LightGBM, Stage C KNN, neighbor fire history ON, May–Nov):
 
 | Slice ID | Data Slice Description | Rows | Positives | Pos Rate | PR-AUC | ROC-AUC | Precision @ 25 | Recall @ 25 | F1 @ 25 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0** | **1. Overall Validation Set** | 93,518 | 2,083 | 2.23% | 0.1930 | 0.8171 | 16.28% | 41.81% | 0.2344 |
-| **1** | **2a. Peak Fire Season (Jun–Oct)** | 66,861 | 1,499 | 2.24% | **0.2130** | **0.8237** | **16.89%** | **43.10%** | **0.2427** |
-| **2** | **2b. Off-Season (Nov–May)** | 26,657 | 584 | 2.19% | 0.1348 | 0.7989 | 14.75% | 38.53% | 0.2134 |
-| **3** | **3a. High Wind Gust (>10 m/s)** | 39,416 | 800 | 2.03% | 0.1911 | 0.8169 | 8.65% | **56.25%** | 0.1499 |
-| **4** | **3b. Normal Wind Gust (<=10 m/s)**| 54,102 | 1,283 | 2.37% | 0.1958 | 0.8163 | 11.79% | 49.18% | 0.1903 |
-| **5** | **3c. High Dryness (VPD >2.0 kPa)** | 16,836 | 323 | 1.92% | 0.1422 | 0.8132 | 5.69% | **69.35%** | 0.1052 |
-| **6** | **4a. Fresh Sentinel-2 (`s2n_available=1`)**| 93,518 | 2,083 | 2.23% | 0.1930 | 0.8171 | 16.28% | 41.81% | 0.2344 |
+| **0** | **1. Overall Validation Set** | 93,518 | 2,083 | 2.23% | 0.1932 | 0.8124 | 16.60% | 42.63% | 0.2389 |
+| **1** | **2a. Peak Fire Season (Jun–Oct)** | 66,861 | 1,499 | 2.24% | **0.2128** | **0.8193** | **17.20%** | **43.90%** | **0.2472** |
+| **2** | **2b. Off-Season (Nov–May)** | 26,657 | 584 | 2.19% | 0.1332 | 0.7941 | 15.08% | 39.38% | 0.2181 |
+| **3** | **3a. High Wind Gust (>10 m/s)** | 39,416 | 800 | 2.03% | 0.1848 | 0.8110 | 8.72% | **56.75%** | 0.1512 |
+| **4** | **3b. Normal Wind Gust (<=10 m/s)** | 54,102 | 1,283 | 2.37% | 0.1994 | 0.8131 | 11.98% | 49.96% | 0.1933 |
+| **5** | **3c. High Dryness (VPD >2.0 kPa)** | 16,836 | 323 | 1.92% | 0.1423 | 0.8137 | 5.64% | **68.73%** | 0.1042 |
+| **6** | **4a. Fresh Sentinel-2 (`s2n_available=1`)** | 93,518 | 2,083 | 2.23% | 0.1932 | 0.8124 | 16.60% | 42.63% | 0.2389 |
+
+> Note: Slice **4b. KNN-imputed S2** had 0 rows in this run (not reported).
 
 #### Key Slice Insights:
-1. **High Wind Gust Spike**: Under high wind speed conditions (>10 m/s), **Recall@25 surges to 56.25%** (+14.4% absolute gain over overall validation baseline).
-2. **Severe Dryness Peak**: Under extreme atmospheric dryness (VPD > 2.0 kPa), **Recall@25 spikes to 69.35%**! Almost 7 out of 10 active wildfires are caught within top-25 daily alerts.
+1. **High Wind Gust Spike**: Under high wind gusts (>10 m/s), **Recall@25 rises to 56.75%** (+14.1 pp vs overall 42.63%).
+2. **Severe Dryness Peak**: Under high atmospheric dryness (VPD > 2.0 kPa), **Recall@25 reaches 68.73%** — nearly 7 in 10 active fires are caught in the daily Top-25 alerts.
+3. **Seasonality**: Peak season (Jun–Oct) is strongest on ranking quality (**PR-AUC 0.2128**); off-season drops to **0.1332**.
 
 ### 4.3 Statistical Significance & 95% Confidence Intervals
 1,000 empirical bootstrap resamples (sampling calendar dates with replacement) yielded:
