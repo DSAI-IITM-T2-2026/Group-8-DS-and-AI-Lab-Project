@@ -83,27 +83,6 @@ Anonymous GCS: `export GS_NO_SIGN_REQUEST=YES`.
 
 ---
 
----
-
-### Milestone 5 — Evaluation & champion models
-
-| Document | Path |
-| -------- | ---- |
-| Report | [`Milestone 5/Report.md`](Milestone%205/Report.md) |
-| Work log | [`Milestone 5/Work Log.md`](Milestone%205/Work%20Log.md) |
-| Figures | [`Milestone 5/images/`](Milestone%205/images/) |
-
-#### Sample evaluation figures
-
-| Aug 1, 2025 risk map | Peak day risk map | Feature importance (SHAP) |
-| --- | --- | --- |
-| ![Aug 1 map](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/map_2025-08-01.png) | ![Peak day](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/map_peak_2025-10-21.png) | ![SHAP](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/feature_explanations.png) |
-
-| Calibration / PR | Confusion grid (2025-08-01) | Spatial FP/FN |
-| --- | --- | --- |
-| ![Calibration](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/calibration_and_precision_recall.png) | ![Grid](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/grid_confusion_2025-08-01.png) | ![Spatial](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/main/Milestone%205/images/spatial_fp_fn_validation.png) |
-
-
 ## Team
 
 | Member | Roll Number |
