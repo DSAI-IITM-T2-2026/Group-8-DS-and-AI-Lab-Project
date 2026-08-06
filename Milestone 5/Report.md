@@ -311,5 +311,5 @@ Global importance over the **86 retained features** using LightGBM gain and nati
 | Ripunjay Kumar      | 21F3002511  |      ✅          |
 | Lakshay Garg        | 21F3001076  |                  |
 | Roushan Kumar Singh | 23F1002240  |                  |
-| Lakshmi Sruthi K    | 21F1005626  |                  |
+| Lakshmi Sruthi K    | 21F1005626  |      ✅          |
 | R Aditya            | 21F1004839  |                  |
