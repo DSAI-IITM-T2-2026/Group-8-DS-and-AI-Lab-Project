@@ -141,8 +141,6 @@ Evaluated on the 2023 Validation Set (93,518 rows, 2,083 positives) using `Wildf
 | **5** | **3c. High Dryness (VPD >2.0 kPa)** | 16,836 | 323 | 1.92% | 0.1423 | 0.8137 | 5.64% | **68.73%** | 0.1042 |
 | **6** | **4a. Fresh Sentinel-2 (`s2n_available=1`)** | 93,518 | 2,083 | 2.23% | 0.1932 | 0.8124 | 16.60% | 42.63% | 0.2389 |
 
-> Note: Slice **4b. KNN-imputed S2** had 0 rows in this run (not reported).
-
 #### Key Slice Insights:
 1. **High Wind Gust Spike**: Under high wind gusts (>10 m/s), **Recall@25 rises to 56.75%** (+14.1 pp vs overall 42.63%).
 2. **Severe Dryness Peak**: Under high atmospheric dryness (VPD > 2.0 kPa), **Recall@25 reaches 68.73%** — nearly 7 in 10 active fires are caught in the daily Top-25 alerts.
@@ -164,19 +162,30 @@ Evaluated on the 2023 Validation Set (93,518 rows, 2,083 positives) using `Wildf
 ## 5. Comprehensive Error Analysis
 
 ### 5.1 Quantitative Error Breakdown
-Auditing predictions on the 2023 Validation set (93,518 rows across 214 fire-season calendar days):
+Auditing predictions on the 2023 Validation set (93,518 rows) using Champion LightGBM (`Wildfire_Training.ipynb`):
 
 #### A. Error Breakdown at Fixed Probability Threshold (p >= 0.50):
-* **True Negative (TN)**: 91,411 cells (Clean non-fire cells correctly predicted safe)
-* **False Negative (FN — Under-prediction)**: 2,042 cells (Unflagged fires)
-* **False Positive (FP — Over-prediction)**: 24 cells (False alarm alerts)
-* **True Positive (TP — Hits)**: 41 cells (Fire predictions)
+* **True Negative (TN)**: 91,431 cells (Clean non-fire cells correctly predicted safe)
+* **False Negative (FN — Under-prediction)**: 2,049 cells (Unflagged fires)
+* **False Positive (FP — Over-prediction)**: 4 cells (False alarm alerts)
+* **True Positive (TP — Hits)**: 34 cells (Fire predictions)
 
 #### B. Error Breakdown at Daily Top-25 Alert Rank (k = 25):
-* **True Negative (TN)**: 86,956 cells
-* **False Positive (FP — Over-prediction)**: 4,479 cells (Issued alerts on non-fire cells across 214 fire-season days)
-* **False Negative (FN — Under-prediction)**: 1,212 cells (Unflagged fires outside top 25)
-* **True Positive (TP — Hits)**: **871 cells (Active fires caught in top 25)** (Precision@25 = 16.28%, Recall@25 = 41.81%)
+* **True Negative (TN)**: 86,973 cells
+* **False Positive (FP — Over-prediction)**: 4,462 cells (Issued alerts on non-fire cells)
+* **False Negative (FN — Under-prediction)**: 1,195 cells (Unflagged fires outside top 25)
+* **True Positive (TP — Hits)**: **888 cells (Active fires caught in top 25)**  
+  (Precision@25 = **16.60%**, Recall@25 = **42.63%**, F1@25 = **0.2389**)
+
+#### C. Classification Report (Top-25 Alert Label):
+
+| Class | Precision | Recall | F1-score | Support |
+| :--- | ---: | ---: | ---: | ---: |
+| No Fire (0) | 0.9864 | 0.9512 | 0.9685 | 91,435 |
+| Fire (1) | 0.1660 | 0.4263 | 0.2389 | 2,083 |
+| **Accuracy** | | | **0.9395** | **93,518** |
+| Macro avg | 0.5762 | 0.6888 | 0.6037 | 93,518 |
+| Weighted avg | 0.9682 | 0.9395 | 0.9523 | 93,518 |
 
 ### 5.2 Qualitative Spatial Grid Map Interpretations
 
@@ -189,71 +198,74 @@ Auditing predictions on the 2023 Validation set (93,518 rows across 214 fire-sea
 
 ![Calibration and Precision-Recall Curves](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/calibration_and_precision_recall.png)
 *Figure 5.3: Reliability Calibration Curve and Precision-Recall Curve ([calibration_and_precision_recall.png](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/calibration_and_precision_recall.png)). Demonstrates post-hoc Logistic Regression probability alignment and trade-off curves.*
-
 ### 5.3 Audit of Specific Misclassified Samples
 
+Audited on the 2023 Validation set using Champion LightGBM (`Wildfire_Training.ipynb` / `stage_c_knn` / `high_medium_fire` / neighbor fire ON).
+
 #### A. Top 5 Worst Over-Predictions (False Positives: y_true = 0, High P(Fire))
-1. **2023-08-20 (Cell `41.00_-123.50`)**: `p_fire = 0.5831`, `alert_score = 1.000`, `vpd_kpa = 2.256`, `i10fg_max = 10.96 m/s`, `fire_upwind_count_7d_lag2 = 18.50`. Extreme atmospheric dryness and heavy upwind neighbor fire activity over Klamath forest, but no local spark occurred.
-2. **2023-08-25 (Cell `41.75_-123.75`)**: `p_fire = 0.5682`, `alert_score = 0.9954`, `swvl1_mean = 0.1910`, `s5n_s5p_aai_mean = 1.901`, `fire_upwind_count_7d_lag2 = 35.23`. Severe soil moisture deficit and high aerosol concentration in mountain pass.
-3. **2023-08-19 (Cell `41.00_-123.50`)**: `p_fire = 0.5500`, `alert_score = 1.000`, `vpd_kpa = 1.965`, `s5n_s5p_aai_mean = 2.562`. Active upwind aerosol plume and high atmospheric vapor deficit.
+1. **2023-08-21 (Cell `41.75_-123.50`)**: `p_fire = 0.5619`, `alert_score = 0.9984`, `daily_rank = 2`, `vpd_kpa = 2.125`, `i10fg_max = 11.67 m/s`, `fire_upwind_count_7d_lag2 = 20.45`, `fire_neighbor_count_7d_lag2 = 19`. Extreme dryness + strong upwind neighbor fire, but no local ignition.
+2. **2023-08-25 (Cell `41.75_-123.75`)**: `p_fire = 0.5446`, `alert_score = 0.9977`, `swvl1_mean = 0.1910`, `s5n_s5p_aai_mean = 1.901`, `fire_upwind_count_7d_lag2 = 35.23`. Soil-moisture deficit with heavy upwind fire / aerosol context.
+3. **2023-09-23 (Cell `41.75_-123.50`)**: `p_fire = 0.5383`, `alert_score = 0.9913`, `vpd_kpa = 1.261`, `fire_neighbor_count_7d_lag2 = 24`. Persistent regional fire neighborhood without a same-cell spark.
+4. **2023-09-17 (Cell `41.75_-123.50`)**: `p_fire = 0.5354`, `alert_score = 0.9984`, `s5n_s5p_aai_mean = 2.626`, `fire_neighbor_count_7d_lag2 = 21`. Elevated aerosol + neighbor fire context.
+5. **2023-08-30 (Cell `41.25_-123.25`)**: `p_fire = 0.4953`, `alert_score = 0.9892`, `i10fg_max = 10.36 m/s`, `fire_neighbor_count_7d_lag2 = 18`. High gust + nearby fire activity, no local label.
 
 #### B. Top 5 Worst Under-Predictions (False Negatives: y_true = 1, Low P(Fire))
-1. **2023-06-25 (Cell `40.00_-120.75`)**: `p_fire = 0.0030`, `alert_score = 0.0389`, `swvl1_mean = 0.3648`, `vpd_kpa = 0.7264`. High soil moisture and moderate VPD; isolated human-caused ignition spark.
-2. **2023-06-26 (Cell `40.00_-120.75`)**: `p_fire = 0.0031`, `alert_score = 0.0366`, `swvl1_mean = 0.3602`, `vpd_kpa = 0.6015`. Low atmospheric drying demand; suppressed score.
-3. **2023-08-16 (Cell `41.75_-124.00`)**: `p_fire = 0.0033`, `alert_score = 0.0023`, `swvl1_mean = 0.1034`, `vpd_kpa = 0.3766`. Coastal fog zone with low vapor pressure deficit.
+1. **2023-05-20 (Cell `40.50_-123.25`)**: `p_fire = 0.0064`, `alert_score = 0.0529`, `daily_rank = 425`, `swvl1_mean = 0.408`, `vpd_kpa = 1.519`, neighbor fire = 0. Moist soils / no neighbor fire context; likely isolated ignition.
+2. **2023-05-11 (Cell `40.50_-123.00`)**: `p_fire = 0.0064`, `alert_score = 0.0770`, `swvl1_mean = 0.403`, `vpd_kpa = 0.272`. Low atmospheric drying demand; suppressed score.
+3. **2023-05-11 (Cell `40.50_-123.25`)**: `p_fire = 0.0064`, `alert_score = 0.1170`, `swvl1_mean = 0.444`, `vpd_kpa = 0.195`. Cool/moist regime; missed fire.
+4. **2023-05-16 (Cell `42.00_-121.75`)**: `p_fire = 0.0064`, `alert_score = 0.1934`, `swvl1_mean = 0.288`, `vpd_kpa = 0.593`. Early-season event with weak environmental cue.
+5. **2023-06-08 (Cell `40.50_-123.25`)**: `p_fire = 0.0064`, `alert_score = 0.0684`, `i10fg_max = 13.04 m/s`, neighbor fire = 0. Gusty but no recent neighbor fire; still under-ranked.
 
 ### 5.4 Root Cause Diagnosis
-1. **Spatial Grid Discretization (45% of Errors)**: 0.25° grid coarseness (~25 km cell width) causes fire fronts crossing cell boundaries to be flagged in adjacent cells.
-2. **Fixed Daily Alert Budget Constraints (35% of Errors)**: Forcing 25 daily alerts during low-activity periods incurs false alarms on elevated risk cells without ignitions.
-3. **Stochastic Human Ignitions (20% of Errors)**: Weather and satellite physics cannot predict random accidental human ignitions in moist, low-risk terrain.
+1. **Spatial Grid Discretization (~45% of errors)**: 0.25° cells (~25 km) cause fire fronts near boundaries to be labeled in adjacent cells while alerts concentrate on neighboring high-risk cells.
+2. **Fixed Daily Alert Budget (~35% of errors)**: Forcing Top-25 alerts every day creates FPs on elevated-risk non-fire cells during quieter periods.
+3. **Stochastic / low-signal ignitions (~20% of errors)**: Weather + EO + neighbor context cannot reliably predict isolated early-season ignitions in moist, low-neighbor-fire terrain.
 
 ---
 
 ## 6. Model Robustness & Sensitivity Analysis
 
 ### 6.1 Stress Testing Under Extreme Environmental Conditions
-To evaluate model stability under extreme climate scenarios, performance was stress-tested against severe environmental slices:
+Stress-tested on 2023 Validation slices (`diagnostics/slice_analysis_validation_2023.csv`):
 
-1. **Santa Ana Wind Storms (Wind Gusts > 10 m/s)**:
-   - *Behavior*: Under high wind vectors, CatBoost ranking maintains strong stability. **Recall@25 reaches 56.25%**, confirming that directional wind features correctly capture rapid wind-driven fire spread.
+1. **High Wind Gusts (>10 m/s)**:
+   - *Behavior*: **Recall@25 = 56.75%** (+14.1 pp vs overall 42.63%). Wind/gust and directional neighbor-fire features help capture wind-driven risk.
 2. **Extreme Atmospheric Drought (VPD > 2.0 kPa)**:
-   - *Behavior*: Under severe vapor pressure deficits, model sensitivity surges to **69.35% Recall@25**, successfully flagging almost 7 out of 10 active wildfires in hot, dry timberland.
+   - *Behavior*: **Recall@25 = 68.73%** — nearly 7 in 10 active fires enter the daily Top-25.
 3. **Peak Summer Burn Window (Jun–Oct)**:
-   - *Behavior*: PR-AUC remains resilient at **0.2130** with **43.10% Recall@25**, proving that CatBoost symmetric decision trees prevent catastrophic score degradation during summer burn windows.
+   - *Behavior*: **PR-AUC = 0.2128**, **Recall@25 = 43.90%** (stronger than off-season PR-AUC 0.1332).
 
 ### 6.2 Modality Occlusion & Missing Feature Degradation (Sentinel-2 Cloud Cover)
-In operational deployment, Sentinel-2 optical imagery is frequently obscured by thick cloud cover or smoke plumes. Model robustness was evaluated under satellite availability conditions:
-
-* **Fresh Sentinel-2 Data (`s2n_available = 1`)**: Standard inference utilizing active 5-day optical vegetation indices (NDVI/EVI). PR-AUC = 0.1930.
-* **Precomputed KNN Imputed Data (`stage_c_knn`)**: When optical imagery is obscured, spatial-temporal 5-nearest-neighbor donor imputation provides synthetic vegetation features (`precomputed KNN`).
-* **Degradation Assessment**: Precomputed KNN donor imputation preserves full feature contract integrity without performance drop, confirming ERA5 weather physics and causal FIRMS fire history provide strong redundancy.
+* **Fresh Sentinel-2 (`s2n_available = 1`)**: In this run the validation slice matches overall (all scored rows flagged available): **PR-AUC = 0.1932**.
+* **Precomputed KNN Imputation (`stage_c_knn`)**: When optical imagery is missing upstream, 5-NN donor imputation fills vegetation features before training/inference.
+* **Degradation Assessment**: Slice **4b (KNN-imputed S2)** had **0 rows** in this validation export (imputation already absorbed upstream). ERA5 physics + causal neighbor FIRMS context provide redundancy when optical signal is weak.
 
 ---
 
 ## 7. Model Interpretability & Explainability
 
 ### 7.1 Global Feature Importance Ranking
-Global feature importance was evaluated across all 86 retained features using CatBoost gain split importance and TreeSHAP attribution values.
+Global importance over the **86 retained features** using LightGBM gain and native TreeSHAP (`explainability/feature_explanations.csv`).
 
-![CatBoost Feature Importance and SHAP Contributions](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/feature_explanations.png)
-*Figure 7.1: Global Feature Importance and SHAP Contributions ([feature_explanations.png](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/feature_explanations.png)). Highlights top predictive features in CatBoost Champion model.*
+![LightGBM Feature Importance and SHAP Contributions](notebook_outputs/champion_training_stage_c_knn_high_medium_fire_full/explainability/feature_explanations.png)
+*Figure 7.1: Global Feature Importance and SHAP Contributions for the Champion LightGBM model (neighbor fire history ON).*
 
-#### Top 10 Most Predictive Features:
-1. **`fire_distance_weighted_count_lag2`** (SHAP: 0.1470, Gain: 5.91%): Distance-weighted D-1 regional fire activity count. Single strongest predictor of continuous fire activity.
-2. **`fire_distance_weighted_count_7d_lag2`** (SHAP: 0.1273, Gain: 5.87%): 7-day cumulative distance-weighted fire activity.
-3. **`elevation`** (SHAP: 0.0578, Gain: 4.78%): Digital Elevation Model topographic height.
-4. **`sp_mean`** (SHAP: 0.0404, Gain: 4.72%): Surface barometric pressure from ERA5.
-5. **`latitude`** (SHAP: 0.0483, Gain: 4.09%): North-south geographic position.
-6. **`lai_hv_mean`** (SHAP: 0.0666, Gain: 3.90%): High vegetation Leaf Area Index.
-7. **`s5n_s5p_co_mean`** (SHAP: 0.0864, Gain: 3.70%): Sentinel-5P carbon monoxide atmospheric concentration.
-8. **`s5n_s5p_co_max`** (SHAP: 0.0657, Gain: 3.11%): Peak carbon monoxide atmospheric anomaly.
-9. **`day_of_year_cos`** (SHAP: 0.0317, Gain: 2.67%): Annual seasonal cyclical encoding.
-10. **`slope`** (SHAP: 0.0444, Gain: 2.57%): Terrain slope steepness.
+#### Top 10 Most Predictive Features (by mean |SHAP|):
+1. **`fire_distance_weighted_count_7d_lag2`** (SHAP: 0.2557, Gain share: 53.77%): 7-day distance-weighted neighbor fire activity.
+2. **`fire_distance_weighted_count_lag2`** (SHAP: 0.0875, Gain share: 20.63%): Near-term distance-weighted neighbor fire count.
+3. **`orographic_index`** (SHAP: 0.0798, Gain share: 1.95%): Terrain orographic complexity.
+4. **`elevation`** (SHAP: 0.0622, Gain share: 1.92%): DEM topographic height.
+5. **`lai_lv_mean`** (SHAP: 0.0450, Gain share: 0.72%): Low-vegetation Leaf Area Index.
+6. **`s5n_s5p_co_mean`** (SHAP: 0.0334, Gain share: 3.85%): Sentinel-5P CO mean (combustion plume proxy).
+7. **`lai_hv_mean`** (SHAP: 0.0315, Gain share: 1.13%): High-vegetation Leaf Area Index.
+8. **`fire_context_vpd_interaction`** (SHAP: 0.0231, Gain share: 0.75%): Neighbor-fire × atmospheric dryness interaction.
+9. **`day_of_year_cos`** (SHAP: 0.0228, Gain share: 0.67%): Seasonal cycle encoding.
+10. **`wind_speed_mean_max_30d`** (SHAP: 0.0219, Gain share: 0.51%): 30-day max wind-speed context.
 
 ### 7.2 Physical Domain Alignment & SHAP Attribution Insights
-* **Causal Fire History Alignment**: Distance-weighted lag features dominate model weights, reflecting physical wildfire propagation and continuous thermal anomaly behavior.
-* **Atmospheric Combustion Plumes**: Sentinel-5P carbon monoxide mean (`s5n_s5p_co_mean`) and max (`s5n_s5p_co_max`) rank among top 10 features, capturing active upwind biomass combustion.
-* **Topography & Vegetation Alignment**: DEM elevation, surface pressure, and high vegetation Leaf Area Index (`lai_hv_mean`) correctly isolate steep mountain chaparral zones vulnerable to dry atmospheric convection.
+* **Causal neighbor fire history**: Distance-weighted lag features dominate SHAP/gain, reflecting spatial contagion rather than same-cell persistence (same-cell fire history is excluded).
+* **Atmospheric combustion plumes**: Sentinel-5P CO ranks in the top features, consistent with upwind biomass burning.
+* **Topography & vegetation**: Orographic index, elevation, and LAI isolate steep / fuel-rich terrain where dryness and wind matter most.
 
 ---
 
@@ -261,17 +273,17 @@ Global feature importance was evaluated across all 86 retained features using Ca
 
 ### 8.1 Short-Term Operational Mitigation Strategies
 1. **Hybrid Dynamic Alert Thresholding**:
-   - Replace fixed Top-25 daily alert budgets with a **Hybrid Rule-Based Filter**: issue alerts for the Top-25 cells *only if* predicted probability exceeds `p_fire >= 0.15`. On low-activity winter days, this suppresses up to 85% of false alarm alerts.
+   - Keep Top-25 ranking, but issue alerts only if `p_fire` also exceeds a floor (e.g. `p_fire >= 0.15`) to cut quiet-day false alarms.
 2. **1-Cell Spatial Buffer Post-Processing**:
-   - Implement a spatial post-processing filter that merges adjacent Top-25 alert cells into unified regional hazard blocks, resolving 1-cell spatial discretization offsets observed during error analysis.
+   - Merge adjacent Top-25 alerts into regional hazard blocks to reduce boundary discretization FPs/FNs.
 
 ### 8.2 Long-Term Architectural Improvements
 1. **Spatial Graph Neural Networks (GNNs)**:
-   - Transition from 2D grid rollups to a **Spatial-Temporal Graph Neural Network (ST-GNN)**, modeling California's terrain as an irregular graph where edges represent wind direction, slope gradient, and fuel continuity.
-2. **Multi-Task Learning (Fire Occurrence + Burn Area + Fire Intensity)**:
-   - Extend the neural loss function to jointly predict next-day fire ignition (y in {0,1}), estimated burn area (hectares), and radiative power (MW).
-3. **CatBoost Optuna Hyperparameter Optimization**:
-   - Perform automated Optuna hyperparameter search on CatBoost tree depth, l2_leaf_reg, and learning rate specifically tuned for high/medium fire-prone cells.
+   - Model cells as a wind/slope/fuel graph instead of independent grid rows.
+2. **Multi-Task Learning (Ignition + Burn Area + Intensity)**:
+   - Jointly predict occurrence, burn area, and FRP where labels allow.
+3. **LightGBM Optuna Refinement**:
+   - Continue Optuna search with stronger imbalance handling (`scale_pos_weight` range expansion) and hard-negative mining for early-season FN cases.
 
 ---
 
@@ -281,13 +293,16 @@ Global feature importance was evaluated across all 86 retained features using Ca
 
 | Model Architecture | PR-AUC | Recall @ 25 | GPU Inference Latency (672 cells) | CPU Inference Latency (672 cells) | Memory Footprint |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **LightGBM Champion** | **0.3524** | 43.50% | **4.2 ms** | **12.5 ms** | **18 MB** |
-| **Dual GBDT Ensemble** | 0.2353 | **47.21%** | **8.6 ms** | **24.1 ms** | **42 MB** |
+| **LightGBM Dual-Head (Full 672 Grid + fire/neighbor history)** | **0.3524** | 43.50% | **4.2 ms** | **12.5 ms** | **18 MB** |
+| **LightGBM Champion Stage C KNN (High–Medium, neighbor history, May–Nov)** | **0.1451** (2025 Test) | **36.38%** (2025 Test) / **42.63%** (2023 Val Top-25) | **~4–5 ms** | **~12–15 ms** | **~18 MB** |
+| **Dual GBDT Ensemble** | 0.1021 | **29.76%** | **8.6 ms** | **24.1 ms** | **42 MB** |
 | **Transformer Model** | 0.1971 | 39.59% | **42.1 ms** | 185.0 ms | **312 MB** |
 
+> Note: Row 1 is the earlier full-grid LightGBM checkpoint (with fire/neighbor history). Row 2 is the **final Stage C KNN** LightGBM champion from `notebook_outputs/champion_training_stage_c_knn_high_medium_fire_full/` (neighbor history ON, fire-season May–Nov, 86 pruned features, blend clf 0.3 / ranker 0.7).
+
 ### 9.2 Model Compression & Production Export
-* **Serialized Model Export**: Final models were packaged into a 18 MB standalone .joblib artifact containing tree weights, probability calibrators, and feature contracts.
-* **ONNX Runtime Acceleration**: Exporting the LightGBM booster to ONNX runtime reduces CPU inference latency to **2.8 ms per daily statewide sweep**, enabling real-time edge execution on field laptops or low-power command center servers.
+* **Serialized Model Export**: Packaged as `models/champion_model.joblib` with LightGBM classifier/ranker, logit calibrator, feature contract, selected cells, and blend weights (plus plain-text booster weight files).
+* **Production Path**: Reload the joblib artifact in the inference notebook (no `.fit()`). LightGBM remains the low-latency option for statewide daily sweeps on CPU or GPU.
 
 ## Signatures
 
