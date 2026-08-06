@@ -5,14 +5,16 @@
 ## 1. Introduction & Objectives
 
 ### 1.1 Selected Model Checkpoints & Architecture Overview
-This evaluation phase benchmarked three distinct model checkpoints developed during Milestone 4 and Milestone 5:
+This evaluation phase benchmarked four distinct model checkpoints developed during Milestone 4 and Milestone 5:
 
-1. Champion LightGBM Dual-Head Model:
+1. LightGBM Dual-Head Model:
    A dual-head pipeline combining a LightGBM Binary Classifier (`LGBMClassifier`) for absolute probability estimation and a LightGBM LambdaRank Ranker (`LGBMRanker`) for spatial relative risk ordering, calibrated using a post-hoc Logistic Regression model.
 2. Heterogeneous GBDT Ensemble:
    A dual-engine 50/50 ensemble combining LightGBM and histogram-accelerated XGBoost (`XGBClassifier` + `XGBRanker`) via daily within-day percentile score fusion.
 3. Spatial-Temporal Transformer:
    A multi-modal 4-layer Transformer Encoder with 5 dedicated feature projection sub-encoders (ERA5, Sentinel-2, Sentinel-5P, DEM, and Causal Fire History) trained with a joint `HybridFocalRankingLoss`.
+4. Champion CatBoost Model (Stage C KNN):
+   A CatBoost gradient boosting pipeline (`CatBoostClassifier` + `CatBoostRanker`) operating on precomputed KNN spatial-temporal imputations, trained on 86 pruned features over high & medium fire-prone cells, using a 100% classifier daily percentile score blend.
 
 ---
 
@@ -26,13 +28,17 @@ Data integrity and temporal non-leakage were strictly enforced across all chrono
 - **Calibration Split (2024)**: Used exclusively for fitting the Logistic Regression Platt probability calibrator.
 - **Held-Out Test Set (2025)**: 365 calendar days (Jan 1, 2025 – Dec 31, 2025), totaling **245,280 cell-days** and **2,275 true positive wildfire events** (0.928% positive rate). Zero 2025 rows influenced model fitting or hyperparameter selection.
 
-### 2.2 Feature Pipeline Contract (63 Source -> 114 Engineered Features)
-The feature engineering pipeline ingests 63 source raw columns and generates **114 model features**:
-* **4 Calendar Cycle Features**: `day_of_year_sin`, `day_of_year_cos`, `month_sin`, `month_cos`.
-* **23 Weather Physics & Interactions (ERA5, Cutoff D-5)**: `vpd_kpa`, `vpd_wind_interaction`, `heat_soil_deficit_interaction`, 14d & 30d rolling mean/maxima.
-* **10 Causal D-1 Fire History Features (FIRMS, Cutoff D-1)**: `fire_cell_lag2`, `fire_cell_days_since_lag2`, `fire_cell_count_7d_lag2`, `fire_neighbor_count_7d_lag2`, `fire_statewide_cells_7d_lag2`.
-* **14 Wind-Aware Directional Spread Context Features**: `fire_upwind_count_7d_lag2`, `fire_wind_spread_potential_7d_lag2`, `fuel_dryness_index`, `ignition_dry_windy_index`.
-* **1 KNN Flag Feature**: `s2n_knn_imputed` (marking spatial-temporal donor imputations when Sentinel-2 optical data was obscured by cloud cover).
+### 2.2 Feature Pipeline Contract & Pruning Strategy (107 Initial -> 86 Kept Features)
+The feature engineering pipeline ingests 63 raw source columns and constructs **107 initial candidate features**. To reduce multicollinearity, lower memory overhead, and optimize downstream model generalization, a **20% feature pruning step** (`drop_fraction: 0.2`) was applied during preprocessing (Stage C KNN pipeline).
+
+#### 1. Feature Pruning Overview
+- **Initial Feature Count**: 107 features
+- **Pruning Rate**: 20.0% (21 features dropped)
+- **Final Model Feature Set**: **86 features**
+- **Imputation Method**: Precomputed K-Nearest Neighbors (`precomputed KNN`)
+- **Target Spatial Cell Subset**: High & Medium Fire Prone Cells (437 selected grid cells out of 672 archive cells)
+- **Features Used**: present in `metrics_summary.json`
+
 
 ### 2.3 Definition of Baseline Models
 The final models were benchmarked against four established baselines:
