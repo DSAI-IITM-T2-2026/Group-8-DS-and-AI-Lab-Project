@@ -41,11 +41,8 @@ The final models were benchmarked against four established baselines:
 3. **Standard Logistic Regression Baseline**: Linear model on raw ERA5 and terrain features. `PR-AUC = 0.0782`, `Recall@25 = 19.4%`.
 4. **Milestone 4 V1/V2 Weather-Only Baseline**: GBDT model excluding causal fire history. `PR-AUC = 0.0958`, `Recall@25 = 25.1%`.
 
-### 2.4 Execution Environment Setup
-Evaluations were executed in Kaggle GPU environments using **Dual NVIDIA Tesla T4 GPUs** (16GB VRAM each), PyTorch 2.2, LightGBM 4.6.0, XGBoost 3.2.0, and Scikit-Learn 1.5.2.
 
-
-### 2.5 Historical Fire Activity Analysis & Regional Splitting 
+### 2.4 Historical Fire Activity Analysis & Regional Splitting 
 To analyze spatial fire density across California's 672 land cells and prevent zero-inflated bias from non-burnable desert/urban cells, historical fire activity was analyzed:
 
 1. **Cumulative Pixel Aggregation**: For each valid cell ID, total historical FIRMS thermal fire pixels were aggregated over the dataset period:
