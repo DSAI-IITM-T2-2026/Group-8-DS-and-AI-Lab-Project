@@ -298,7 +298,7 @@ Global importance over the **86 retained features** using LightGBM gain and nati
 | **Dual GBDT Ensemble** | 0.1021 | **29.76%** | **8.6 ms** | **24.1 ms** | **42 MB** |
 | **Transformer Model** | 0.1971 | 39.59% | **42.1 ms** | 185.0 ms | **312 MB** |
 
-> Note: Row 1 is the earlier full-grid LightGBM checkpoint (with fire/neighbor history). Row 2 is the **final Stage C KNN** LightGBM champion from `notebook_outputs/champion_training_stage_c_knn_high_medium_fire_full/` (neighbor history ON, fire-season May–Nov, 86 pruned features, blend clf 0.3 / ranker 0.7).
+
 
 ### 9.2 Model Compression & Production Export
 * **Serialized Model Export**: Packaged as `models/champion_model.joblib` with LightGBM classifier/ranker, logit calibrator, feature contract, selected cells, and blend weights (plus plain-text booster weight files).
