@@ -19,6 +19,10 @@
 - Conducted an extensive analysis of historical wildfire hotspots by aggregating FIRMS fire pixels across 672 land regions and classifying each region into Low, Medium, and High-risk categories. Explored the use of these spatial risk priors to guide model training towards fire-prone regions, with the objective of improving predictive performance and reducing class imbalance effects.
 - Designed, developed, and experimented with a novel ensemble modelling approach combining LightGBM and histogram-based XGBoost, investigating how complementary gradient boosting algorithms could improve robustness, generalization, and overall wildfire prediction performance.
 - Collated, organized, and analysed experimental results from the various machine learning models developed throughout the milestone.
+## Roushan Kumar Singh (Roll Number: 23F1002240)
+
+- Integrate Lakshay’s train / test split script with existing training / inference notebook.
+- created training and inference notebooks from the milestone 4 code for better experimentation, validation and testing of the models. and understanding of models.
 
 
 ## Signatures
@@ -28,8 +32,6 @@
 | ------------------- | ----------- | ---------------- |
 | Ripunjay Kumar      | 21F3002511  |                  |
 | Lakshay Garg        | 21F3001076  | ✅                |
-| Roushan Kumar Singh | 23F1002240  |                  |
+| Roushan Kumar Singh | 23F1002240  | ✅                |
 | Lakshmi Sruthi K    | 21F1005626  | ✅               |
 | R Aditya            | 21F1004839  | ✅️               |
-
-
