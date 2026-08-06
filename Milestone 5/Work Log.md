@@ -1,5 +1,14 @@
 # Work Logs - Milestone 5
 
+## Ripunjay Kumar (Roll Number: 21F3002511)
+
+- Ran Optuna hyperparameter fine-tuning for the champion LightGBM dual-head pipeline (classifier search on chronological 2019–2022 → 2023 validation, objective blending PR-AUC and Recall@25).
+- Performed SHAP / TreeSHAP feature importance analysis on the fitted classifier and ranked drivers for interpretability and pruning.
+- Selected the top ~80% features by SHAP contribution, dropped the bottom ~20%, and re-trained the classifier + ranker on the pruned feature set; re-tuned the daily classifier/ranker alert blend on 2023.
+- Extended training notebooks with post-training diagnostics (slice analysis, Top-25 confusion maps, FP/FN sample generation) for LightGBM / CatBoost evaluation runs.
+- Contributed to the Milestone 5 report write-up and PPT slides (metrics, robustness, limitations, and evaluation figures).
+
+
 ## Lakshay Garg (Roll Number: 21F3001076)
 
 - Consolidated Stage C / Stage C KNN datasets on Kaggle (`California_Wildfire_KNN`, `California_Wildfire_Median`, `firms_test` / `fire_analysis2.csv`) for reproducible training and inference Inputs.
@@ -30,7 +39,7 @@
 
 | Member              | Roll Number | Signature Commit |
 | ------------------- | ----------- | ---------------- |
-| Ripunjay Kumar      | 21F3002511  |                  |
+| Ripunjay Kumar      | 21F3002511  | ✅               |
 | Lakshay Garg        | 21F3001076  | ✅                |
 | Roushan Kumar Singh | 23F1002240  | ✅                |
 | Lakshmi Sruthi K    | 21F1005626  | ✅               |
