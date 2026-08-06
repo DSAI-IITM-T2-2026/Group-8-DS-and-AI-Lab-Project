@@ -66,7 +66,7 @@ To analyze spatial fire density across California's 672 land cells and prevent z
    - Outliers were flagged using standard Interquartile Range rules (IQR = Q3 - Q1, Lower Bound = Q1 - 1.5 * IQR, Upper Bound = Q3 + 1.5 * IQR).
 
 The following figure illustrates the spatial distribution of California's grid cells categorized into outlier, high-, medium-, and low-fire-risk regions based on historical cumulative fire activity.
-![](https://raw.githubusercontent.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project/refs/heads/main/Milestone%205/images/fire_analysis2_category_grid_map.png)
+![](images/fire_analysis2_category_grid_map.png)
 
 
 
@@ -189,15 +189,15 @@ Auditing predictions on the 2023 Validation set (93,518 rows) using Champion Lig
 
 ### 5.2 Qualitative Spatial Grid Map Interpretations
 
-![California Spatial Risk Map August 1, 2025](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/map_2025-08-01.png)
+![California Spatial Risk Map August 1, 2025](images/map_2025-08-01.png)
 
-*Figure 5.1: Spatial Risk Map for August 1, 2025 ([map_2025-08-01.png](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/map_2025-08-01.png)). Demonstrates CatBoost spatial risk scoring across California high and medium fire prone cells during peak summer burn season.*
+*Figure 5.1: Spatial Risk Map for August 1, 2025 ([map_2025-08-01.png](images/map_2025-08-01.png)). Demonstrates LightGBM spatial risk scoring across California high and medium fire-prone cells during peak summer burn season.*
 
-![California Spatial Risk Map October 21, 2025](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/map_peak_2025-10-21.png)
-*Figure 5.2: Spatial Risk Map for Peak Fire Day October 21, 2025 ([map_peak_2025-10-21.png](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/map_peak_2025-10-21.png)). Highlights high risk score concentration along active timberland corridors.*
+![California Spatial Risk Map October 21, 2025](images/map_peak_2025-10-21.png)
+*Figure 5.2: Spatial Risk Map for Peak Fire Day October 21, 2025 ([map_peak_2025-10-21.png](images/map_peak_2025-10-21.png)). Highlights high risk score concentration along active timberland corridors.*
 
-![Calibration and Precision-Recall Curves](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/calibration_and_precision_recall.png)
-*Figure 5.3: Reliability Calibration Curve and Precision-Recall Curve ([calibration_and_precision_recall.png](file:///d:/IITM/BSc/DSAI/Project/Group-8-DS-and-AI-Lab-Project/Milestone%205/images/calibration_and_precision_recall.png)). Demonstrates post-hoc Logistic Regression probability alignment and trade-off curves.*
+![Calibration and Precision-Recall Curves](images/calibration_and_precision_recall.png)
+*Figure 5.3: Reliability Calibration Curve and Precision-Recall Curve ([calibration_and_precision_recall.png](images/calibration_and_precision_recall.png)). Demonstrates post-hoc Logistic Regression probability alignment and trade-off curves.*
 ### 5.3 Audit of Specific Misclassified Samples
 
 Audited on the 2023 Validation set using Champion LightGBM (`Wildfire_Training.ipynb` / `stage_c_knn` / `high_medium_fire` / neighbor fire ON).
@@ -247,7 +247,7 @@ Stress-tested on 2023 Validation slices (`diagnostics/slice_analysis_validation_
 ### 7.1 Global Feature Importance Ranking
 Global importance over the **86 retained features** using LightGBM gain and native TreeSHAP (`explainability/feature_explanations.csv`).
 
-![LightGBM Feature Importance and SHAP Contributions](notebook_outputs/champion_training_stage_c_knn_high_medium_fire_full/explainability/feature_explanations.png)
+![LightGBM Feature Importance and SHAP Contributions](images/feature_explanations.png)
 *Figure 7.1: Global Feature Importance and SHAP Contributions for the Champion LightGBM model (neighbor fire history ON).*
 
 #### Top 10 Most Predictive Features (by mean |SHAP|):
