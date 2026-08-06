@@ -15,6 +15,11 @@
 - Initiated the analysis of historical fire pixels to identify recurring wildfire hotspots, exploring their potential use for spatial risk assessment, feature engineering, and improving future modelling efforts.
 - Conducted technical research and experimentation on temporal learning architectures, multimodal geospatial data integration, and preprocessing strategies to support the development of a more robust wildfire prediction pipeline.
 
+## Lakshmi Sruthi K (Roll Number: 21F1005626)
+- Conducted an extensive analysis of historical wildfire hotspots by aggregating FIRMS fire pixels across 672 land regions and classifying each region into Low, Medium, and High-risk categories. Explored the use of these spatial risk priors to guide model training towards fire-prone regions, with the objective of improving predictive performance and reducing class imbalance effects.
+- Engineered and integrated domain-informed features into the sequential Transformer training pipeline, enhancing the representation of spatial and temporal information from multimodal datasets. Worked on incorporating these engineered features into the preprocessing and training workflow to support more effective learning.
+- Designed, developed, and experimented with a novel ensemble modelling approach combining LightGBM and histogram-based XGBoost, investigating how complementary gradient boosting algorithms could improve robustness, generalization, and overall wildfire prediction performance.
+- Collated, organized, and analysed experimental results from the various machine learning models developed throughout the milestone. Conducted a systematic benchmarking study by comparing evaluation metrics, identifying strengths and weaknesses of different approaches, and documenting findings to support future modelling decisions and research direction.
 
 
 ## Signatures
@@ -25,7 +30,7 @@
 | Ripunjay Kumar      | 21F3002511  |                  |
 | Lakshay Garg        | 21F3001076  | ✅                |
 | Roushan Kumar Singh | 23F1002240  |                  |
-| Lakshmi Sruthi K    | 21F1005626  |                  |
+| Lakshmi Sruthi K    | 21F1005626  | ✅                 |
 | R Aditya            | 21F1004839  | ✅️                |
 
 
