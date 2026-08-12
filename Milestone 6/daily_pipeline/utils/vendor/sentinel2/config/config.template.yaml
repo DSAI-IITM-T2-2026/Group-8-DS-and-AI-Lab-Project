@@ -1,0 +1,47 @@
+# Credential-free template used by Sentinel2_v3_team_export.ipynb.
+# Resource identifiers are prefilled; users still authenticate individually.
+
+gee:
+  project_id: "iitm-bs-mlops-500106"
+
+aoi:
+  geojson_path: "config/california.geojson"
+  error_margin_m: 100
+
+temporal:
+  # Keep 2018 as the anchor so 5-day windows match production v3.
+  start_year: 2018
+  end_year: 2025
+  window_days: 5
+
+grid:
+  resolution_m: 1000
+  crs: "EPSG:3310"
+  asset_id: "projects/iitm-bs-mlops-500106/assets/california_1km_grid_v3"
+  reduce_tile_m: 100000
+
+sentinel2:
+  collection: COPERNICUS/S2_SR_HARMONIZED
+  cloud_probability_collection: COPERNICUS/S2_CLOUD_PROBABILITY
+  bands: [B2, B3, B4, B8, B11, B12]
+  cloud_filter_pct: 100
+  cloud_probability_threshold: 65
+  composite: median
+  evi_min_abs_denominator: 0.05
+  evi_max_abs: 2.0
+  reduce_scale_m: 100
+  tile_scale: 4
+
+export:
+  bucket: "sentinel-2-2016-2025"
+  prefix: sentinel2_features_v3
+  gee_format: CSV
+  format: parquet
+  drop_empty_cells: false
+
+scheduler:
+  max_running_tasks: 5
+  poll_interval_seconds: 120
+  retry_attempts: 3
+  state_db: state/features_v3.db
+  log_dir: logs
