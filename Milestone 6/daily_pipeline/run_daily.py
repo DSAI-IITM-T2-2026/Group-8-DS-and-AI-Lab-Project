@@ -11,6 +11,7 @@ Date conventions (Milestone 4 / live prediction):
 from __future__ import annotations
 
 import argparse
+import calendar
 import logging
 import sys
 import time
@@ -136,20 +137,51 @@ def _fmt_secs(seconds: float) -> str:
     return f"{h}h {m}m {s:.0f}s"
 
 
-def _month_uri_exists(bucket: str, prefix: str, day: date) -> bool:
-    """True if monthly ERA5 covering this day exists (era5/YYYY or era5/raw/YYYY)."""
+_MONTH_BLOB_CACHE: dict[tuple[str, str, int, int], bool] = {}
+
+
+def _month_blob_exists(bucket: str, prefix: str, day: date) -> bool:
+    """True if a monthly ERA5 object exists for this calendar month."""
+    key = (bucket, prefix, day.year, day.month)
+    cached = _MONTH_BLOB_CACHE.get(key)
+    if cached is not None:
+        return cached
+
     from google.cloud import storage
 
     stem = f"era5_{day.year}_{day.month:02d}.nc"
     client = storage.Client()
     b = client.bucket(bucket)
+    found = False
     for name in (
         f"{prefix.rstrip('/')}/{day.year}/{stem}",
         f"{prefix.rstrip('/')}/raw/{day.year}/{stem}",
     ):
         if b.blob(name).exists():
-            return True
-    return False
+            found = True
+            break
+    _MONTH_BLOB_CACHE[key] = found
+    return found
+
+
+def _month_is_finished(day: date, *, as_of: date) -> bool:
+    """True when the calendar month containing `day` has fully elapsed before as_of."""
+    last = date(day.year, day.month, calendar.monthrange(day.year, day.month)[1])
+    return last < as_of
+
+
+def _month_covers_day(
+    bucket: str, prefix: str, day: date, *, as_of: date | None = None
+) -> bool:
+    """Skip daily CDS only if a monthly file exists and that month is finished.
+
+    A current-month object (e.g. era5_2026_08.nc on 13 Aug) is often partial.
+    Treating it as covering later August days would skip CDS for days not in the file.
+    """
+    as_of = as_of or date.today()
+    if not _month_is_finished(day, as_of=as_of):
+        return False
+    return _month_blob_exists(bucket, prefix, day)
 
 
 def _download_flags(args: argparse.Namespace, cfg: dict) -> tuple[bool, bool]:
@@ -239,10 +271,19 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
     )
 
     t = time.perf_counter()
-    if skip and _month_uri_exists(bucket, prefixes["era5"], era5_day):
+    if skip and _month_covers_day(bucket, prefixes["era5"], era5_day, as_of=as_of):
         logger.info("ERA5 monthly covers %s — skip daily CDS", era5_day)
         era5_rc = 0
     else:
+        if skip and _month_blob_exists(bucket, prefixes["era5"], era5_day):
+            logger.info(
+                "ERA5 monthly era5_%04d_%02d.nc exists but %04d-%02d is still open as of %s — daily CDS",
+                era5_day.year,
+                era5_day.month,
+                era5_day.year,
+                era5_day.month,
+                as_of,
+            )
         era5_rc = download_era5_day(
             era5_day,
             bucket=bucket,
@@ -324,9 +365,22 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
     prefixes = cfg["gcs"]["prefixes"]
     project = cfg["gee"]["project_id"]
 
+    logged_open_months: set[tuple[int, int]] = set()
     for day in era5_days:
-        if skip and _month_uri_exists(bucket, prefixes["era5"], day):
+        if skip and _month_covers_day(bucket, prefixes["era5"], day, as_of=as_of):
             continue
+        if skip and _month_blob_exists(bucket, prefixes["era5"], day):
+            key = (day.year, day.month)
+            if key not in logged_open_months:
+                logger.info(
+                    "ERA5 monthly era5_%04d_%02d.nc exists but %04d-%02d is still open as of %s — daily CDS for uncovered days",
+                    day.year,
+                    day.month,
+                    day.year,
+                    day.month,
+                    as_of,
+                )
+                logged_open_months.add(key)
         rc = download_era5_day(
             day,
             bucket=bucket,

@@ -289,6 +289,82 @@ def _build_month_from_daily_files(
     return pd.concat(frames, ignore_index=True)
 
 
+def _unique_dates(df: pd.DataFrame) -> set[date]:
+    if df.empty:
+        return set()
+    return {pd.Timestamp(x).date() for x in pd.to_datetime(df["date"]).unique()}
+
+
+def _needed_month_days(
+    year: int, month: int, start: pd.Timestamp, end: pd.Timestamp
+) -> list[date]:
+    start_d = pd.Timestamp(start).normalize().date()
+    end_d = pd.Timestamp(end).normalize().date()
+    return [d for d in _days_in_month(year, month) if start_d <= d <= end_d]
+
+
+def _fill_month_from_dailies(
+    month_df: pd.DataFrame | None,
+    year: int,
+    month: int,
+    gcs_prefix: str,
+    raw_cache: Path,
+    *,
+    legacy_prefix: str | None,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.DataFrame:
+    """Append daily NetCDFs for days missing from a (possibly partial) monthly frame."""
+    needed = _needed_month_days(year, month, start, end)
+    have = _unique_dates(month_df) if month_df is not None else set()
+    missing = [d for d in needed if d not in have]
+    if not missing:
+        if month_df is None:
+            raise FileNotFoundError(f"No ERA5 for {year}-{month:02d}")
+        return month_df
+
+    if month_df is not None:
+        logger.info(
+            "Monthly ERA5 %04d-%02d missing %d needed day(s); stitching dailies: %s%s",
+            year,
+            month,
+            len(missing),
+            ", ".join(d.isoformat() for d in missing[:8]),
+            "…" if len(missing) > 8 else "",
+        )
+    else:
+        logger.info(
+            "No monthly ERA5 for %04d-%02d; stitching daily NetCDFs",
+            year,
+            month,
+        )
+
+    try:
+        daily_df = _build_month_from_daily_files(
+            year,
+            month,
+            gcs_prefix,
+            raw_cache,
+            legacy_prefix=legacy_prefix,
+            start=pd.Timestamp(min(missing)),
+            end=pd.Timestamp(max(missing)),
+        )
+    except FileNotFoundError:
+        if month_df is None:
+            raise
+        logger.warning(
+            "ERA5 %04d-%02d: monthly file is partial and no daily NetCDFs for missing days",
+            year,
+            month,
+        )
+        return month_df
+
+    if month_df is None:
+        return daily_df
+    out = pd.concat([month_df, daily_df], ignore_index=True)
+    return out.drop_duplicates(subset=["date", "cell_id"], keep="first")
+
+
 def build_era5_daily_range(
     start: pd.Timestamp,
     end: pd.Timestamp,
@@ -301,9 +377,9 @@ def build_era5_daily_range(
     """Return daily ERA5 features for [start, end], caching per month.
 
     Resolution order per month:
-      1. Cached parquet
+      1. Cached parquet (rebuilt if it is missing days in [start, end])
       2. Monthly object (era5/YYYY/… or era5/raw/YYYY/…)
-      3. Stitch daily era5_YYYY_MM_DD.nc objects
+      3. Stitch daily era5_YYYY_MM_DD.nc for any days the monthly file does not cover
     """
     daily_cache.mkdir(parents=True, exist_ok=True)
     frames: list[pd.DataFrame] = []
@@ -312,9 +388,22 @@ def build_era5_daily_range(
     for period in months:
         year, month = period.year, period.month
         cache_path = daily_cache / f"era5_daily_{year}_{month:02d}.parquet"
+        needed = set(_needed_month_days(year, month, start, end))
+        month_df: pd.DataFrame | None = None
+
         if cache_path.exists():
-            logger.info("ERA5 daily cache hit %s", cache_path.name)
             month_df = pd.read_parquet(cache_path)
+            have = _unique_dates(month_df)
+            if needed <= have:
+                logger.info("ERA5 daily cache hit %s", cache_path.name)
+                mask = (month_df["date"] >= start) & (month_df["date"] <= end)
+                frames.append(month_df.loc[mask])
+                continue
+            logger.info(
+                "ERA5 daily cache %s missing %d needed day(s); filling from daily NetCDFs",
+                cache_path.name,
+                len(needed - have),
+            )
         else:
             try:
                 raw = download_era5_month(
@@ -328,22 +417,20 @@ def build_era5_daily_range(
                 month_df = month_to_daily_frame(ds)
                 logger.info("Built ERA5 month from monthly file %04d-%02d", year, month)
             except FileNotFoundError:
-                logger.info(
-                    "No monthly ERA5 for %04d-%02d; stitching daily NetCDFs",
-                    year,
-                    month,
-                )
-                month_df = _build_month_from_daily_files(
-                    year,
-                    month,
-                    gcs_prefix,
-                    raw_cache,
-                    legacy_prefix=legacy_prefix,
-                    start=start,
-                    end=end,
-                )
-            month_df.to_parquet(cache_path, index=False)
-            logger.info("Wrote %s (%d rows)", cache_path.name, len(month_df))
+                month_df = None
+
+        month_df = _fill_month_from_dailies(
+            month_df,
+            year,
+            month,
+            gcs_prefix,
+            raw_cache,
+            legacy_prefix=legacy_prefix,
+            start=start,
+            end=end,
+        )
+        month_df.to_parquet(cache_path, index=False)
+        logger.info("Wrote %s (%d rows)", cache_path.name, len(month_df))
 
         mask = (month_df["date"] >= start) & (month_df["date"] <= end)
         frames.append(month_df.loc[mask])
