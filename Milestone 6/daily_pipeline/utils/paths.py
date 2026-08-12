@@ -9,12 +9,12 @@ _OUTER_KEYS = frozenset({"local_cache", "m4_shared_cache", "repo_root"})
 
 
 def utils_root() -> Path:
-    """ops/daily_pipeline/utils/"""
+    """Milestone 6/daily_pipeline/utils/"""
     return Path(__file__).resolve().parent
 
 
 def pipeline_root() -> Path:
-    """ops/daily_pipeline/ (public entry folder)."""
+    """Milestone 6/daily_pipeline/ (public entry folder)."""
     return utils_root().parent
 
 

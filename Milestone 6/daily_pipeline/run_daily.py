@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Single CLI: download | preprocess | export_day | all.
 
-Date conventions (Milestone 4):
+Date conventions (Milestone 4 / live prediction):
   label_date D          → day we predict / write *_test.parquet
   eo_asof_date          → D − 1  (S2 / S5P causal join)
-  feature_end_date      → D − (era5_lag + lead) = D − 6  (ERA5)
-  FIRMS y_fire          → on label_date D
+  feature_end_date      → D − (era5_lag + lead) = D − 6  (ERA5; 7d history ending there)
+  FIRMS neighbor history → through D − 1 (y_fire on D is not a model input; export uses 0)
 """
 
 from __future__ import annotations
@@ -85,33 +85,45 @@ def resolve_label_dates(args: argparse.Namespace) -> list[date]:
 
 
 def label_window(labels: list[date], cfg: dict) -> list[date]:
-    lookback = int(cfg["task"].get("lookback_days", 7))
+    lookback = int(cfg["task"].get("lookback_days", 30))
     label_start = min(labels) - timedelta(days=lookback)
     label_end = max(labels)
     return date_range(label_start, label_end)
 
 
-def era5_days_needed(labels: list[date], cfg: dict) -> list[date]:
-    """ERA5 calendar days for Stage A: history ending at each label's feature_end."""
-    lookback = int(cfg["task"].get("lookback_days", 7))
+def eo_asof_dates_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
+    """Unique eo_asof (= label−1) days for S2/S5P; never past as_of (default today)."""
+    as_of = as_of or date.today()
+    days = sorted({eo_asof_date(d) for d in label_window(labels, cfg)})
+    return [d for d in days if d <= as_of]
+
+
+def firms_label_dates_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
+    """FIRMS geotiffs for neighbor fire history through D−1 (not predict-day D)."""
+    as_of = as_of or date.today()
+    lookback = int(cfg["task"].get("lookback_days", 30))
+    # Neighbor features use lag2 → need history through min(D−1, as_of), not D.
+    history_end = min(max(labels) - timedelta(days=1), as_of)
+    history_start = min(labels) - timedelta(days=lookback)
+    if history_end < history_start:
+        return []
+    return date_range(history_start, history_end)
+
+
+def era5_days_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
+    """ERA5 calendar days ending at each label's feature_end (D−6); never past as_of−6."""
+    as_of = as_of or date.today()
+    lookback = int(cfg["task"].get("lookback_days", 30))
     history = int(cfg["task"].get("history_days", 7))
     lag = int(cfg["task"]["era5_lag_days"])
     lead = int(cfg["task"]["lead_days"])
     label_start = min(labels) - timedelta(days=lookback)
-    label_end = max(labels)
-    era5_end = label_end - timedelta(days=lag + lead)
+    label_end = min(max(labels), as_of)
+    era5_end = min(label_end - timedelta(days=lag + lead), as_of - timedelta(days=lag + lead))
     era5_start = label_start - timedelta(days=history + lag + lead)
+    if era5_end < era5_start:
+        return []
     return date_range(era5_start, era5_end)
-
-
-def eo_asof_dates_needed(labels: list[date], cfg: dict) -> list[date]:
-    """Unique eo_asof (= label−1) days for S2/S5P over the label lookback window."""
-    return sorted({eo_asof_date(d) for d in label_window(labels, cfg)})
-
-
-def firms_label_dates_needed(labels: list[date], cfg: dict) -> list[date]:
-    """FIRMS geotiffs keyed by label_date (y_fire / neighbor history)."""
-    return label_window(labels, cfg)
 
 
 def _fmt_secs(seconds: float) -> str:
@@ -154,8 +166,14 @@ def cmd_download_eo_day(
     *,
     skip: bool,
     force_s5p: bool,
+    as_of: date | None = None,
 ) -> int:
     """Download S2 + S5P for one eo_asof day. Returns 2 if S5P still pending."""
+    as_of = as_of or date.today()
+    if eo_day > as_of:
+        logger.info("Skip EO eo_asof=%s (after as_of=%s)", eo_day, as_of)
+        return 0
+
     bucket = cfg["gcs"]["bucket"]
     prefixes = cfg["gcs"]["prefixes"]
     project = cfg["gee"]["project_id"]
@@ -169,6 +187,7 @@ def cmd_download_eo_day(
         grid_asset_id=cfg["gee"]["grid_asset_id"],
         skip_existing=skip,
         window_days=cfg["download"].get("s2_window_days", 5),
+        as_of=as_of,
     )
     logger.info("Timing S2 eo_asof=%s: %s", eo_day, _fmt_secs(time.perf_counter() - t))
 
@@ -193,12 +212,14 @@ def cmd_download_eo_day(
 
 
 def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
-    """Legacy single-day download: --date is treated as eo_asof (S2/S5P) + FIRMS that day.
+    """Legacy single-day download: --date is treated as eo_asof (S2/S5P).
 
     Prefer `download --start-date/--end-date` (label range) or `all --label-date`.
+    FIRMS for the implied label day is skipped (live prediction does not need D's label).
     """
     skip, force_s5p = _download_flags(args, cfg)
     target = args.date
+    as_of = date.today()
     bucket = cfg["gcs"]["bucket"]
     prefixes = cfg["gcs"]["prefixes"]
     project = cfg["gee"]["project_id"]
@@ -234,17 +255,18 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
     if era5_rc != 0:
         return era5_rc
 
+    # Neighbor history: FIRMS for eo_asof day (= D−1), not the predict day.
     t = time.perf_counter()
     export_firms_day(
-        label,
+        target,
         project_id=project,
         bucket=bucket,
         prefix=prefixes["firms"],
         skip_existing=skip,
     )
-    logger.info("Timing FIRMS label=%s: %s", label, _fmt_secs(time.perf_counter() - t))
+    logger.info("Timing FIRMS history_day=%s: %s", target, _fmt_secs(time.perf_counter() - t))
 
-    rc = cmd_download_eo_day(target, cfg, skip=skip, force_s5p=force_s5p)
+    rc = cmd_download_eo_day(target, cfg, skip=skip, force_s5p=force_s5p, as_of=as_of)
     if rc == 2:
         wait = bool(cfg["download"].get("s5p_wait", True))
         if wait:
@@ -262,23 +284,40 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
 
 
 def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[date]) -> int:
-    """Download ERA5 + FIRMS(label) + S2/S5P(eo_asof) for the label lookback window."""
+    """Download ERA5 + FIRMS(through D−1) + S2/S5P(eo_asof≤today) for the lookback window."""
     skip, force_s5p = _download_flags(args, cfg)
-    firms_days = firms_label_dates_needed(labels, cfg)
-    eo_days = eo_asof_dates_needed(labels, cfg)
-    era5_days = era5_days_needed(labels, cfg)
+    as_of = date.today()
+    # Cap requested labels at today for live demos (no future Aug 13–31).
+    capped = [d for d in labels if d <= as_of]
+    if not capped:
+        logger.error("All requested labels are after as_of=%s", as_of)
+        return 1
+    if len(capped) < len(labels):
+        logger.warning(
+            "Capped label range to as_of=%s (%d → %d days); skipped future labels",
+            as_of,
+            len(labels),
+            len(capped),
+        )
+    labels = capped
+
+    firms_days = firms_label_dates_needed(labels, cfg, as_of=as_of)
+    eo_days = eo_asof_dates_needed(labels, cfg, as_of=as_of)
+    era5_days = era5_days_needed(labels, cfg, as_of=as_of)
 
     logger.info(
-        "Range download: %d label(s) %s…%s | FIRMS labels=%d | EO asof=%d (%s…%s) | ERA5 %s…%s",
+        "Range download: %d label(s) %s…%s | FIRMS history=%d (%s…%s) | EO asof=%d (%s…%s) | ERA5 %s…%s",
         len(labels),
         min(labels),
         max(labels),
         len(firms_days),
+        firms_days[0] if firms_days else None,
+        firms_days[-1] if firms_days else None,
         len(eo_days),
-        eo_days[0],
-        eo_days[-1],
-        era5_days[0],
-        era5_days[-1],
+        eo_days[0] if eo_days else None,
+        eo_days[-1] if eo_days else None,
+        era5_days[0] if era5_days else None,
+        era5_days[-1] if era5_days else None,
     )
 
     bucket = cfg["gcs"]["bucket"]
@@ -300,10 +339,10 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
             logger.error("ERA5 download failed for %s (exit=%s)", day, rc)
             return rc
 
-    for i, label in enumerate(firms_days, 1):
-        logger.info("[%d/%d] FIRMS label_date=%s", i, len(firms_days), label)
+    for i, firms_day in enumerate(firms_days, 1):
+        logger.info("[%d/%d] FIRMS history_day=%s", i, len(firms_days), firms_day)
         export_firms_day(
-            label,
+            firms_day,
             project_id=project,
             bucket=bucket,
             prefix=prefixes["firms"],
@@ -313,7 +352,7 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
     pending_s5p: list[date] = []
     for i, eo_day in enumerate(eo_days, 1):
         logger.info("[%d/%d] EO eo_asof=%s (S2+S5P)", i, len(eo_days), eo_day)
-        rc = cmd_download_eo_day(eo_day, cfg, skip=skip, force_s5p=force_s5p)
+        rc = cmd_download_eo_day(eo_day, cfg, skip=skip, force_s5p=force_s5p, as_of=as_of)
         if rc == 2:
             pending_s5p.append(eo_day)
             continue

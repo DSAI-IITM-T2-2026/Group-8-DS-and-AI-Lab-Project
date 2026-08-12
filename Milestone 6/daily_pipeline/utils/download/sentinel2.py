@@ -12,6 +12,7 @@ from pathlib import Path
 logger = logging.getLogger("download.sentinel2")
 
 S2_SRC = Path(__file__).resolve().parents[1] / "vendor" / "sentinel2"
+S2_ANCHOR = date(2018, 1, 1)
 
 
 def parse_date(value: str) -> date:
@@ -26,21 +27,27 @@ def _add_s2_path() -> None:
 
 
 def windows_overlapping(target: date, window_days: int = 5) -> list[tuple[date, date]]:
-    """Return 5-day windows (start, end) that contain target."""
-    anchor = date(2018, 1, 1)
-    delta = (target - anchor).days
+    """Return unique 5-day windows (start, end) on the 2018-01-01 grid that contain target."""
+    delta = (target - S2_ANCHOR).days
     idx = delta // window_days
     results: list[tuple[date, date]] = []
+    seen: set[tuple[date, date]] = set()
     for offset in (-1, 0, 1):
-        start = anchor + timedelta(days=(idx + offset) * window_days)
+        start = S2_ANCHOR + timedelta(days=(idx + offset) * window_days)
         end = start + timedelta(days=window_days - 1)
-        if start <= target <= end:
+        if start <= target <= end and (start, end) not in seen:
+            seen.add((start, end))
             results.append((start, end))
     if not results:
-        start = anchor + timedelta(days=idx * window_days)
+        start = S2_ANCHOR + timedelta(days=idx * window_days)
         end = start + timedelta(days=window_days - 1)
         results.append((start, end))
     return results
+
+
+def window_index(start: date, window_days: int = 5) -> int:
+    """1-based window index from the 2018-01-01 production grid."""
+    return (start - S2_ANCHOR).days // window_days + 1
 
 
 def flat_stem(start: date, end: date) -> str:
@@ -64,8 +71,10 @@ def build_runtime_config(
     object.__setattr__(cfg.grid, "asset_id", grid_asset_id)
     object.__setattr__(cfg.export, "bucket", bucket)
     object.__setattr__(cfg.export, "prefix", prefix)
-    object.__setattr__(cfg.temporal, "start_year", year)
-    object.__setattr__(cfg.temporal, "end_year", year)
+    # Keep 2018 anchor so find_window / indices match production; only need this year
+    # for export metadata — do not seed full-year window lists.
+    object.__setattr__(cfg.temporal, "start_year", 2018)
+    object.__setattr__(cfg.temporal, "end_year", max(year, 2018))
     return cfg
 
 
@@ -78,7 +87,19 @@ def export_window(
     prefix: str = "sentinel2",
     grid_asset_id: str = "projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3",
     skip_existing: bool = True,
+    as_of: date | None = None,
+    window_days: int = 5,
 ) -> str | None:
+    as_of = as_of or date.today()
+    if start > as_of:
+        logger.info(
+            "S2 skip future window %s…%s (starts after as_of=%s)",
+            start,
+            end,
+            as_of,
+        )
+        return None
+
     _add_s2_path()
     from s2_lib import export as export_mod  # type: ignore
     from s2_lib.export import initialize, start_export  # type: ignore
@@ -113,7 +134,13 @@ def export_window(
 
     export_mod.export_prefix = flat_export_prefix  # type: ignore[attr-defined]
 
-    window = TimeWindow(start_date=start, end_date=end)
+    idx = window_index(start, window_days=window_days)
+    window = TimeWindow(
+        window_id=f"{start.isoformat()}_{end.isoformat()}",
+        start_date=start,
+        end_date=end,
+        window_index=idx,
+    )
     task_id, uri = start_export(cfg, window)
     logger.info("Started S2 export %s (task=%s)", uri, task_id)
     return uri
@@ -128,9 +155,16 @@ def download_s2_for_date(
     grid_asset_id: str = "projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3",
     skip_existing: bool = True,
     window_days: int = 5,
+    as_of: date | None = None,
 ) -> list[str]:
+    """Export unique overlapping 5-day windows; skip windows that start after as_of."""
+    as_of = as_of or date.today()
     uris: list[str] = []
+    seen: set[tuple[date, date]] = set()
     for start, end in windows_overlapping(target, window_days=window_days):
+        if (start, end) in seen:
+            continue
+        seen.add((start, end))
         uri = export_window(
             start,
             end,
@@ -139,6 +173,8 @@ def download_s2_for_date(
             prefix=prefix,
             grid_asset_id=grid_asset_id,
             skip_existing=skip_existing,
+            as_of=as_of,
+            window_days=window_days,
         )
         if uri:
             uris.append(uri)
@@ -154,6 +190,12 @@ def main() -> int:
     parser.add_argument("--prefix", default="sentinel2")
     parser.add_argument("--grid-asset", default="projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3")
     parser.add_argument("--no-skip-existing", action="store_true")
+    parser.add_argument(
+        "--as-of",
+        type=parse_date,
+        default=None,
+        help="Do not submit windows that start after this date (default: today).",
+    )
     args = parser.parse_args()
     download_s2_for_date(
         args.date,
@@ -162,6 +204,7 @@ def main() -> int:
         prefix=args.prefix,
         grid_asset_id=args.grid_asset,
         skip_existing=not args.no_skip_existing,
+        as_of=args.as_of,
     )
     return 0
 

@@ -27,9 +27,9 @@ task:
   lead_days: 1
   era5_lag_days: 5
   firms_confidence_min: 30
-  # Days of prior labels kept for rolling features (30d uses min_periods=1 if shorter).
-  # Keep small for daily ops so only months covering the requested range are built.
-  lookback_days: 7
+  # Prior label days for champion rolling (14d/30d weather + neighbor lag2/7d).
+  # Match M5 feature engineering; Stage C month assemble clips to label_date (not MonthEnd).
+  lookback_days: 30
 
 paths:
   # Relative to utils/ (except local_cache → daily_pipeline/.cache)
@@ -60,6 +60,8 @@ download:
 preprocess:
   use_precomputed_knn: true
   knn_neighbors: 5
+  # When KNN has no year<=2022 donors (live 2026), fill missing S2 from prior days.
+  s2_forward_fill_max_days: 7
   # Cell filter for final_processed (see README):
   #   high_medium_fire | high_only | all
   cell_subset: high_medium_fire

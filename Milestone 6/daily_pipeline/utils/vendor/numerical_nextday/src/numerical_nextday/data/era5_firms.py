@@ -37,16 +37,29 @@ def build_era5_firms_month(
     month: int,
     worker: str = "local",
     force: bool = False,
+    end_clip: "pd.Timestamp | None" = None,
 ) -> Path | None:
-    """Download/cache ERA5 daily + FIRMS cells for one calendar month."""
+    """Download/cache ERA5 daily + FIRMS cells for one calendar month.
+
+    If end_clip is set (daily pipeline), do not read past that date so a mid-month
+    label does not require future FIRMS/ERA5 days.
+    """
     cache = shared_cache(cfg)
     stage = "era5_firms"
-    if not claim(cache, worker=worker, stage=stage, year=year, month=month, force=force):
+    # When clipping mid-month, always rebuild so a prior full-month cache is not reused.
+    force_month = force or end_clip is not None
+    if not claim(cache, worker=worker, stage=stage, year=year, month=month, force=force_month):
         return cache / "era5_daily" / f"year={year}" / f"month={month:02d}.parquet"
 
     mvp = load_mvp_modules(cfg)
     start = pd.Timestamp(year=year, month=month, day=1)
     end = start + pd.offsets.MonthEnd(0)
+    if end_clip is not None:
+        end = min(end, pd.Timestamp(end_clip).normalize())
+        if end < start:
+            logger.warning("era5_firms skip %04d-%02d (end_clip=%s before month start)", year, month, end_clip)
+            mark_done(cache, worker=worker, stage=stage, year=year, month=month)
+            return None
 
     era5_dir = cache / "era5_daily" / f"year={year}"
     firms_dir = cache / "firms_cells" / f"year={year}"

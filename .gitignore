@@ -9,3 +9,5 @@ data/processed/
 *.pt
 .DS_Store
 logs/
+.env
+.cache/

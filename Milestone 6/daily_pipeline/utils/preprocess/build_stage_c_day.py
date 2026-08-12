@@ -97,21 +97,49 @@ def run_stage_c_pipeline(
         write_splits,
     )
 
-    lookback = daily_cfg["task"].get("lookback_days", 45)
+    lookback = daily_cfg["task"].get("lookback_days", 30)
+    # Live prediction: panel through D is fine for row keys, but ERA5/FIRMS assemble
+    # must not require calendar days after today / after available as-of.
+    as_of = min(label_date, date.today())
     start = label_date - timedelta(days=lookback)
-    years = _years_in_range(start, label_date)
-    months = _months_in_range(start, label_date)
+    years = _years_in_range(start, as_of)
+    months = _months_in_range(start, as_of)
+    end_clip = pd.Timestamp(as_of)
 
-    logger.info("Stage C build label_date=%s years=%s months=%s", label_date, years, months)
+    logger.info(
+        "Stage C build label_date=%s as_of=%s years=%s months=%s end_clip=%s",
+        label_date,
+        as_of,
+        years,
+        months,
+        end_clip.date(),
+    )
 
     for year in years:
-        year_months = [m for m in months if (year > start.year or m >= start.month) and (year < label_date.year or m <= label_date.month)]
+        year_months = [
+            m
+            for m in months
+            if (year > start.year or m >= start.month)
+            and (year < as_of.year or m <= as_of.month)
+        ]
         if not year_months:
             year_months = months
         for month in year_months:
-            build_era5_firms_month(m4_cfg, year, month, worker="daily", force=force)
+            build_era5_firms_month(
+                m4_cfg,
+                year,
+                month,
+                worker="daily",
+                force=force,
+                end_clip=end_clip,
+            )
         assemble_stage_a_year(
-            m4_cfg, year, months=year_months, worker="daily", era5_lag_days=m4_cfg["task"]["era5_lag_days"], force=force
+            m4_cfg,
+            year,
+            months=year_months,
+            worker="daily",
+            era5_lag_days=m4_cfg["task"]["era5_lag_days"],
+            force=force,
         )
 
     merge_stage_a(m4_cfg, years)
@@ -146,8 +174,42 @@ def run_stage_c_pipeline(
     return history
 
 
+def _forward_fill_s2(frame: pd.DataFrame, targets: list[str], max_days: int) -> pd.DataFrame:
+    """Per-cell causal ffill of S2 bands, at most max_days after last valid observation."""
+    if not targets or max_days < 1 or frame.empty:
+        return frame
+    out = frame.copy()
+    out["label_date"] = pd.to_datetime(out["label_date"]).dt.normalize()
+    out = out.sort_values(["cell_id", "label_date"]).reset_index(drop=True)
+    filled = 0
+    chunks: list[pd.DataFrame] = []
+    for _, grp in out.groupby("cell_id", sort=False):
+        part = grp.copy()
+        missing = part["s2n_available"].fillna(0).astype(int).eq(0)
+        part[targets] = part[targets].ffill(limit=max_days)
+        now_ok = part[targets].notna().any(axis=1)
+        newly = missing & now_ok
+        n_new = int(newly.sum())
+        if n_new:
+            part.loc[newly, "s2n_available"] = 1
+            if "s2n_lag_days" in part.columns:
+                last_obs = part["label_date"].where(~missing).ffill()
+                extra = (part["label_date"] - last_obs).dt.days.fillna(0)
+                prev = pd.to_numeric(part["s2n_lag_days"], errors="coerce").fillna(0)
+                part.loc[newly, "s2n_lag_days"] = prev.loc[newly] + extra.loc[newly]
+            filled += n_new
+        chunks.append(part)
+    out = pd.concat(chunks, ignore_index=True)
+    logger.info(
+        "S2 forward-fill (limit=%d days): filled %d previously missing rows",
+        max_days,
+        filled,
+    )
+    return out
+
+
 def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
-    """Apply KNN imputation (same logic as M4 build_stage_c_knn.py)."""
+    """KNN when 2019–2022 donors exist; otherwise causal S2 forward-fill for live days."""
     from sklearn.neighbors import NearestNeighbors
     from sklearn.preprocessing import StandardScaler
     import numpy as np
@@ -180,7 +242,18 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
 
     out = df.copy()
     out["s2n_knn_imputed"] = 0
-    if miss.sum() and donor.sum() and targets:
+    n_donors = int(donor.sum())
+    n_miss = int(miss.sum())
+    if n_miss and n_donors == 0:
+        max_days = int(daily_cfg.get("preprocess", {}).get("s2_forward_fill_max_days", 7))
+        logger.warning(
+            "KNN skipped: %d missing S2 rows and no year<=2022 donors. "
+            "Forward-filling S2 per cell (max %d days).",
+            n_miss,
+            max_days,
+        )
+        out = _forward_fill_s2(out, targets, max_days)
+    elif n_miss and n_donors and targets:
         X = out[preds].apply(pd.to_numeric, errors="coerce")
         X_d = X.loc[donor].fillna(X.median())
         X_m = X.loc[miss].fillna(X.median())
@@ -188,7 +261,7 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
         X_d_s = scaler.fit_transform(X_d)
         X_m_s = scaler.transform(X_m)
         k = daily_cfg["preprocess"].get("knn_neighbors", 5)
-        nn = NearestNeighbors(n_neighbors=min(k, donor.sum()), metric="euclidean")
+        nn = NearestNeighbors(n_neighbors=min(k, n_donors), metric="euclidean")
         nn.fit(X_d_s)
         dist, idx = nn.kneighbors(X_m_s)
         weights = 1.0 / np.maximum(dist, 1e-6)
@@ -197,6 +270,7 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
         for i, row_idx in enumerate(np.flatnonzero(miss)):
             out.loc[row_idx, targets] = (donor_vals[idx[i]] * weights[i][:, None]).sum(axis=0)
             out.loc[row_idx, "s2n_knn_imputed"] = 1
+        logger.info("KNN imputed %d S2 rows from %d donors (year<=2022)", n_miss, n_donors)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out.to_parquet(out_dir / "all.parquet", index=False)

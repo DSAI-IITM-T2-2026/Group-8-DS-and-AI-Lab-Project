@@ -1,11 +1,14 @@
 # Daily Wildfire Pipeline (self-contained)
 
+Self-contained package under **`Milestone 6/daily_pipeline`** (not `ops/`).
+Produces the same 86-feature per-day table Milestone 5 scores via `prepared_champion_day`.
+
 ---
 
 ## Run setup
 
 ```bash
-cd ops/daily_pipeline
+cd "Milestone 6/daily_pipeline"
 pip install -r requirements.txt
 cp .env.example .env          # fill CDS_API_KEY / GOOGLE_CLOUD_PROJECT
 
@@ -25,56 +28,100 @@ Folder notes: `[utils/README.md](utils/README.md)`.
 
 ### Date range
 
-`--start-date` / `--end-date` are **label dates** (inclusive). The pipeline downloads
-only the decision/ERA5 days needed for that range (plus a short lookback for rolling
-features). ERA5 uses **daily** `era5/YYYY/era5_YYYY_MM_DD.nc` when present, or
-**monthly** under `era5/raw/YYYY/` if that already covers the month.
+`--start-date` / `--end-date` are **label dates** (inclusive). Future labels past **today** are capped (no S2/S5P through 31 Aug when today is earlier). ERA5 uses **daily** `era5/YYYY/era5_YYYY_MM_DD.nc` when present, or **monthly** under `era5/raw/YYYY/`.
 
 ```bash
 # Inclusive label dates (each day: download → preprocess → export)
-python run_daily.py all --start-date 2026-08-01 --end-date 2026-08-10
+python run_daily.py all --start-date 2026-08-10 --end-date 2026-08-12
 
 # Single day
 python run_daily.py all --label-date 2026-08-10
 
-# Raw downloads only for a label range
-python run_daily.py download --start-date 2026-08-01 --end-date 2026-08-10
+# Raw downloads only for a label range (lookback_days=30 pulls prior history)
+python run_daily.py download --start-date 2026-08-10 --end-date 2026-08-12
 ```
 
 ### Timing (how long one day takes)
 
-Logs print per-stage and end-of-day totals, e.g.:
+Logs print per-stage and end-of-day totals. **S5P** is the long pole (~30 min/day on EE). Wait loop polls until parquet exists (`download.s5p_wait: true`).
 
-```text
-Timing ERA5: …
-Timing FIRMS: …
-Timing S2: …
-Timing S5P: …
-Timing download total: …
-Timing preprocess: …
-Timing export_day: …
-=== Timing summary label_date=… | download=… | preprocess=… | export=… | TOTAL=… ===
+Cancel stray EE tasks: [Earth Engine Tasks](https://code.earthengine.google.com/tasks).
+
+**S5P recovery after cancelling:** CANCELLED/FAILED are **not** auto-resubmitted. Use `--force-s5p` or `download.s5p_force: true`. Optional: clear `.cache/s5p_ee_tasks.json`.
+
+---
+
+## Per-day `D_test.parquet` (prediction)
+
+Milestone 4/5 date math (LightGBM artifact stays valid):
+
+| Role | Formula | Example D = 2026-08-10 |
+|------|---------|-------------------------|
+| **label_date** | D | **2026-08-10** → `…/final_processed/2026-08-10_test.parquet` |
+| **eo_asof** (S2 / S5P) | D − 1 | **2026-08-09** (one causal snapshot, not a 7-day EO mean) |
+| **ERA5 feature_end** | (D−1) − 5 = **D − 6** | **2026-08-04**; `*_7d` ≈ Jul 29–Aug 4 |
+| **FIRMS on D** | **not a model input** | `y_fire` column kept as **0** for live forecast |
+| **Neighbor `fire_*`** | prior `y_fire`, lag2 through D−2 | FIRMS downloaded through **D−1** only |
+
+Export asserts: 86 features, single `label_date`, `eo_asof = D−1`, `feature_end = D−6`, ~437 high/medium cells.
+
+With `lookback_days: 30` for D = 2026-08-10 … 2026-08-12:
+
+- FIRMS history: **2026-07-11 … 2026-08-11** (not the predict day)
+- EO/S5P: **2026-07-10 … 2026-08-11**
+- ERA5: **2026-06-28 … 2026-08-06**
+
+**Sentinel-2:** only unique 5-day windows on the 2018-01-01 grid; windows with `start > today` are **skipped** (fixes accidental Aug 16–31 submits).
+
+---
+
+## Demo download (July–August 2026)
+
+Do **not** request labels through 31 Aug. Cap at today (or the last day you will score).
+
+### Recommended: few live days (start ASAP)
+
+```bash
+cd "Milestone 6/daily_pipeline"
+python run_daily.py download --start-date 2026-08-10 --end-date 2026-08-12
+python run_daily.py all --label-date 2026-08-10
 ```
 
-**S5P note:** first-time S5P starts an Earth Engine export and returns before the CSV is ready. Wall time for that stage is only “submit”; wait until the EE task is **COMPLETED**, then re-run `download` / `all` (skip will pick up the file and finish parquet). Use the Timing summary line after a full successful day (raw already present) for a fair “download→final” estimate.
+S5P ≈ 33 eo_asof days (Jul 10–Aug 11) is the long pole.
 
-Cancel stray EE tasks from a bad run (e.g. year=2019 flood): [Earth Engine Tasks](https://code.earthengine.google.com/tasks).
+### Optional: any day in July + August so far
+
+```bash
+python run_daily.py download --start-date 2026-07-01 --end-date 2026-08-12
+```
+
+~73 S5P days — start early; top up before demo:
+
+```bash
+python run_daily.py download --start-date 2026-08-12 --end-date 2026-08-12
+```
+
+### Zero-download 2025 replay
+
+Historical 86-feature panel (schema match):
+
+```bash
+gsutil cp gs://wildfire-detection-first/final_processed/2019_2025/2019-2025.parquet /tmp/
+```
+
+Use Milestone 5 `Wildfire_Inference.ipynb` with `INFERENCE_INPUT_KIND=prepared_champion_day`.
 
 ---
 
 ## Local output
 
-Created under `ops/daily_pipeline/.cache/` while the pipeline runs:
-
+Created under `Milestone 6/daily_pipeline/.cache/`:
 
 | What                       | Local path                                                          |
 | -------------------------- | ------------------------------------------------------------------- |
 | **Final 86-feature table** | `.cache/final_processed/YYYY-MM-DD_test.parquet`                    |
 | Stage C / KNN work         | `.cache/m4_shared_cache/`                                           |
 | Stage C one day            | `.cache/m4_shared_cache/stage_c_knn/day=YYYY-MM-DD/stage_c.parquet` |
-
-
-Skip uploading the final table to GCS (keep local only):
 
 ```bash
 python run_daily.py export_day --label-date 2026-08-10 --local-only
@@ -83,9 +130,6 @@ python run_daily.py export_day --label-date 2026-08-10 --local-only
 ---
 
 ## What goes into GCS (paths)
-
-Raw downloads + final processed table land on the bucket from `utils/config.yaml` → `gcs.bucket` (default `wildfire-detection-first`):
-
 
 | What                       | GCS path                                                   | Format        |
 | -------------------------- | ---------------------------------------------------------- | ------------- |
@@ -96,45 +140,13 @@ Raw downloads + final processed table land on the bucket from `utils/config.yaml
 | DEM                        | `gs://<bucket>/dem/era5_grid_dem_features.parquet`         | Parquet       |
 | **Final (app reads this)** | `gs://<bucket>/final_processed/YYYY-MM-DD_test.parquet`    | Parquet       |
 
-
 Example: `gs://wildfire-detection-first/final_processed/2026-08-10_test.parquet`
-
----
-
-## GCS run and outputs
-
-On a GCP VM / Cloud Run Job / API host (same repo folder + credentials):
-
-```bash
-python run_daily.py all --label-date YYYY-MM-DD
-# or
-./utils/cron/run_cron.sh
-```
-
-
-| Output                | Where                                                   |
-| --------------------- | ------------------------------------------------------- |
-| App deliverable       | `gs://<bucket>/final_processed/YYYY-MM-DD_test.parquet` |
-| Raw layers            | same GCS paths as above                                 |
-| Optional local mirror | `.cache/final_processed/` on the machine                |
-
-
-```text
-Cloud Scheduler OR App API
-        │
-        ▼
-  run_daily.py all --label-date ...
-        │
-        ▼
-  gs://.../final_processed/YYYY-MM-DD_test.parquet
-```
 
 ---
 
 ## How to change bucket / GEE project / grid / cells
 
 **Single config file:** `[utils/config.yaml](utils/config.yaml)`
-
 
 | What                       | Key(s)                                       |
 | -------------------------- | -------------------------------------------- |
@@ -144,62 +156,22 @@ Cloud Scheduler OR App API
 | GEE project                | `gee.project_id` **and** `gcs.project`       |
 | S2 1 km grid asset         | `gee.grid_asset_id`                          |
 | **Cells in final parquet** | `preprocess.cell_subset`                     |
-
-
-### Bucket + project example
-
-```yaml
-gcs:
-  bucket: my-new-bucket
-  project: my-gee-project
-  firms_vsigs_prefix: /vsigs/my-new-bucket/firms_daily_geotiff
-
-gee:
-  project_id: my-gee-project
-  grid_asset_id: projects/my-gee-project/assets/california_s2_grid_1km_v3
-```
+| Feature lookback           | `task.lookback_days` (default **30**)        |
 
 ### Cell subset (`preprocess.cell_subset`)
 
-
 | Value                        | What you get                           | Approx. rows / day |
 | ---------------------------- | -------------------------------------- | ------------------ |
-| `high_medium_fire` (default) | High Outlier + High + Medium           | **~439**           |
+| `high_medium_fire` (default) | High Outlier + High + Medium           | **~437–439**       |
 | `high_only`                  | High Outlier + High only               | **~146**           |
-| `all`                        | No fire-region filter (full day panel) | **up to ~672**     |
-
-
-```yaml
-preprocess:
-  cell_subset: high_medium_fire   # or high_only  or  all
-```
-
-Categories from `utils/vendor/fire_analysis2.csv`. Champion training used **high + medium**.
-
----
-
-## How to create S2 grid asset
-
-Use when you switch to a **new GEE project** and do not already have a shared 1 km California grid:
-
-```bash
-python utils/create_s2_grid_asset.py --project my-gee-project --dry-run
-python utils/create_s2_grid_asset.py --project my-gee-project
-```
-
-When the Earth Engine task is **COMPLETED** (~413k cells; can take a long time):
-
-1. Set `gee.grid_asset_id` in `utils/config.yaml` to the printed id
-2. Run `python verify_gcs.py`
-
-Reuse an existing shared asset if you already have one — do not recreate casually.
+| `all`                        | No fire-region filter                  | **up to ~672**     |
 
 ---
 
 ## Layout
 
 ```text
-ops/daily_pipeline/
+Milestone 6/daily_pipeline/
   README.md
   requirements.txt
   .env.example
@@ -208,19 +180,6 @@ ops/daily_pipeline/
   utils/          ← config, download, preprocess, vendor, cron
   .cache/         ← local processed work
 ```
-
-
-| Path                            | Role                                 |
-| ------------------------------- | ------------------------------------ |
-| `utils/config.yaml`             | Bucket, project, grid, cell_subset   |
-| `utils/README.md`               | Folder-by-folder internals           |
-| `utils/create_s2_grid_asset.py` | Create S2 grid for a new GEE project |
-| `utils/contracts/`              | Frozen 86 features                   |
-| `utils/download/`               | Raw → GCS                            |
-| `utils/preprocess/`             | → final_processed                    |
-| `utils/vendor/`                 | Bundled Stage C / DEM / S2 / S5P     |
-| `utils/cron/run_cron.sh`        | Daily wrapper                        |
-
 
 ---
 
@@ -234,39 +193,4 @@ cp .env.example .env   # CDS_API_KEY / GOOGLE_CLOUD_PROJECT / SA path
 - CDS: `.env` or `~/.cdsapirc`
 - GCS: write access to `gcs.bucket`
 
----
-
-## Example: one label day (cron / `all`)
-
-Milestone 4 date rules (predict day **D**):
-
-| Role | Formula | Example D = 2026-08-10 |
-|------|---------|-------------------------|
-| **label_date** | D | **2026-08-10** → `…/final_processed/2026-08-10_test.parquet` |
-| **eo_asof** (S2 / S5P) | D − 1 | **2026-08-09** |
-| **ERA5 feature_end** | D − (lag+lead) = D − 6 | **2026-08-04** |
-| **ERA5 7d history** | ending at feature_end | **~2026-07-29 … 2026-08-04** |
-| **FIRMS `y_fire`** | on D (+ lookback labels) | **2026-08-10** (and prior labels if `lookback_days>0`) |
-
-```bash
-python run_daily.py all --label-date 2026-08-10
-# cron uses tomorrow: ./utils/cron/run_cron.sh
-```
-
-With `lookback_days: 7`, downloads also cover prior labels for feature engineering:
-
-- EO/S5P eo_asof: **2026-08-02 … 2026-08-09**
-- FIRMS labels: **2026-08-03 … 2026-08-10**
-- ERA5: **2026-07-21 … 2026-08-04**
-
-`*_test.parquet` still has **one row set for D only** (~439 cells × 86 features). S2/S5P in that file are a **single causal snapshot as of D−1** (not a 7-day S2/S5P average). ERA5 `*_7d` rolls use the 7 weather days. Neighbor `fire_*_lag2` uses prior FIRMS labels through D−2.
-
-**S5P recovery after cancelling EE tasks:** CANCELLED/FAILED tasks are not auto-resubmitted. Use:
-
-```bash
-python run_daily.py all --label-date 2026-08-10 --force-s5p
-```
-
-Or set `download.s5p_force: true`. Optional: delete `.cache/s5p_ee_tasks.json` entries for those days.
-
-**Cron at 06:00 IST:** `run_cron.sh` sets `label_date = tomorrow`, builds that day’s `*_test.parquet`. Existing raw GCS objects are skipped; the final parquet is always regenerated.
+**Cron at 06:00 IST:** `./utils/cron/run_cron.sh` sets `label_date = tomorrow`, builds that day’s `*_test.parquet`. Existing raw GCS objects are skipped; the final parquet is always regenerated.
