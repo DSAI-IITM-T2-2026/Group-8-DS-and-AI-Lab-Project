@@ -1,0 +1,73 @@
+# Edit THIS FILE to change bucket, GEE project, and S2 grid asset.
+# See README.md → "How to change bucket / project / grid".
+
+gcs:
+  bucket: wildfire-detection-first
+  project: plated-mechanic-418917
+  prefixes:
+    firms: firms_daily_geotiff
+    sentinel2: sentinel2
+    sentinel5p: sentinel5p
+    era5: era5
+    dem: dem
+    stage_c_knn: stage_c_knn
+    final_processed: final_processed
+  era5_legacy_bucket: dsai-lab-project
+  era5_legacy_prefix: wildfire_satellite/era5/raw
+  # Keep in sync with gcs.bucket when you change the bucket name:
+  firms_vsigs_prefix: /vsigs/wildfire-detection-first/firms_daily_geotiff
+
+gee:
+  project_id: plated-mechanic-418917
+  # After switching project, create/update with: python utils/create_s2_grid_asset.py
+  grid_asset_id: projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3
+
+task:
+  # Used by cron and date.today() caps so IST/UTC hosts still mean California "today".
+  timezone: America/Los_Angeles
+  history_days: 7
+  lead_days: 1
+  era5_lag_days: 5
+  firms_confidence_min: 30
+  # Prior label days for champion rolling (14d/30d weather + neighbor lag2/7d).
+  # Match M5 feature engineering; Stage C month assemble clips to label_date (not MonthEnd).
+  lookback_days: 30
+
+paths:
+  # Relative to utils/ (except local_cache → daily_pipeline/.cache)
+  repo_root: .
+  m4_root: vendor/numerical_nextday
+  m4_config: vendor/numerical_nextday/config.yaml
+  dem_local: vendor/mvp_era5_dem/data/era5_grid_dem_features.parquet
+  dem_gcs_name: era5_grid_dem_features.parquet
+  contracts: contracts/champion_86_features.json
+  fire_region_csv: vendor/fire_analysis2.csv
+  local_cache: .cache
+  m4_shared_cache: .cache/m4_shared_cache
+  mvp_era5_dem_root: vendor/mvp_era5_dem
+  multimodal_fusion_root: vendor/multimodal_fusion
+
+download:
+  skip_existing: true
+  s2_window_days: 5
+  # Shared readiness polling for S2 and FIRMS Earth Engine exports.
+  ee_poll_seconds: 60
+  ee_timeout_seconds: 21600
+  era5_workdir: /tmp/era5
+  # S5P: local code submits 1 EE task at a time; Google runs many tasks in parallel.
+  # After submit, wait here until all decision-day parquets exist (no manual re-run).
+  s5p_wait: true
+  s5p_poll_seconds: 60
+  s5p_timeout_seconds: 21600
+  # If true (or CLI --force-s5p), resubmit after CANCELLED/FAILED.
+  s5p_force: false
+
+preprocess:
+  use_precomputed_knn: true
+  knn_neighbors: 5
+  # When KNN has no year<=2022 donors (live 2026), fill missing S2 from prior days.
+  s2_forward_fill_max_days: 7
+  # Cell filter for final_processed (see README):
+  #   high_medium_fire | high_only | all
+  cell_subset: high_medium_fire
+  fire_season_only: true

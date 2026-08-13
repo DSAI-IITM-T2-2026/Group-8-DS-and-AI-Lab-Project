@@ -1,0 +1,48 @@
+import { renderHook, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { useInference } from "./useInference";
+
+const geometry = {
+  regionId: "california",
+  geometryVersion: "v1",
+  geojson: { type: "FeatureCollection", features: [] },
+} as const;
+
+const riskMap = {
+  regionId: "california",
+  timestamp: "2025-08-01T12:00:00Z",
+  geometryVersion: "v1",
+  provenance: "model",
+  items: [{
+    areaId: "cell-a", areaName: "Grid cell cell-a", probability: 0.2,
+    rawProbability: 0.3, alertScore: 0.9, priorityRank: 1,
+    alertTop25: true, riskClass: "very_high", updatedAt: "2025-08-01T12:00:00Z",
+  }],
+} as const;
+
+describe("useInference", () => {
+  it("automatically scores and loads the highest-priority cell", async () => {
+    const service = {
+      getGeometry: vi.fn().mockResolvedValue(geometry),
+      getRiskMap: vi.fn().mockResolvedValue(riskMap),
+      getPrediction: vi.fn().mockResolvedValue({ regionId: "cell-a" }),
+    } as any;
+    const { result } = renderHook(() => useInference(service, "2025-08-01"));
+
+    await waitFor(() => expect(result.current.riskMap?.items[0].areaId).toBe("cell-a"));
+    await waitFor(() => expect(result.current.prediction?.regionId).toBe("cell-a"));
+    expect(service.getRiskMap).toHaveBeenCalledWith("2025-08-01");
+    expect(service.getPrediction).toHaveBeenCalledWith("cell-a", "2025-08-01");
+  });
+
+  it("keeps inference errors separate from pipeline state", async () => {
+    const service = {
+      getGeometry: vi.fn().mockResolvedValue(geometry),
+      getRiskMap: vi.fn().mockRejectedValue(new Error("Model unavailable")),
+      getPrediction: vi.fn(),
+    } as any;
+    const { result } = renderHook(() => useInference(service, "2025-08-01"));
+    await waitFor(() => expect(result.current.error?.message).toBe("Model unavailable"));
+    expect(result.current.riskMap).toBeUndefined();
+  });
+});

@@ -1,0 +1,2 @@
+-r backend/requirements.txt
+-r daily_pipeline/requirements.txt

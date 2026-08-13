@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""FIRMS daily GeoTIFF export to GCS via Earth Engine."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import time
+from datetime import date, datetime, timedelta
+
+logger = logging.getLogger("download.firms")
+
+DEFAULT_PROJECT = "plated-mechanic-418917"
+DEFAULT_BUCKET = "wildfire-detection-first"
+DEFAULT_PREFIX = "firms_daily_geotiff"
+
+
+def parse_date(value: str) -> date:
+    return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+
+
+def init_ee(project_id: str) -> None:
+    from download.ee_init import initialize_ee
+
+    initialize_ee(project_id)
+
+
+def make_firms_day_image(day_str: str, aoi) -> "ee.Image":
+    import ee
+
+    day_start = ee.Date(day_str)
+    day_end = day_start.advance(1, "day")
+    firms_col = (
+        ee.ImageCollection("FIRMS")
+        .filterBounds(aoi)
+        .filterDate(day_start, day_end)
+    )
+    confidence = firms_col.select("confidence").max().rename("firms_confidence")
+    t21 = firms_col.select("T21").max().rename("firms_t21")
+    label = firms_col.select("T21").count().gt(0).rename("label").toFloat()
+    return ee.Image.cat([confidence, t21, label]).clip(aoi).toFloat()
+
+
+def export_firms_day(
+    target: date,
+    *,
+    project_id: str = DEFAULT_PROJECT,
+    bucket: str = DEFAULT_BUCKET,
+    prefix: str = DEFAULT_PREFIX,
+    skip_existing: bool = True,
+) -> str | None:
+    try:
+        from download.gcs_listing import blob_listed
+    except ImportError:
+        from gcs_listing import blob_listed
+
+    day_str = target.isoformat()
+    blob_name = f"{prefix.rstrip('/')}/{day_str}.tif"
+    gcs_uri = f"gs://{bucket}/{blob_name}"
+
+    if skip_existing and blob_listed(bucket, blob_name, prefix=prefix, project=project_id):
+        logger.info("Already exists: %s", gcs_uri)
+        return gcs_uri
+
+    init_ee(project_id)
+    from download.task_registry import (
+        FAILED_STATES,
+        PENDING_STATES,
+        SUCCESS_STATES,
+        failure_message,
+        find_task,
+        remember_task,
+    )
+
+    description = f"firms_{day_str}"
+    existing = find_task("firms", day_str, description)
+    if existing:
+        state = str(existing.get("state", "")).upper()
+        if state in PENDING_STATES:
+            logger.info("FIRMS task already %s for %s; not re-submitting", state, day_str)
+            return None
+        if state in SUCCESS_STATES:
+            logger.info("FIRMS task completed for %s; waiting for GCS visibility", day_str)
+            return None
+        if state in FAILED_STATES:
+            raise RuntimeError(f"FIRMS {day_str}: {failure_message(existing)}")
+
+    import ee
+
+    california = ee.FeatureCollection("TIGER/2018/States").filter(ee.Filter.eq("STUSPS", "CA"))
+    aoi = california.geometry()
+
+    task = ee.batch.Export.image.toCloudStorage(
+        image=make_firms_day_image(day_str, aoi),
+        description=description,
+        bucket=bucket,
+        fileNamePrefix=f"{prefix.rstrip('/')}/{day_str}",
+        region=aoi,
+        scale=1000,
+        crs="EPSG:4326",
+        maxPixels=1e13,
+        fileFormat="GeoTIFF",
+    )
+    task.start()
+    remember_task("firms", day_str, task.id, description)
+    logger.info("Started FIRMS export → %s (task=%s)", gcs_uri, task.id)
+    return None
+
+
+def wait_for_firms_days(
+    days: list[date],
+    *,
+    project_id: str,
+    bucket: str,
+    prefix: str,
+    poll_seconds: int = 60,
+    timeout_seconds: int = 6 * 3600,
+) -> dict[date, str]:
+    """Wait until every FIRMS export is visible in GCS."""
+    from google.cloud import storage
+    from download.task_registry import FAILED_STATES, failure_message, find_task
+
+    init_ee(project_id)
+    client = storage.Client(project=project_id)
+    pending = list(dict.fromkeys(days))
+    done: dict[date, str] = {}
+    started = time.monotonic()
+    while pending:
+        if time.monotonic() - started > timeout_seconds:
+            raise TimeoutError(
+                "Timed out waiting for FIRMS exports: "
+                + ", ".join(day.isoformat() for day in pending)
+            )
+        remaining: list[date] = []
+        for day in pending:
+            blob_name = f"{prefix.rstrip('/')}/{day.isoformat()}.tif"
+            if client.bucket(bucket).blob(blob_name).exists(client):
+                done[day] = f"gs://{bucket}/{blob_name}"
+                continue
+            status = find_task("firms", day.isoformat(), f"firms_{day.isoformat()}")
+            if status and str(status.get("state", "")).upper() in FAILED_STATES:
+                raise RuntimeError(f"FIRMS {day}: {failure_message(status)}")
+            remaining.append(day)
+        pending = remaining
+        if pending:
+            logger.info("FIRMS wait: %d day(s) pending; sleep %ss", len(pending), max(15, poll_seconds))
+            time.sleep(max(15, poll_seconds))
+    return done
+
+
+def download_firms_range(
+    start: date,
+    end: date,
+    *,
+    project_id: str = DEFAULT_PROJECT,
+    bucket: str = DEFAULT_BUCKET,
+    prefix: str = DEFAULT_PREFIX,
+    skip_existing: bool = True,
+    sleep_s: float = 0.5,
+) -> list[str]:
+    uris: list[str] = []
+    current = start
+    while current <= end:
+        uri = export_firms_day(
+            current,
+            project_id=project_id,
+            bucket=bucket,
+            prefix=prefix,
+            skip_existing=skip_existing,
+        )
+        if uri:
+            uris.append(uri)
+        current += timedelta(days=1)
+        if not skip_existing:
+            time.sleep(sleep_s)
+    return uris
+
+
+def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(description="Export FIRMS daily GeoTIFF to GCS.")
+    parser.add_argument("--date", type=parse_date, required=True)
+    parser.add_argument("--project", default=DEFAULT_PROJECT)
+    parser.add_argument("--bucket", default=DEFAULT_BUCKET)
+    parser.add_argument("--prefix", default=DEFAULT_PREFIX)
+    parser.add_argument("--no-skip-existing", action="store_true")
+    args = parser.parse_args()
+    export_firms_day(
+        args.date,
+        project_id=args.project,
+        bucket=args.bucket,
+        prefix=args.prefix,
+        skip_existing=not args.no_skip_existing,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
