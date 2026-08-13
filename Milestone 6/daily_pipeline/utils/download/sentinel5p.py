@@ -162,9 +162,13 @@ def _find_ee_task_for_day(day: date) -> tuple[str | None, str | None]:
             if state in _TERMINAL_BAD:
                 found_bad = (tid, state)
 
-    # Scan a large recent window so busy accounts still see our task.
+    # Scan recent EE tasks so busy accounts still see ours.
     try:
-        for task in ee.batch.Task.list(count=500):
+        try:
+            listed = ee.batch.Task.list(count=500)
+        except TypeError:
+            listed = ee.batch.Task.list()
+        for task in listed:
             st = task.status()
             if st.get("description") != desc:
                 continue
@@ -292,6 +296,8 @@ def submit_s5p_day(
         )
 
     _add_s5p_path()
+    import ee  # type: ignore
+
     _init_ee(project_id)
 
     existing_id, existing_state = _find_ee_task_for_day(target)
