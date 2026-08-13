@@ -267,6 +267,8 @@ def assemble_stage_a_year(
     era5["date"] = pd.to_datetime(era5["date"]).dt.normalize()
     if len(firms):
         firms["date"] = pd.to_datetime(firms["date"]).dt.normalize()
+        firms["cell_id"] = firms["cell_id"].astype(str)
+        firms = firms.drop_duplicates(["date", "cell_id"], keep="last")
 
     dem = mvp["cells"].load_dem_cells(Path(cfg["paths"]["dem_cells"]))
 

@@ -89,6 +89,20 @@ def _save_scanned(path: Path, dates: set[str]) -> None:
     path.write_text(json.dumps(sorted(dates)), encoding="utf-8")
 
 
+def _dedupe_firms_cells(df: pd.DataFrame) -> pd.DataFrame:
+    """One row per (date, cell_id). Duplicate scans would explode Stage A merges."""
+    if df is None or df.empty:
+        return pd.DataFrame(columns=_EMPTY_COLS)
+    out = df.copy()
+    out["date"] = pd.to_datetime(out["date"]).dt.normalize()
+    out["cell_id"] = out["cell_id"].astype(str)
+    return (
+        out.sort_values(["date", "cell_id"])
+        .drop_duplicates(["date", "cell_id"], keep="last")
+        .reset_index(drop=True)
+    )
+
+
 def _fetch_days(
     days: list[pd.Timestamp],
     vsigs_prefix: str,
@@ -146,16 +160,21 @@ def build_firms_cell_labels(
         scanned_path = _scanned_path(cache_path)
         month_start = max(start, period.to_timestamp(how="start"))
         month_end = min(end, period.to_timestamp(how="end").normalize())
+
+        if cache_path.exists():
+            month_df = _dedupe_firms_cells(pd.read_parquet(cache_path))
+        else:
+            month_df = pd.DataFrame(columns=_EMPTY_COLS)
+
+        scanned = _load_scanned(scanned_path)
+        if len(month_df):
+            scanned.update(pd.to_datetime(month_df["date"]).dt.strftime("%Y-%m-%d").unique())
+
         needed = [
             d
             for d in pd.date_range(month_start, month_end, freq="D")
-            if d.strftime("%Y-%m-%d") not in _load_scanned(scanned_path)
+            if d.strftime("%Y-%m-%d") not in scanned
         ]
-
-        if cache_path.exists():
-            month_df = pd.read_parquet(cache_path)
-        else:
-            month_df = pd.DataFrame(columns=_EMPTY_COLS)
 
         if needed:
             logger.info(
@@ -169,14 +188,15 @@ def build_firms_cell_labels(
             extra = _fetch_days(
                 needed, vsigs_prefix, confidence_min, resolution, max_workers
             )
-            month_df = pd.concat([month_df, extra], ignore_index=True)
+            month_df = _dedupe_firms_cells(pd.concat([month_df, extra], ignore_index=True))
             month_df.to_parquet(cache_path, index=False)
-            scanned = _load_scanned(scanned_path)
             scanned.update(d.strftime("%Y-%m-%d") for d in needed)
             _save_scanned(scanned_path, scanned)
             logger.info("Wrote %s (%d fire-cell rows)", cache_path.name, len(month_df))
         else:
             logger.info("FIRMS cache already scanned %s…%s", month_start.date(), month_end.date())
+            month_df.to_parquet(cache_path, index=False)
+            _save_scanned(scanned_path, scanned)
 
         if month_df.empty:
             frames.append(month_df)

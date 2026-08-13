@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 CONSTANT_FEATURES = frozenset({"s5n_s5p_aai_std", "s5n_s5p_co_std"})
 
@@ -127,9 +130,21 @@ def build_features(
         if col in frame.columns:
             frame[col] = pd.to_datetime(frame[col]).dt.normalize()
 
+    n_before = len(frame)
+    frame = frame.drop_duplicates(["cell_id", "label_date"], keep="last")
+    if len(frame) != n_before:
+        logger.warning(
+            "Dropped %d duplicate (cell_id, label_date) rows before feature reshape",
+            n_before - len(frame),
+        )
     frame = frame.sort_values(["cell_id", "label_date"]).reset_index(drop=True)
     cells = int(frame["cell_id"].nunique())
     days = int(frame["label_date"].nunique())
+    if cells * days != len(frame):
+        raise ValueError(
+            f"History panel is not a complete grid: {len(frame)} rows vs "
+            f"{cells} cells × {days} days"
+        )
 
     day_of_year = frame["eo_asof_date"].dt.dayofyear.to_numpy(dtype="float32")
     month = frame["eo_asof_date"].dt.month.to_numpy(dtype="float32")
