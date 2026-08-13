@@ -114,7 +114,7 @@ This project was developed by **Group 8** as part of the DS & AI Lab Project:
 | Member              | Roll Number | Signature Commit |
 | ------------------- | ----------- | ---------------- |
 | Ripunjay Kumar      | 21F3002511  |                  |
-| Lakshay Garg        | 21F3001076  |                  |
+| Lakshay Garg        | 21F3001076  |     ✅              |
 | Roushan Kumar Singh | 23F1002240  |                  |
 | Lakshmi Sruthi K    | 21F1005626  |                  |
 | R Aditya            | 21F1004839  |                  |
