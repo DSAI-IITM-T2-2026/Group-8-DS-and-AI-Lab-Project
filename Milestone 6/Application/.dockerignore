@@ -1,0 +1,17 @@
+# Applies to the build context used by backend/Dockerfile (context: .).
+# frontend/ has its own context and its own frontend/.dockerignore.
+**/.venv/
+**/.state/
+**/.cache/
+**/__pycache__/
+**/.pytest_cache/
+**/*.py[cod]
+**/.env
+**/.env.*
+!**/.env.example
+
+frontend/
+documentation/
+*.md
+.git/
+.gitignore

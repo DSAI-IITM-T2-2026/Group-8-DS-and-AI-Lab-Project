@@ -1,0 +1,10 @@
+node_modules
+dist
+audit
+qa
+reference
+.git
+*.md
+.env
+.env.*
+!.env.example

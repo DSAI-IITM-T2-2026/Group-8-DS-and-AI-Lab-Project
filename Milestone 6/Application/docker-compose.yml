@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: wildfire-backend
+    env_file:
+      - backend/.env
+      - daily_pipeline/.env
+    volumes:
+      - backend-state:/app/backend/.state
+      - pipeline-cache:/app/daily_pipeline/.cache
+      # Uncomment to mount a service-account key and set
+      # GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json in
+      # backend/.env or daily_pipeline/.env:
+      # - ./secrets/service-account.json:/secrets/service-account.json:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - wildfire-net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: wildfire-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - wildfire-net
+
+networks:
+  wildfire-net:
+    driver: bridge
+
+volumes:
+  backend-state:
+  pipeline-cache:

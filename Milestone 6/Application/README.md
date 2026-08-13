@@ -181,6 +181,44 @@ frontend/dist/server/index.js
 frontend/dist/.openai/hosting.json
 ```
 
+## Run with Docker Compose
+
+An alternative to steps 3–4 above: build and run the backend and frontend
+together in containers. This is a single-machine setup (one backend worker,
+matching the "intentionally runs one pipeline worker" constraint above); it is
+not a substitute for the separate-deployment guidance in the next section.
+
+```bash
+cd "Milestone 6/Application"
+cp backend/.env.example backend/.env
+cp daily_pipeline/.env.example daily_pipeline/.env
+# Edit both .env files: WILDFIRE_MODEL_URI, GOOGLE_CLOUD_PROJECT, CDS_API_KEY, ...
+docker compose up --build
+```
+
+- Frontend: `http://localhost:8080`
+- Backend health: `http://localhost:8000/api/v1/health`
+
+The backend image bundles `api/` and `daily_pipeline/` as source (they are not
+separate services — see `backend/README.md`), and the frontend image builds
+the static site with Vite and serves it from nginx, which reverse-proxies
+`/api/*` to the `backend` container so no `VITE_API_BASE_URL` override is
+needed.
+
+`backend/.state` (job history and logs) and `daily_pipeline/.cache`
+(processed cache and EE task registry) persist in named Docker volumes across
+restarts. To start over with a clean state: `docker compose down -v`.
+
+For cloud credentials, either mount a service-account key by uncommenting the
+`secrets/service-account.json` volume line in `docker-compose.yml` and setting
+`GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json` in
+`backend/.env` and `daily_pipeline/.env`, or otherwise provide Application
+Default Credentials to the container. Also set `PIPELINE_CORS_ORIGINS` in
+`backend/.env` to include `http://localhost:8080` (or your published frontend
+origin) so the browser can call the backend.
+
+Tail logs with `docker compose logs -f backend` (or `frontend`).
+
 ## Deployment configuration
 
 Deploy the backend and frontend separately.
