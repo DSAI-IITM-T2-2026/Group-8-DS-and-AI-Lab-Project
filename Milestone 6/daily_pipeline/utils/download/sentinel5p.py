@@ -144,10 +144,11 @@ def _ee_task_status(task_id: str) -> dict | None:
 
 
 def _find_ee_task_for_day(day: date) -> tuple[str | None, str | None]:
-    """Return (task_id, state). Prefer pending/completed; also report CANCELLED/FAILED."""
-    import ee
+    """Return (task_id, state) from the local EE task registry + getTaskStatus.
 
-    desc = task_description(day)
+    Do not call ee.batch.Task.list(): current earthengine-api paginates every
+    historical operation, and Task.status() then calls getOperation per row.
+    """
     key = day.isoformat()
     found_bad: tuple[str | None, str | None] = (None, None)
 
@@ -161,28 +162,6 @@ def _find_ee_task_for_day(day: date) -> tuple[str | None, str | None]:
                 return tid, state
             if state in _TERMINAL_BAD:
                 found_bad = (tid, state)
-
-    # Scan recent EE tasks so busy accounts still see ours.
-    try:
-        try:
-            listed = ee.batch.Task.list(count=500)
-        except TypeError:
-            listed = ee.batch.Task.list()
-        for task in listed:
-            st = task.status()
-            if st.get("description") != desc:
-                continue
-            state = str(st.get("state", "")).upper()
-            tid = st.get("id") or getattr(task, "id", None)
-            if state in _PENDING_STATES or state in _DONE_OK:
-                if tid:
-                    _remember_task(day, tid)
-                return tid, state
-            if state in _TERMINAL_BAD and found_bad[0] is None:
-                found_bad = (tid, state)
-    except Exception as exc:
-        logger.warning("Could not list EE tasks: %s", exc)
-
     return found_bad
 
 
