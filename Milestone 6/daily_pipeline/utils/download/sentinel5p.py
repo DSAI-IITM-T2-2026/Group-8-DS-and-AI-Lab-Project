@@ -7,13 +7,20 @@ import argparse
 import io
 import json
 import logging
-import subprocess
 import sys
 import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger("download.sentinel5p")
+
+
+def _gcs_listing():
+    try:
+        from download import gcs_listing as gl
+    except ImportError:
+        import gcs_listing as gl  # type: ignore
+    return gl
 
 S5P_DIR = Path(__file__).resolve().parents[1] / "vendor" / "sentinel5p"
 TASK_REGISTRY = Path(__file__).resolve().parents[2] / ".cache" / "s5p_ee_tasks.json"
@@ -23,8 +30,22 @@ _DONE_OK = {"COMPLETED"}
 _TERMINAL_BAD = {"FAILED", "CANCELLED"}
 
 
-def parse_date(value: str) -> date:
-    return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+def _init_ee(project_id: str) -> None:
+    try:
+        from download.ee_init import initialize_ee
+    except ImportError:
+        from ee_init import initialize_ee  # type: ignore
+
+    initialize_ee(project_id)
+
+
+def _download_gcs_to_file(uri: str, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    rest = uri[5:]
+    bucket_name, _, blob_name = rest.partition("/")
+    from google.cloud import storage
+
+    storage.Client().bucket(bucket_name).blob(blob_name).download_to_filename(str(dest))
 
 
 def hive_prefix(day: date, gcs_prefix: str) -> str:
@@ -62,6 +83,7 @@ def upload_parquet(df, bucket: str, blob_name: str, project: str | None = None) 
     client = storage.Client(project=project) if project else storage.Client()
     blob = client.bucket(bucket).blob(blob_name)
     blob.upload_from_string(buf.getvalue(), content_type="application/octet-stream")
+    _gcs_listing().remember(bucket, blob_name)
     return f"gs://{bucket}/{blob_name}"
 
 
@@ -171,7 +193,7 @@ def convert_hive_csv_to_flat_parquet(
 ) -> str:
     hive_blob = f"{hive_prefix(day, source_prefix)}.csv"
     flat_blob = f"{dest_prefix.rstrip('/')}/{flat_stem(day)}.parquet"
-    if blob_exists(dest_bucket, flat_blob, project):
+    if _gcs_listing().blob_listed(dest_bucket, flat_blob, prefix=dest_prefix, project=project):
         uri = f"gs://{dest_bucket}/{flat_blob}"
         logger.info("Flat S5P already exists: %s", uri)
         return uri
@@ -180,7 +202,7 @@ def convert_hive_csv_to_flat_parquet(
         local_csv = Path(tmp) / "features.csv"
         uri = f"gs://{source_bucket}/{hive_blob}"
         logger.info("Downloading %s", uri)
-        subprocess.check_call(["gsutil", "-q", "cp", uri, str(local_csv)])
+        _download_gcs_to_file(uri, local_csv)
         df = _csv_to_parquet_df(local_csv)
         out_uri = upload_parquet(df, dest_bucket, flat_blob, project)
         logger.info("Uploaded flat S5P: %s", out_uri)
@@ -223,7 +245,7 @@ def _flatten_dest_csv_if_present(
             local_csv = Path(tmp) / "features.csv"
             uri = f"gs://{dest_bucket}/{name}"
             logger.info("Flattening S5P CSV %s → parquet", uri)
-            subprocess.check_call(["gsutil", "-q", "cp", uri, str(local_csv)])
+            _download_gcs_to_file(uri, local_csv)
             df = _csv_to_parquet_df(local_csv)
             out = upload_parquet(df, dest_bucket, flat_blob, project)
             clear_task_registry_day(day)
@@ -244,7 +266,9 @@ def submit_s5p_day(
 ) -> str | None:
     """Export one calendar day. Never duplicates pending/completed tasks unless force=True."""
     flat_blob = f"{dest_prefix.rstrip('/')}/{flat_stem(target)}.parquet"
-    if skip_existing and blob_exists(dest_bucket, flat_blob, project_id):
+    if skip_existing and _gcs_listing().blob_listed(
+        dest_bucket, flat_blob, prefix=dest_prefix, project=project_id
+    ):
         uri = f"gs://{dest_bucket}/{flat_blob}"
         logger.info("S5P already exists: %s", uri)
         return uri
@@ -268,13 +292,7 @@ def submit_s5p_day(
         )
 
     _add_s5p_path()
-    import ee  # type: ignore
-
-    try:
-        ee.Initialize(project=project_id)
-    except Exception:
-        ee.Authenticate()
-        ee.Initialize(project=project_id)
+    _init_ee(project_id)
 
     existing_id, existing_state = _find_ee_task_for_day(target)
 
@@ -377,13 +395,7 @@ def wait_for_s5p_days(
     """Poll until every day has flat parquet. Does not start new EE tasks."""
     import time
 
-    import ee
-
-    try:
-        ee.Initialize(project=project_id)
-    except Exception:
-        ee.Authenticate()
-        ee.Initialize(project=project_id)
+    _init_ee(project_id)
 
     pending = list(days)
     done: dict[date, str] = {}

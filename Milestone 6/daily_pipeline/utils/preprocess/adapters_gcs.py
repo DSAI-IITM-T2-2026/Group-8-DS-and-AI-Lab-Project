@@ -18,6 +18,16 @@ S5P_FLAT_RE = re.compile(r"s5pfeat_(\d{8})_(\d{8})\.(csv|parquet)$")
 ERA5_NC_RE = re.compile(r"era5_(\d{4})_(\d{2})_(\d{2})\.nc$")
 
 
+def _prefer_parquet(df: pd.DataFrame) -> pd.DataFrame:
+    """If both CSV and parquet exist for a window, keep parquet only."""
+    if df.empty or "layout" not in df.columns:
+        return df
+    out = df.copy()
+    out["_rank"] = out["layout"].map({"flat_parquet": 0, "flat_csv": 1}).fillna(2)
+    out = out.sort_values("_rank").drop_duplicates(["year", "window"], keep="first")
+    return out.drop(columns=["_rank"])
+
+
 def gsutil_ls(prefix_uri: str) -> list[str]:
     try:
         proc = subprocess.run(
@@ -45,10 +55,40 @@ def _sdk_list(prefix_uri: str) -> list[str]:
 
 
 def download_blob(uri: str, dest: Path) -> Path:
+    """Download a GCS object. Prefer the Python client — gsutil sliced cp often hangs."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and dest.stat().st_size > 0:
         return dest
-    subprocess.check_call(["gsutil", "-q", "cp", uri, str(dest)])
+    for leftover in dest.parent.glob(dest.name + "*gstmp*"):
+        try:
+            leftover.unlink()
+        except OSError:
+            pass
+
+    logger.info("Downloading %s → %s", uri, dest)
+    rest = uri[5:]
+    bucket_name, _, blob_name = rest.partition("/")
+    try:
+        from google.cloud import storage
+
+        blob = storage.Client().bucket(bucket_name).blob(blob_name)
+        size = blob.size
+        if size:
+            logger.info("  %s is %.1f MB", dest.name, size / 1e6)
+        blob.download_to_filename(str(dest))
+    except Exception as exc:
+        logger.warning("SDK download failed (%s); gsutil without sliced download", exc)
+        subprocess.check_call(
+            [
+                "gsutil",
+                "-o",
+                "GSUtil:sliced_object_download_max_components=1",
+                "cp",
+                uri,
+                str(dest),
+            ]
+        )
+    logger.info("Downloaded %s (%d bytes)", dest.name, dest.stat().st_size)
     return dest
 
 
@@ -109,7 +149,7 @@ def list_flat_s2(bucket: str, prefix: str) -> pd.DataFrame:
             "window_end": end,
             "layout": "flat_parquet" if name.endswith(".parquet") else "flat_csv",
         })
-    return pd.DataFrame(rows)
+    return _prefer_parquet(pd.DataFrame(rows))
 
 
 def list_flat_s5p(bucket: str, prefix: str) -> pd.DataFrame:
@@ -131,7 +171,7 @@ def list_flat_s5p(bucket: str, prefix: str) -> pd.DataFrame:
             "window_end": day,
             "layout": "flat_parquet" if name.endswith(".parquet") else "flat_csv",
         })
-    return pd.DataFrame(rows)
+    return _prefer_parquet(pd.DataFrame(rows))
 
 
 def load_flat_feature_table(uri: str, local_cache: Path, columns: list[str] | None = None) -> pd.DataFrame:

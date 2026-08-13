@@ -193,4 +193,9 @@ cp .env.example .env   # CDS_API_KEY / GOOGLE_CLOUD_PROJECT / SA path
 - CDS: `.env` or `~/.cdsapirc`
 - GCS: write access to `gcs.bucket`
 
-**Cron at 06:00 IST:** `./utils/cron/run_cron.sh` sets `label_date = tomorrow`, builds that day’s `*_test.parquet`. Existing raw GCS objects are skipped; the final parquet is always regenerated.
+**Cron (California today, 06:30 Pacific):** `./utils/cron/run_cron.sh`
+
+- Label date = **today in `America/Los_Angeles`** (override with `LABEL_DATE=YYYY-MM-DD` or `PIPELINE_TZ=...`).
+- Existing raw GCS objects are skipped; `final_processed/YYYY-MM-DD_test.parquet` is always regenerated.
+- Overlapping runs exit 0. Logs: `daily_pipeline/logs/YYYY-MM-DD.log`.
+- VM must have ADC / `GOOGLE_APPLICATION_CREDENTIALS` and a **persistent** `.cache` (S2 CSVs are ~300 MB each). Do not use interactive `ee.Authenticate()` on cron.

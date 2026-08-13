@@ -118,10 +118,16 @@ def apply_train_median_fill(
 ) -> tuple[pd.DataFrame, ...]:
     """Fill NaNs in cols using train medians; apply same values to all frames."""
     medians: dict[str, float] = {}
+    if train.empty:
+        logger.info("Train split empty — skip median fill (live 2026 panel)")
+        return (train,) + others
     for c in cols:
         if c not in train.columns:
             continue
-        medians[c] = float(np.nanmedian(train[c].to_numpy(dtype=float)))
+        vals = train[c].to_numpy(dtype=float)
+        if not np.isfinite(vals).any():
+            continue
+        medians[c] = float(np.nanmedian(vals))
 
     def _fill(df: pd.DataFrame) -> pd.DataFrame:
         out = df.copy()

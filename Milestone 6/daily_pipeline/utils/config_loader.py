@@ -4,13 +4,28 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import sys
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from paths import pipeline_root, resolve_path, utils_root
+
+
+def pipeline_today(cfg: dict[str, Any] | None = None) -> date:
+    """Calendar 'today' for live caps. California AOI default; override with PIPELINE_TZ."""
+    tz_name = None
+    if cfg:
+        tz_name = cfg.get("task", {}).get("timezone")
+    tz_name = os.environ.get("PIPELINE_TZ") or tz_name
+    if tz_name:
+        from zoneinfo import ZoneInfo
+
+        return datetime.now(ZoneInfo(str(tz_name))).date()
+    return date.today()
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -55,10 +70,11 @@ def load_m4_config(cfg: dict[str, Any]) -> dict[str, Any]:
 
     flat_s2 = {"bucket": bucket, "prefix": prefixes["sentinel2"], "layout": "flat_parquet"}
     flat_s5p = {"bucket": bucket, "prefix": prefixes["sentinel5p"], "layout": "flat_parquet"}
+    m4["gcs"].setdefault("s2_by_year", {})
+    m4["gcs"].setdefault("s5p_by_year", {})
     for year in range(2018, 2031):
         m4["gcs"]["s2_by_year"][str(year)] = flat_s2
-        if str(year) in m4["gcs"].get("s5p_by_year", {}):
-            m4["gcs"]["s5p_by_year"][str(year)] = flat_s5p
+        m4["gcs"]["s5p_by_year"][str(year)] = flat_s5p
 
     cache = resolve_path(cfg, "local_cache") / "m4_shared_cache"
     m4["paths"]["shared_cache"] = str(cache)
@@ -68,6 +84,8 @@ def load_m4_config(cfg: dict[str, Any]) -> dict[str, Any]:
     m4["paths"]["mvp_era5_dem_root"] = str(resolve_path(cfg, "mvp_era5_dem_root"))
     m4["paths"]["multimodal_fusion_root"] = str(resolve_path(cfg, "multimodal_fusion_root"))
     m4["task"]["era5_lag_days"] = cfg["task"]["era5_lag_days"]
+    m4["task"]["lead_days"] = cfg["task"]["lead_days"]
+    m4["task"]["history_days"] = cfg["task"]["history_days"]
     m4["task"]["lookback_days"] = cfg["task"].get("lookback_days", 45)
     return m4
 

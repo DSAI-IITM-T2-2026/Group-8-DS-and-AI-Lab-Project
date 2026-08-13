@@ -66,7 +66,7 @@ Do not edit science here casually — re-sync from milestones if upstream change
 
 | File | Role |
 |------|------|
-| `run_cron.sh` | Thin wrapper: `python run_daily.py all --label-date <tomorrow UTC>` |
+| `run_cron.sh` | `python run_daily.py all --label-date <California today>` (not UTC tomorrow) |
 
 Optional for Cloud Scheduler / VM crontab. Not required if an API triggers `run_daily.py`.
 

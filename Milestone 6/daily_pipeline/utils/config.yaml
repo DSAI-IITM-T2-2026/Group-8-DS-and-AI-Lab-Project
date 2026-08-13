@@ -23,6 +23,8 @@ gee:
   grid_asset_id: projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3
 
 task:
+  # Used by cron and date.today() caps so IST/UTC hosts still mean California "today".
+  timezone: America/Los_Angeles
   history_days: 7
   lead_days: 1
   era5_lag_days: 5

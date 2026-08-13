@@ -20,13 +20,9 @@ def parse_date(value: str) -> date:
 
 
 def init_ee(project_id: str) -> None:
-    import ee
+    from download.ee_init import initialize_ee
 
-    try:
-        ee.Initialize(project=project_id)
-    except Exception:
-        ee.Authenticate()
-        ee.Initialize(project=project_id)
+    initialize_ee(project_id)
 
 
 def make_firms_day_image(day_str: str, aoi) -> "ee.Image":
@@ -53,21 +49,24 @@ def export_firms_day(
     prefix: str = DEFAULT_PREFIX,
     skip_existing: bool = True,
 ) -> str | None:
-    import ee
-    from google.cloud import storage
+    try:
+        from download.gcs_listing import blob_listed
+    except ImportError:
+        from gcs_listing import blob_listed
 
-    init_ee(project_id)
-    california = ee.FeatureCollection("TIGER/2018/States").filter(ee.Filter.eq("STUSPS", "CA"))
-    aoi = california.geometry()
     day_str = target.isoformat()
     blob_name = f"{prefix.rstrip('/')}/{day_str}.tif"
     gcs_uri = f"gs://{bucket}/{blob_name}"
 
-    if skip_existing:
-        client = storage.Client(project=project_id)
-        if client.bucket(bucket).blob(blob_name).exists():
-            logger.info("Already exists: %s", gcs_uri)
-            return gcs_uri
+    if skip_existing and blob_listed(bucket, blob_name, prefix=prefix, project=project_id):
+        logger.info("Already exists: %s", gcs_uri)
+        return gcs_uri
+
+    import ee
+
+    init_ee(project_id)
+    california = ee.FeatureCollection("TIGER/2018/States").filter(ee.Filter.eq("STUSPS", "CA"))
+    aoi = california.geometry()
 
     task = ee.batch.Export.image.toCloudStorage(
         image=make_firms_day_image(day_str, aoi),
@@ -108,7 +107,8 @@ def download_firms_range(
         if uri:
             uris.append(uri)
         current += timedelta(days=1)
-        time.sleep(sleep_s)
+        if not skip_existing:
+            time.sleep(sleep_s)
     return uris
 
 

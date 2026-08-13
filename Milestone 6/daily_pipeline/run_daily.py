@@ -27,7 +27,7 @@ from bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
-from config_loader import load_daily_config, load_m4_config  # noqa: E402
+from config_loader import load_daily_config, load_m4_config, pipeline_today  # noqa: E402
 from download.dem import publish_dem  # noqa: E402
 from download.era5 import download_era5_day  # noqa: E402
 from download.firms import export_firms_day  # noqa: E402
@@ -94,14 +94,14 @@ def label_window(labels: list[date], cfg: dict) -> list[date]:
 
 def eo_asof_dates_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
     """Unique eo_asof (= label−1) days for S2/S5P; never past as_of (default today)."""
-    as_of = as_of or date.today()
+    as_of = as_of or pipeline_today(cfg)
     days = sorted({eo_asof_date(d) for d in label_window(labels, cfg)})
     return [d for d in days if d <= as_of]
 
 
 def firms_label_dates_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
     """FIRMS geotiffs for neighbor fire history through D−1 (not predict-day D)."""
-    as_of = as_of or date.today()
+    as_of = as_of or pipeline_today(cfg)
     lookback = int(cfg["task"].get("lookback_days", 30))
     # Neighbor features use lag2 → need history through min(D−1, as_of), not D.
     history_end = min(max(labels) - timedelta(days=1), as_of)
@@ -113,7 +113,7 @@ def firms_label_dates_needed(labels: list[date], cfg: dict, *, as_of: date | Non
 
 def era5_days_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
     """ERA5 calendar days ending at each label's feature_end (D−6); never past as_of−6."""
-    as_of = as_of or date.today()
+    as_of = as_of or pipeline_today(cfg)
     lookback = int(cfg["task"].get("lookback_days", 30))
     history = int(cfg["task"].get("history_days", 7))
     lag = int(cfg["task"]["era5_lag_days"])
@@ -137,31 +137,27 @@ def _fmt_secs(seconds: float) -> str:
     return f"{h}h {m}m {s:.0f}s"
 
 
-_MONTH_BLOB_CACHE: dict[tuple[str, str, int, int], bool] = {}
-
-
 def _month_blob_exists(bucket: str, prefix: str, day: date) -> bool:
     """True if a monthly ERA5 object exists for this calendar month."""
-    key = (bucket, prefix, day.year, day.month)
-    cached = _MONTH_BLOB_CACHE.get(key)
-    if cached is not None:
-        return cached
-
-    from google.cloud import storage
+    from download.gcs_listing import blob_listed
 
     stem = f"era5_{day.year}_{day.month:02d}.nc"
-    client = storage.Client()
-    b = client.bucket(bucket)
-    found = False
-    for name in (
-        f"{prefix.rstrip('/')}/{day.year}/{stem}",
-        f"{prefix.rstrip('/')}/raw/{day.year}/{stem}",
+    base = prefix.rstrip("/")
+    year = day.year
+    for name, pfx in (
+        (f"{base}/{year}/{stem}", f"{base}/{year}"),
+        (f"{base}/raw/{year}/{stem}", f"{base}/raw/{year}"),
     ):
-        if b.blob(name).exists():
-            found = True
-            break
-    _MONTH_BLOB_CACHE[key] = found
-    return found
+        if blob_listed(bucket, name, prefix=pfx):
+            return True
+    return False
+
+
+def _era5_daily_exists(bucket: str, prefix: str, day: date) -> bool:
+    from download.gcs_listing import blob_listed, era5_daily_blob
+
+    name = era5_daily_blob(prefix, day)
+    return blob_listed(bucket, name, prefix=f"{prefix.rstrip('/')}/{day.year:04d}")
 
 
 def _month_is_finished(day: date, *, as_of: date) -> bool:
@@ -178,7 +174,7 @@ def _month_covers_day(
     A current-month object (e.g. era5_2026_08.nc on 13 Aug) is often partial.
     Treating it as covering later August days would skip CDS for days not in the file.
     """
-    as_of = as_of or date.today()
+    as_of = as_of or pipeline_today(cfg)
     if not _month_is_finished(day, as_of=as_of):
         return False
     return _month_blob_exists(bucket, prefix, day)
@@ -201,7 +197,7 @@ def cmd_download_eo_day(
     as_of: date | None = None,
 ) -> int:
     """Download S2 + S5P for one eo_asof day. Returns 2 if S5P still pending."""
-    as_of = as_of or date.today()
+    as_of = as_of or pipeline_today(cfg)
     if eo_day > as_of:
         logger.info("Skip EO eo_asof=%s (after as_of=%s)", eo_day, as_of)
         return 0
@@ -251,7 +247,7 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
     """
     skip, force_s5p = _download_flags(args, cfg)
     target = args.date
-    as_of = date.today()
+    as_of = pipeline_today(cfg)
     bucket = cfg["gcs"]["bucket"]
     prefixes = cfg["gcs"]["prefixes"]
     project = cfg["gee"]["project_id"]
@@ -273,6 +269,12 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
     t = time.perf_counter()
     if skip and _month_covers_day(bucket, prefixes["era5"], era5_day, as_of=as_of):
         logger.info("ERA5 monthly covers %s — skip daily CDS", era5_day)
+        era5_rc = 0
+    elif skip and _era5_daily_exists(bucket, prefixes["era5"], era5_day):
+        logger.info(
+            "ERA5 daily already in bucket — skip CDS %s",
+            era5_day,
+        )
         era5_rc = 0
     else:
         if skip and _month_blob_exists(bucket, prefixes["era5"], era5_day):
@@ -327,7 +329,7 @@ def cmd_download(args: argparse.Namespace, cfg: dict) -> int:
 def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[date]) -> int:
     """Download ERA5 + FIRMS(through D−1) + S2/S5P(eo_asof≤today) for the lookback window."""
     skip, force_s5p = _download_flags(args, cfg)
-    as_of = date.today()
+    as_of = pipeline_today(cfg)
     # Cap requested labels at today for live demos (no future Aug 13–31).
     capped = [d for d in labels if d <= as_of]
     if not capped:
@@ -365,9 +367,25 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
     prefixes = cfg["gcs"]["prefixes"]
     project = cfg["gee"]["project_id"]
 
+    if skip:
+        from download.gcs_listing import prefetch_download_prefixes
+
+        years = sorted(
+            {d.year for d in era5_days}
+            | {d.year for d in firms_days}
+            | {d.year for d in eo_days}
+        )
+        prefetch_download_prefixes(bucket, prefixes, years=years, project=project)
+
     logged_open_months: set[tuple[int, int]] = set()
+    era5_skip_month = 0
+    era5_skip_daily = 0
     for day in era5_days:
         if skip and _month_covers_day(bucket, prefixes["era5"], day, as_of=as_of):
+            era5_skip_month += 1
+            continue
+        if skip and _era5_daily_exists(bucket, prefixes["era5"], day):
+            era5_skip_daily += 1
             continue
         if skip and _month_blob_exists(bucket, prefixes["era5"], day):
             key = (day.year, day.month)
@@ -392,6 +410,13 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
         if rc != 0:
             logger.error("ERA5 download failed for %s (exit=%s)", day, rc)
             return rc
+
+    if era5_skip_month or era5_skip_daily:
+        logger.info(
+            "ERA5 skipped %d day(s) via finished monthly file, %d day(s) already in GCS",
+            era5_skip_month,
+            era5_skip_daily,
+        )
 
     for i, firms_day in enumerate(firms_days, 1):
         logger.info("[%d/%d] FIRMS history_day=%s", i, len(firms_days), firms_day)
@@ -513,6 +538,19 @@ def cmd_all_one(args: argparse.Namespace, cfg: dict, label_date: date, *, skip_d
 
 def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
     labels = resolve_label_dates(args)
+    as_of = pipeline_today(cfg)
+    capped = [d for d in labels if d <= as_of]
+    if not capped:
+        logger.error("All requested labels are after as_of=%s", as_of)
+        return 1
+    if len(capped) < len(labels):
+        logger.warning(
+            "Capped label range to as_of=%s (%d → %d days); skipped future labels",
+            as_of,
+            len(labels),
+            len(capped),
+        )
+    labels = capped
     logger.info("Running all for %d label date(s): %s … %s", len(labels), labels[0], labels[-1])
     wall0 = time.perf_counter()
 

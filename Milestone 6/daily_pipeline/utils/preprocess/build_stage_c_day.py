@@ -81,7 +81,7 @@ def run_stage_c_pipeline(
     force: bool = False,
 ) -> pd.DataFrame:
     """Build Stage C KNN rows for lookback window ending at label_date."""
-    from config_loader import setup_m4_imports
+    from config_loader import setup_m4_imports, pipeline_today
     from paths import resolve_path
 
     m4_src = setup_m4_imports(daily_cfg)
@@ -100,19 +100,29 @@ def run_stage_c_pipeline(
     lookback = daily_cfg["task"].get("lookback_days", 30)
     # Live prediction: panel through D is fine for row keys, but ERA5/FIRMS assemble
     # must not require calendar days after today / after available as-of.
-    as_of = min(label_date, date.today())
+    as_of = min(label_date, pipeline_today(daily_cfg))
     start = label_date - timedelta(days=lookback)
     years = _years_in_range(start, as_of)
     months = _months_in_range(start, as_of)
     end_clip = pd.Timestamp(as_of)
+    lag = int(m4_cfg["task"]["era5_lag_days"])
+    lead = int(m4_cfg["task"]["lead_days"])
+    history = int(m4_cfg["task"]["history_days"])
+    era5_start_clip = pd.Timestamp(start) - pd.Timedelta(days=lag + lead + history)
+    era5_end_clip = pd.Timestamp(as_of) - pd.Timedelta(days=lag + lead)
+    firms_start_clip = pd.Timestamp(start)
 
     logger.info(
-        "Stage C build label_date=%s as_of=%s years=%s months=%s end_clip=%s",
+        "Stage C build label_date=%s as_of=%s years=%s months=%s "
+        "labels %s…%s era5_from=%s era5_to=%s",
         label_date,
         as_of,
         years,
         months,
-        end_clip.date(),
+        start,
+        as_of,
+        era5_start_clip.date(),
+        era5_end_clip.date(),
     )
 
     for year in years:
@@ -131,7 +141,10 @@ def run_stage_c_pipeline(
                 month,
                 worker="daily",
                 force=force,
+                start_clip=era5_start_clip,
                 end_clip=end_clip,
+                era5_end_clip=era5_end_clip,
+                firms_start_clip=firms_start_clip,
             )
         assemble_stage_a_year(
             m4_cfg,
@@ -140,6 +153,8 @@ def run_stage_c_pipeline(
             worker="daily",
             era5_lag_days=m4_cfg["task"]["era5_lag_days"],
             force=force,
+            start_clip=pd.Timestamp(start),
+            end_clip=end_clip,
         )
 
     merge_stage_a(m4_cfg, years)

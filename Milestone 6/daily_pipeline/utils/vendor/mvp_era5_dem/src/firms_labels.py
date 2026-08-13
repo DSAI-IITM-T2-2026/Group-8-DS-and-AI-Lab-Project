@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -70,6 +71,54 @@ def label_day_to_cells(
     return agg[["date", "cell_id", "firms_n_pixels", "firms_max_confidence", "y_fire"]]
 
 
+def _scanned_path(cache_path: Path) -> Path:
+    return cache_path.with_suffix(".scanned.json")
+
+
+def _load_scanned(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return set(data if isinstance(data, list) else [])
+    except Exception:
+        return set()
+
+
+def _save_scanned(path: Path, dates: set[str]) -> None:
+    path.write_text(json.dumps(sorted(dates)), encoding="utf-8")
+
+
+def _fetch_days(
+    days: list[pd.Timestamp],
+    vsigs_prefix: str,
+    confidence_min: float,
+    resolution: float,
+    max_workers: int,
+) -> pd.DataFrame:
+    if not days:
+        return pd.DataFrame(columns=_EMPTY_COLS)
+    day_frames: list[pd.DataFrame] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futs = {
+            pool.submit(
+                label_day_to_cells,
+                day,
+                vsigs_prefix,
+                confidence_min,
+                resolution,
+            ): day
+            for day in days
+        }
+        for fut in as_completed(futs):
+            day_frames.append(fut.result())
+    return (
+        pd.concat(day_frames, ignore_index=True)
+        if day_frames
+        else pd.DataFrame(columns=_EMPTY_COLS)
+    )
+
+
 def build_firms_cell_labels(
     start: pd.Timestamp,
     end: pd.Timestamp,
@@ -80,7 +129,11 @@ def build_firms_cell_labels(
     months: list[int] | None = None,
     max_workers: int = 8,
 ) -> pd.DataFrame:
-    """Build (and cache) daily cell-level FIRMS labels for the date range."""
+    """Build (and cache) daily cell-level FIRMS labels for the date range.
+
+    A sidecar ``.scanned.json`` records days already read so cron can add
+    only the new calendar day instead of re-reading the whole month.
+    """
     cache_dir.mkdir(parents=True, exist_ok=True)
     frames: list[pd.DataFrame] = []
 
@@ -90,37 +143,44 @@ def build_firms_cell_labels(
             continue
 
         cache_path = cache_dir / f"firms_cells_{period.year}_{period.month:02d}.parquet"
+        scanned_path = _scanned_path(cache_path)
         month_start = max(start, period.to_timestamp(how="start"))
         month_end = min(end, period.to_timestamp(how="end").normalize())
+        needed = [
+            d
+            for d in pd.date_range(month_start, month_end, freq="D")
+            if d.strftime("%Y-%m-%d") not in _load_scanned(scanned_path)
+        ]
 
         if cache_path.exists():
-            logger.info("FIRMS cell cache hit %s", cache_path.name)
             month_df = pd.read_parquet(cache_path)
         else:
-            days = list(pd.date_range(month_start, month_end, freq="D"))
-            day_frames: list[pd.DataFrame] = []
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futs = {
-                    pool.submit(
-                        label_day_to_cells,
-                        day,
-                        vsigs_prefix,
-                        confidence_min,
-                        resolution,
-                    ): day
-                    for day in days
-                }
-                for fut in as_completed(futs):
-                    day_frames.append(fut.result())
+            month_df = pd.DataFrame(columns=_EMPTY_COLS)
 
-            month_df = (
-                pd.concat(day_frames, ignore_index=True)
-                if day_frames
-                else pd.DataFrame(columns=_EMPTY_COLS)
+        if needed:
+            logger.info(
+                "FIRMS scanning %d new day(s) for %04d-%02d: %s%s",
+                len(needed),
+                period.year,
+                period.month,
+                needed[0].date(),
+                f"…{needed[-1].date()}" if len(needed) > 1 else "",
             )
+            extra = _fetch_days(
+                needed, vsigs_prefix, confidence_min, resolution, max_workers
+            )
+            month_df = pd.concat([month_df, extra], ignore_index=True)
             month_df.to_parquet(cache_path, index=False)
+            scanned = _load_scanned(scanned_path)
+            scanned.update(d.strftime("%Y-%m-%d") for d in needed)
+            _save_scanned(scanned_path, scanned)
             logger.info("Wrote %s (%d fire-cell rows)", cache_path.name, len(month_df))
+        else:
+            logger.info("FIRMS cache already scanned %s…%s", month_start.date(), month_end.date())
 
+        if month_df.empty:
+            frames.append(month_df)
+            continue
         mask = (month_df["date"] >= start) & (month_df["date"] <= end)
         frames.append(month_df.loc[mask])
 

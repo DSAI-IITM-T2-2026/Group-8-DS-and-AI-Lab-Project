@@ -92,6 +92,13 @@ def build_eo_cell_cache(
         rows = list(index.itertuples(index=False))
         if limit_windows:
             rows = rows[:limit_windows]
+        logger.info(
+            "%s cell cache year=%s: %d window file(s) to load (months=%s)",
+            modality,
+            year,
+            len(rows),
+            sorted(months_set),
+        )
 
         for row in tqdm(rows, desc=f"{modality} {year}"):
             dest = win_cache / f"m{row.month:02d}_w{row.window:03d}.parquet"

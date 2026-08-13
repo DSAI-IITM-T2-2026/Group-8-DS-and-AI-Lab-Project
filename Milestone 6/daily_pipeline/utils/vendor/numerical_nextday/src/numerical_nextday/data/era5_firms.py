@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 import json
 import logging
 from pathlib import Path
@@ -31,6 +32,25 @@ def parse_year_month_ranges(
     return [(y, m) for y in years for m in months]
 
 
+def _finished_month_reusable(
+    era5_path: Path,
+    firms_path: Path,
+    year: int,
+    month: int,
+    clip_end: "pd.Timestamp | None",
+) -> bool:
+    """True when this calendar month has fully elapsed and both caches exist."""
+    if not era5_path.exists() or not firms_path.exists():
+        return False
+    if era5_path.stat().st_size == 0:
+        return False
+    last = calendar.monthrange(year, month)[1]
+    month_end = pd.Timestamp(year=year, month=month, day=last).normalize()
+    if clip_end is None:
+        return False
+    return month_end < pd.Timestamp(clip_end).normalize()
+
+
 def build_era5_firms_month(
     cfg: dict,
     year: int,
@@ -38,61 +58,97 @@ def build_era5_firms_month(
     worker: str = "local",
     force: bool = False,
     end_clip: "pd.Timestamp | None" = None,
+    start_clip: "pd.Timestamp | None" = None,
+    era5_end_clip: "pd.Timestamp | None" = None,
+    firms_start_clip: "pd.Timestamp | None" = None,
 ) -> Path | None:
     """Download/cache ERA5 daily + FIRMS cells for one calendar month.
 
-    If end_clip is set (daily pipeline), do not read past that date so a mid-month
-    label does not require future FIRMS/ERA5 days.
+    Daily pipeline: ERA5 is clipped to feature_end (D−6); FIRMS to the label
+    lookback. Finished calendar months are reused so cron does not re-read
+    July vsigs every August morning.
     """
     cache = shared_cache(cfg)
     stage = "era5_firms"
-    # When clipping mid-month, always rebuild so a prior full-month cache is not reused.
-    force_month = force or end_clip is not None
-    if not claim(cache, worker=worker, stage=stage, year=year, month=month, force=force_month):
-        return cache / "era5_daily" / f"year={year}" / f"month={month:02d}.parquet"
-
-    mvp = load_mvp_modules(cfg)
-    start = pd.Timestamp(year=year, month=month, day=1)
-    end = start + pd.offsets.MonthEnd(0)
-    if end_clip is not None:
-        end = min(end, pd.Timestamp(end_clip).normalize())
-        if end < start:
-            logger.warning("era5_firms skip %04d-%02d (end_clip=%s before month start)", year, month, end_clip)
-            mark_done(cache, worker=worker, stage=stage, year=year, month=month)
-            return None
-
     era5_dir = cache / "era5_daily" / f"year={year}"
     firms_dir = cache / "firms_cells" / f"year={year}"
     era5_path = era5_dir / f"month={month:02d}.parquet"
     firms_path = firms_dir / f"month={month:02d}.parquet"
+
+    if not force and _finished_month_reusable(era5_path, firms_path, year, month, end_clip):
+        logger.info("era5_firms reuse finished month %04d-%02d", year, month)
+        return era5_path
+
+    # Open month (or missing cache): always rebuild so cron picks up the new day.
+    claim(cache, worker=worker, stage=stage, year=year, month=month, force=True)
+
+    mvp = load_mvp_modules(cfg)
+    month_start = pd.Timestamp(year=year, month=month, day=1)
+    month_end = month_start + pd.offsets.MonthEnd(0)
+
+    era5_start = month_start
+    era5_end = month_end
+    if start_clip is not None:
+        era5_start = max(era5_start, pd.Timestamp(start_clip).normalize())
+    era5_stop = era5_end_clip if era5_end_clip is not None else end_clip
+    if era5_stop is not None:
+        era5_end = min(era5_end, pd.Timestamp(era5_stop).normalize())
+
+    firms_start = month_start
+    firms_end = month_end
+    if firms_start_clip is not None:
+        firms_start = max(firms_start, pd.Timestamp(firms_start_clip).normalize())
+    elif start_clip is not None:
+        firms_start = max(firms_start, pd.Timestamp(start_clip).normalize())
+    if end_clip is not None:
+        firms_end = min(firms_end, pd.Timestamp(end_clip).normalize())
+
     raw_era5 = cache / "era5_raw"
     daily_tmp = cache / "_era5_daily_mvp"
     firms_tmp = cache / "_firms_mvp"
 
-    # Prefer monthly under era5/raw/, else stitch daily era5_YYYY_MM_DD.nc
-    era5 = mvp["era5_daily"].build_era5_daily_range(
-        start=start,
-        end=end,
-        gcs_prefix=cfg["gcs"]["era5_prefix"],
-        raw_cache=raw_era5,
-        daily_cache=daily_tmp,
-        legacy_prefix=cfg["gcs"].get("era5_legacy_prefix"),
-    )
-    _atomic_to_parquet(era5, era5_path)
+    if era5_end >= era5_start:
+        era5 = mvp["era5_daily"].build_era5_daily_range(
+            start=era5_start,
+            end=era5_end,
+            gcs_prefix=cfg["gcs"]["era5_prefix"],
+            raw_cache=raw_era5,
+            daily_cache=daily_tmp,
+            legacy_prefix=cfg["gcs"].get("era5_legacy_prefix"),
+        )
+        _atomic_to_parquet(era5, era5_path)
+    else:
+        logger.info("era5_firms skip ERA5 %04d-%02d (empty window)", year, month)
 
-    firms = mvp["firms_labels"].build_firms_cell_labels(
-        start=start,
-        end=end,
-        vsigs_prefix=cfg["gcs"]["firms_vsigs_prefix"],
-        confidence_min=float(cfg["task"]["firms_confidence_min"]),
-        cache_dir=firms_tmp,
-        resolution=float(cfg["era5"]["resolution_deg"]),
-        months=[month],
-    )
-    _atomic_to_parquet(firms, firms_path)
+    if firms_end >= firms_start:
+        firms = mvp["firms_labels"].build_firms_cell_labels(
+            start=firms_start,
+            end=firms_end,
+            vsigs_prefix=cfg["gcs"]["firms_vsigs_prefix"],
+            confidence_min=float(cfg["task"]["firms_confidence_min"]),
+            cache_dir=firms_tmp,
+            resolution=float(cfg["era5"]["resolution_deg"]),
+            months=[month],
+        )
+        _atomic_to_parquet(firms, firms_path)
+    else:
+        logger.info("era5_firms skip FIRMS %04d-%02d (empty window)", year, month)
+        if not firms_path.exists():
+            _atomic_to_parquet(
+                pd.DataFrame(
+                    columns=["date", "cell_id", "firms_n_pixels", "firms_max_confidence", "y_fire"]
+                ),
+                firms_path,
+            )
+
+    if not era5_path.exists():
+        mark_done(cache, worker=worker, stage=stage, year=year, month=month)
+        return None
 
     mark_done(cache, worker=worker, stage=stage, year=year, month=month)
-    logger.info("era5_firms done %04d-%02d era5=%d firms=%d", year, month, len(era5), len(firms))
+    n_era5 = len(pd.read_parquet(era5_path, columns=["date"])) if era5_path.exists() else 0
+    n_firms = len(pd.read_parquet(firms_path, columns=["date"])) if firms_path.exists() else 0
+    logger.info("era5_firms done %04d-%02d era5=%d firms=%d", year, month, n_era5, n_firms)
     return era5_path
 
 
@@ -110,12 +166,18 @@ def assemble_stage_a_year(
     worker: str = "local",
     force: bool = False,
     era5_lag_days: int | None = None,
+    end_clip: "pd.Timestamp | None" = None,
+    start_clip: "pd.Timestamp | None" = None,
 ) -> Path:
     """
     Build Stage A parquet for one label year.
 
     ERA5 feature_end_date = D_era5; label_date = D_era5 + lag + lead.
     lag=0 writes under m4_shared_cache/lag0/stage_a/.
+
+    When `months` is a subset of the year (daily pipeline) and/or clips are set,
+    only load ERA5/FIRMS for the label window plus 7-day weather history — not
+    Jan–Dec, and not an extra 30d pad from the 1st of the first label month.
     """
     cache = shared_cache(cfg)
     lag = int(cfg["task"]["era5_lag_days"] if era5_lag_days is None else era5_lag_days)
@@ -123,26 +185,49 @@ def assemble_stage_a_year(
     stage_root = _stage_a_root(cache, lag)
     out = stage_root / f"year={year}.parquet"
 
-    if not force and is_done(cache, stage, year, month=None) and out.exists():
+    months = months or list(range(1, 13))
+    clip_to_months = (
+        months != list(range(1, 13)) or end_clip is not None or start_clip is not None
+    )
+
+    if not force and not clip_to_months and is_done(cache, stage, year, month=None) and out.exists():
         logger.info("Stage A year=%s lag=%s already done", year, lag)
         return out
 
-    claim(cache, worker=worker, stage=stage, year=year, month=None, force=force)
+    claim(cache, worker=worker, stage=stage, year=year, month=None, force=force or clip_to_months)
 
     mvp = load_mvp_modules(cfg)
     lead = int(cfg["task"]["lead_days"])
     history = int(cfg["task"]["history_days"])
-    months = months or list(range(1, 13))
 
-    # Label year window; need ERA5 from (start - history - lag) through end
-    label_start = pd.Timestamp(year=year, month=1, day=1)
-    label_end = pd.Timestamp(year=year, month=12, day=31)
-    # Restrict to requested months on label_date later
-    era5_start = label_start - pd.Timedelta(days=history + lag + lead)
-    era5_end = label_end - pd.Timedelta(days=lead)  # feature days for last labels
-    _ = era5_end
+    if clip_to_months:
+        label_start = pd.Timestamp(year=year, month=min(months), day=1)
+        label_end = pd.Timestamp(year=year, month=max(months), day=1) + pd.offsets.MonthEnd(0)
+        if start_clip is not None:
+            label_start = max(label_start, pd.Timestamp(start_clip).normalize())
+        if end_clip is not None:
+            label_end = min(label_end, pd.Timestamp(end_clip).normalize())
+        if label_end < label_start:
+            raise ValueError(
+                f"Stage A empty window year={year} months={months} "
+                f"start_clip={start_clip} end_clip={end_clip}"
+            )
+        # Match daily download: ERA5 through feature_end, 7d history.
+        # lookback_days is already encoded in start_clip (first panel label).
+        era5_start = label_start - pd.Timedelta(days=lag + lead + history)
+        logger.info(
+            "Stage A clipped year=%s labels %s…%s; ERA5/FIRMS months %s…%s",
+            year,
+            label_start.date(),
+            label_end.date(),
+            era5_start.to_period("M"),
+            label_end.to_period("M"),
+        )
+    else:
+        label_start = pd.Timestamp(year=year, month=1, day=1)
+        label_end = pd.Timestamp(year=year, month=12, day=31)
+        era5_start = label_start - pd.Timedelta(days=history + lag + lead)
 
-    # Load ERA5/FIRMS from hive caches spanning needed months
     era5_frames = []
     firms_frames = []
     period_start = era5_start.to_period("M")
@@ -153,12 +238,32 @@ def assemble_stage_a_year(
         fpath = cache / "firms_cells" / f"year={y}" / f"month={m:02d}.parquet"
         if not epath.exists() or not fpath.exists():
             logger.info("Missing cache for %04d-%02d — building", y, m)
-            build_era5_firms_month(cfg, y, m, worker=worker, force=force)
-        era5_frames.append(pd.read_parquet(epath))
-        firms_frames.append(pd.read_parquet(fpath))
+            build_era5_firms_month(
+                cfg,
+                y,
+                m,
+                worker=worker,
+                force=force,
+                start_clip=era5_start,
+                end_clip=end_clip if end_clip is not None else label_end,
+                era5_end_clip=label_end - pd.Timedelta(days=lag + lead),
+                firms_start_clip=label_start,
+            )
+        if epath.exists():
+            era5_frames.append(pd.read_parquet(epath))
+        if fpath.exists():
+            firms_frames.append(pd.read_parquet(fpath))
 
+    if not era5_frames:
+        raise FileNotFoundError(
+            f"No ERA5 month caches for year={year} {period_start}…{period_end}"
+        )
     era5 = pd.concat(era5_frames, ignore_index=True)
-    firms = pd.concat(firms_frames, ignore_index=True)
+    firms = (
+        pd.concat(firms_frames, ignore_index=True)
+        if firms_frames
+        else pd.DataFrame()
+    )
     era5["date"] = pd.to_datetime(era5["date"]).dt.normalize()
     if len(firms):
         firms["date"] = pd.to_datetime(firms["date"]).dt.normalize()

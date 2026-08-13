@@ -13,6 +13,7 @@ logger = logging.getLogger("download.sentinel2")
 
 S2_SRC = Path(__file__).resolve().parents[1] / "vendor" / "sentinel2"
 S2_ANCHOR = date(2018, 1, 1)
+_S2_WINDOW_RESULT: dict[tuple[str, str, date, date], str | None] = {}
 
 
 def parse_date(value: str) -> date:
@@ -100,25 +101,35 @@ def export_window(
         )
         return None
 
+    stem = flat_stem(start, end)
+    blob_parquet = f"{prefix.rstrip('/')}/{stem}.parquet"
+    gcs_uri = f"gs://{bucket}/{blob_parquet}"
+    cache_key = (bucket, prefix.rstrip("/"), start, end)
+
+    if skip_existing and cache_key in _S2_WINDOW_RESULT:
+        return _S2_WINDOW_RESULT[cache_key]
+
+    if skip_existing:
+        try:
+            from download.gcs_listing import blob_listed
+        except ImportError:
+            from gcs_listing import blob_listed
+
+        if blob_listed(bucket, blob_parquet, prefix=prefix, project=project_id):
+            logger.info("S2 already exists: %s", gcs_uri)
+            _S2_WINDOW_RESULT[cache_key] = gcs_uri
+            return gcs_uri
+        csv_blob = f"{prefix.rstrip('/')}/{stem}.csv"
+        if blob_listed(bucket, csv_blob, prefix=prefix, project=project_id):
+            csv_uri = f"gs://{bucket}/{csv_blob}"
+            logger.info("S2 CSV exists (parquet pending): %s", csv_uri)
+            _S2_WINDOW_RESULT[cache_key] = csv_uri
+            return csv_uri
+
     _add_s2_path()
     from s2_lib import export as export_mod  # type: ignore
     from s2_lib.export import initialize, start_export  # type: ignore
     from s2_lib.sentinel2 import TimeWindow  # type: ignore
-    from google.cloud import storage
-
-    stem = flat_stem(start, end)
-    blob_parquet = f"{prefix.rstrip('/')}/{stem}.parquet"
-    gcs_uri = f"gs://{bucket}/{blob_parquet}"
-
-    if skip_existing:
-        client = storage.Client(project=project_id)
-        if client.bucket(bucket).blob(blob_parquet).exists():
-            logger.info("S2 already exists: %s", gcs_uri)
-            return gcs_uri
-        csv_blob = f"{prefix.rstrip('/')}/{stem}.csv"
-        if client.bucket(bucket).blob(csv_blob).exists():
-            logger.info("S2 CSV exists (parquet pending): gs://%s/%s", bucket, csv_blob)
-            return f"gs://{bucket}/{csv_blob}"
 
     initialize(project_id)
     cfg = build_runtime_config(
@@ -143,6 +154,8 @@ def export_window(
     )
     task_id, uri = start_export(cfg, window)
     logger.info("Started S2 export %s (task=%s)", uri, task_id)
+    if skip_existing:
+        _S2_WINDOW_RESULT[cache_key] = uri
     return uri
 
 
