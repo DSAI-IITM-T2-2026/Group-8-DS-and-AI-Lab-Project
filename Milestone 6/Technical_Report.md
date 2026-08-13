@@ -610,8 +610,8 @@ Artifact integrity is verifiable via SHA-256 hashes in `run_manifest.json`.
 
 | Member              | Roll Number | Signature Commit |
 | ------------------- | ----------- | ---------------- |
-| Ripunjay Kumar      | 21F3002511  |                  |
-| Lakshay Garg        | 21F3001076  |                  |
-| Roushan Kumar Singh | 23F1002240  |                  |
-| Lakshmi Sruthi K    | 21F1005626  |                  |
-| R Aditya            | 21F1004839  |                  |
+| Ripunjay Kumar      | 21F3002511  |      ✅          |
+| Lakshay Garg        | 21F3001076  |      ✅          |
+| Roushan Kumar Singh | 23F1002240  |      ✅          |
+| Lakshmi Sruthi K    | 21F1005626  |      ✅          |
+| R Aditya            | 21F1004839  |      ✅          |
