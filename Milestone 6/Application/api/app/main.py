@@ -1,6 +1,6 @@
 """FastAPI app implementing frontend-backend-api-contract.md.
 
-See Application/api/README.md for exactly which endpoints are backed by
+See Milestone 6/Application/api/README.md for exactly which endpoints are backed by
 real pipeline data today and which return a documented 503 because a
 dependency (trained model artifact, GCS credentials, historical archive)
 is not part of this repository.

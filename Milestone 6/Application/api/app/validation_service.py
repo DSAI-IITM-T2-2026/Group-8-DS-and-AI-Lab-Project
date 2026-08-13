@@ -1,7 +1,7 @@
 """Backs /validation/events with real actual-vs-predicted records.
 
 This needs two things this repo does not ship, by design (see
-Application/api/README.md):
+Milestone 6/Application/api/README.md):
 
 1. A local copy of the multi-year historical archive
    (``final_processed/2019_2025/2019-2025.parquet``, ~GB-scale) that carries

@@ -74,7 +74,7 @@ Optional for Cloud Scheduler / VM crontab. Not required if an API triggers `run_
 
 ## Runtime cache (outside `utils/`)
 
-Created at `Application/daily_pipeline/.cache/` (gitignored):
+Created at `Milestone 6/Application/daily_pipeline/.cache/` (gitignored):
 
 - `.cache/m4_shared_cache/` — Stage C intermediates
 - `.cache/final_processed/` — local copy of the 86-feature table

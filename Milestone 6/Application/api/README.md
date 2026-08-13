@@ -38,7 +38,7 @@ cp .env.example .env
 ```
 
 The deployment must use Python 3.12 and the pinned pandas, NumPy,
-scikit-learn, and LightGBM versions in `Application/backend/requirements.txt`;
+scikit-learn, and LightGBM versions in `Milestone 6/Application/backend/requirements.txt`;
 they match the artifact's run manifest. GCS Application Default Credentials
 must grant object read access. The model is deserialized directly from bytes
 and is not persisted to the application filesystem.
@@ -77,7 +77,7 @@ then set `WILDFIRE_HISTORICAL_ARCHIVE=/tmp/2019-2025.parquet` in `.env`.
 ## Running
 
 ```bash
-cd "Application/backend"
+cd "Milestone 6/Application/backend"
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -92,7 +92,7 @@ work with zero configuration — they only touch files already in this repo.
 ## Layout
 
 ```text
-Application/api/
+Milestone 6/Application/api/
   requirements.txt
   .env.example
   README.md

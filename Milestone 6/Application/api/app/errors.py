@@ -68,7 +68,7 @@ class ServiceUnavailableError(ApiError):
     """Model or required data source is unavailable (docs: 503).
 
     Raised instead of ever fabricating a probability, feature value, or
-    validation record -- see Application/api/README.md for which endpoints
+    validation record -- see Milestone 6/Application/api/README.md for which endpoints
     depend on assets (a trained model artifact, GCS credentials, a local
     historical archive) that are not bundled with this repository.
     """

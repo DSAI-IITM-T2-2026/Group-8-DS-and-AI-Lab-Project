@@ -3,7 +3,7 @@
 Everything here maps to a real, documented piece of the project:
 
 - ``daily_pipeline`` config (bucket, grid, feature contract) is loaded from
-  ``Application/daily_pipeline/utils/config.yaml`` via the pipeline's own
+  ``Milestone 6/Application/daily_pipeline/utils/config.yaml`` via the pipeline's own
   ``config_loader`` -- we do not duplicate those values.
 - Deployment-specific knobs (which trained model artifact to serve, whether
   to allow GCS reads, CORS origin) come from environment variables / ``.env``
@@ -21,7 +21,7 @@ from typing import Any
 
 
 def api_root() -> Path:
-    """Application/api/"""
+    """Milestone 6/Application/api/"""
     return Path(__file__).resolve().parent.parent
 
 

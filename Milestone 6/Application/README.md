@@ -1,6 +1,6 @@
 # Wildfire IQ Application
 
-`Application/` is the complete, deployable Wildfire IQ application. It is
+`Milestone 6/Application/` is the complete, deployable Wildfire IQ application. It is
 self-contained and does not import runtime code from the repository's milestone
 folders. The original `Milestone 6/api` and `Milestone 6/daily_pipeline`
 directories remain unchanged for milestone history and comparison.
@@ -13,7 +13,7 @@ the champion model, and displays the daily risk map and ranked results.
 ## Application structure
 
 ```text
-Application/
+Milestone 6/Application/
 ├── frontend/        React, TypeScript, and Vite user interface
 ├── backend/         Public FastAPI server, SQLite queue, and pipeline worker
 ├── api/             Inference routers and champion-model scoring services
@@ -40,7 +40,7 @@ working directory explicitly.
 
 ```bash
 git clone https://github.com/DSAI-IITM-T2-2026/Group-8-DS-and-AI-Lab-Project.git
-cd Group-8-DS-and-AI-Lab-Project/Application
+cd "Group-8-DS-and-AI-Lab-Project/Milestone 6/Application"
 ```
 
 ## 2. Configure the backend and pipeline
@@ -79,7 +79,7 @@ The runtime identity needs:
 
 ## 3. Install and run the backend
 
-From `Application/`:
+From `Milestone 6/Application/`:
 
 ```bash
 python3.12 -m venv .venv
@@ -106,7 +106,7 @@ Engine quotas and persistent state.
 Open a second terminal:
 
 ```bash
-cd Group-8-DS-and-AI-Lab-Project/Application/frontend
+cd "Group-8-DS-and-AI-Lab-Project/Milestone 6/Application/frontend"
 npm ci
 npm run dev
 ```
@@ -136,20 +136,20 @@ completed cloud export and local pipeline cache are retained across retries.
 Every preparation run has a separate log:
 
 ```text
-Application/backend/.state/logs/<run-id>.log
+Milestone 6/Application/backend/.state/logs/<run-id>.log
 ```
 
 Follow the newest local run from the repository root:
 
 ```bash
-tail -f "$(ls -t Application/backend/.state/logs/*.log | head -1)"
+tail -f "$(ls -t "Milestone 6/Application/backend/.state/logs/"*.log | head -1)"
 ```
 
 Other persistent runtime paths:
 
 ```text
-Application/backend/.state/pipeline-runs.sqlite3  job history
-Application/daily_pipeline/.cache/                processed cache and EE task registry
+Milestone 6/Application/backend/.state/pipeline-runs.sqlite3  job history
+Milestone 6/Application/daily_pipeline/.cache/                processed cache and EE task registry
 ```
 
 These paths are ignored by Git. Mount both on persistent storage in a VM or
@@ -157,14 +157,14 @@ container deployment so restarts can reconcile previous work.
 
 ## Test and build commands
 
-Backend, inference, and pipeline tests, from `Application/`:
+Backend, inference, and pipeline tests, from `Milestone 6/Application/`:
 
 ```bash
 PYTHONPATH="$PWD:$PWD/backend" .venv/bin/python -m pytest \
   daily_pipeline/tests api/tests backend/tests -q
 ```
 
-Frontend checks, from `Application/frontend/`:
+Frontend checks, from `Milestone 6/Application/frontend/`:
 
 ```bash
 npm run typecheck
@@ -191,7 +191,7 @@ Backend environment values:
 WILDFIRE_MODEL_URI=gs://wildfire-detection-first/champion_training_outputs/champion_training_outputs_stage_c_knn_high_medium_fire/models/champion_model.joblib
 WILDFIRE_ALLOW_GCS=true
 PIPELINE_CORS_ORIGINS=https://your-frontend.example
-PIPELINE_PYTHON=/absolute/path/to/Application/.venv/bin/python
+PIPELINE_PYTHON="/absolute/path/to/Milestone 6/Application/.venv/bin/python"
 PIPELINE_STATE_DIR=/persistent/wildfire-iq/backend-state
 GOOGLE_CLOUD_PROJECT=plated-mechanic-418917
 GOOGLE_APPLICATION_CREDENTIALS=/secure/mount/service-account.json
@@ -201,7 +201,7 @@ CDS_API_KEY=your-cds-uid:your-cds-api-key
 For a frontend build, provide the public backend URL including `/api/v1`:
 
 ```bash
-cd Application/frontend
+cd "Milestone 6/Application/frontend"
 npm ci
 VITE_API_BASE_URL=https://your-backend.example/api/v1 npm run build
 ```

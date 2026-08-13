@@ -1,6 +1,6 @@
 # Daily Wildfire Pipeline (self-contained)
 
-Self-contained package under **`Application/daily_pipeline`**.
+Self-contained package under **`Milestone 6/Application/daily_pipeline`**.
 Produces the same 86-feature per-day table Milestone 5 scores via `prepared_champion_day`.
 
 ---
@@ -8,7 +8,7 @@ Produces the same 86-feature per-day table Milestone 5 scores via `prepared_cham
 ## Run setup
 
 ```bash
-cd "Application/daily_pipeline"
+cd "Milestone 6/Application/daily_pipeline"
 pip install -r requirements.txt
 cp .env.example .env          # fill CDS_API_KEY / GOOGLE_CLOUD_PROJECT
 
@@ -82,7 +82,7 @@ Do **not** request labels through 31 Aug. Cap at today (or the last day you will
 ### Recommended: few live days (start ASAP)
 
 ```bash
-cd "Application/daily_pipeline"
+cd "Milestone 6/Application/daily_pipeline"
 python run_daily.py download --start-date 2026-08-10 --end-date 2026-08-12
 python run_daily.py all --label-date 2026-08-10
 ```
@@ -115,7 +115,7 @@ Use Milestone 5 `Wildfire_Inference.ipynb` with `INFERENCE_INPUT_KIND=prepared_c
 
 ## Local output
 
-Created under `Application/daily_pipeline/.cache/`:
+Created under `Milestone 6/Application/daily_pipeline/.cache/`:
 
 | What                       | Local path                                                          |
 | -------------------------- | ------------------------------------------------------------------- |
@@ -171,7 +171,7 @@ Example: `gs://wildfire-detection-first/final_processed/2026-08-10_test.parquet`
 ## Layout
 
 ```text
-Application/daily_pipeline/
+Milestone 6/Application/daily_pipeline/
   README.md
   requirements.txt
   .env.example
