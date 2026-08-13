@@ -51,7 +51,7 @@ def build_cfg(project_id: str, asset_id: str):
     from s2_lib.config import load_config  # type: ignore
 
     template = _UTILS / "vendor" / "sentinel2" / "config" / "config.template.yaml"
-    cfg = load_config(template, project_id=project_id)
+    cfg = load_config(template)
     object.__setattr__(cfg, "project_id", project_id)
     object.__setattr__(cfg.grid, "asset_id", asset_id)
     return cfg

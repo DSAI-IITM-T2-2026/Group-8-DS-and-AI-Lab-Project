@@ -67,7 +67,7 @@ def build_runtime_config(
     from s2_lib.config import load_config  # type: ignore
 
     template = S2_SRC / "config" / "config.template.yaml"
-    cfg = load_config(template, project_id=project_id)
+    cfg = load_config(template)
     object.__setattr__(cfg, "project_id", project_id)
     object.__setattr__(cfg.grid, "asset_id", grid_asset_id)
     object.__setattr__(cfg.export, "bucket", bucket)
