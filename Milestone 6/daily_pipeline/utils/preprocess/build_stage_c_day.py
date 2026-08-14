@@ -224,7 +224,21 @@ def _forward_fill_s2(frame: pd.DataFrame, targets: list[str], max_days: int) -> 
 
 
 def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
-    """KNN when 2019–2022 donors exist; otherwise causal S2 forward-fill for live days."""
+    """Impute missing S2 rows with a causal, distance-weighted donor pool.
+
+    Training used observed rows from 2019–2022 as frozen donors. A daily live
+    build intentionally contains only the configured lookback window, so those
+    historical rows are normally absent. In that case, use observed S2 rows in
+    the live window; every one of those observations is still available no
+    later than D−1. This keeps the deployed stage finite without silently
+    turning the model's passthrough preprocessor into a different estimator.
+
+    Before KNN, apply optional per-cell causal forward-fill
+    (``preprocess.s2_forward_fill_max_days``). Any row whose S2 band values are
+    still non-finite is treated as missing — including cases where
+    ``s2n_available==1`` but individual bands are NaN (common on live 2026
+    windows when train-median fill is skipped).
+    """
     from sklearn.neighbors import NearestNeighbors
     from sklearn.preprocessing import StandardScaler
     import numpy as np
@@ -251,27 +265,46 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
 
     targets = s2_targets(df.columns.tolist())
     preds = predictors(df.columns.tolist())
+    max_ffill = int(daily_cfg.get("preprocess", {}).get("s2_forward_fill_max_days", 7))
+    if targets and max_ffill > 0:
+        df = _forward_fill_s2(df, targets, max_ffill)
+
     years = pd.to_datetime(df["label_date"]).dt.year
-    miss = df["s2n_available"].fillna(0).astype(int).to_numpy() == 0
-    donor = (df["s2n_available"].fillna(0).astype(int).to_numpy() == 1) & (years.to_numpy() <= 2022)
+    target_values = df[targets].apply(pd.to_numeric, errors="coerce") if targets else pd.DataFrame(index=df.index)
+    finite_s2 = (
+        np.isfinite(target_values.to_numpy(dtype=float)).all(axis=1)
+        if targets
+        else np.ones(len(df), dtype=bool)
+    )
+    # Treat non-finite bands as missing even when the attach flag says available.
+    miss = ~finite_s2
+    observed = finite_s2
+    historical_donor = observed & (years.to_numpy() <= 2022)
+    donor = historical_donor if historical_donor.any() else observed
 
     out = df.copy()
     out["s2n_knn_imputed"] = 0
     n_donors = int(donor.sum())
     n_miss = int(miss.sum())
     if n_miss and n_donors == 0:
-        max_days = int(daily_cfg.get("preprocess", {}).get("s2_forward_fill_max_days", 7))
-        logger.warning(
-            "KNN skipped: %d missing S2 rows and no year<=2022 donors. "
-            "Forward-filling S2 per cell (max %d days).",
-            n_miss,
-            max_days,
+        raise ValueError(
+            f"Cannot KNN-impute {n_miss} missing S2 rows: the live window has no "
+            "fully observed Sentinel-2 donor rows"
         )
-        out = _forward_fill_s2(out, targets, max_days)
-    elif n_miss and n_donors and targets:
+    if n_miss and n_donors and targets:
+        if not historical_donor.any():
+            logger.info(
+                "No 2019–2022 donors in the live lookback; using %d causal observed "
+                "S2 rows from the current window",
+                n_donors,
+            )
         X = out[preds].apply(pd.to_numeric, errors="coerce")
-        X_d = X.loc[donor].fillna(X.median())
-        X_m = X.loc[miss].fillna(X.median())
+        donor_medians = X.loc[donor].median(numeric_only=True)
+        usable_predictors = donor_medians.loc[donor_medians.notna()].index.tolist()
+        if not usable_predictors:
+            raise ValueError("Cannot KNN-impute S2: no finite donor predictors are available")
+        X_d = X.loc[donor, usable_predictors].fillna(donor_medians[usable_predictors])
+        X_m = X.loc[miss, usable_predictors].fillna(donor_medians[usable_predictors])
         scaler = StandardScaler()
         X_d_s = scaler.fit_transform(X_d)
         X_m_s = scaler.transform(X_m)
@@ -281,11 +314,44 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
         dist, idx = nn.kneighbors(X_m_s)
         weights = 1.0 / np.maximum(dist, 1e-6)
         weights /= weights.sum(axis=1, keepdims=True)
-        donor_vals = out.loc[donor, targets].to_numpy(dtype=float)
+        donor_vals = target_values.loc[donor, targets].to_numpy(dtype=float)
         for i, row_idx in enumerate(np.flatnonzero(miss)):
             out.loc[row_idx, targets] = (donor_vals[idx[i]] * weights[i][:, None]).sum(axis=0)
             out.loc[row_idx, "s2n_knn_imputed"] = 1
-        logger.info("KNN imputed %d S2 rows from %d donors (year<=2022)", n_miss, n_donors)
+            out.loc[row_idx, "s2n_available"] = 1
+        remaining = ~np.isfinite(
+            out.loc[miss, targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+        )
+        if remaining.any():
+            # Last resort for live panels: column medians from finite donors
+            # (train-median fill is skipped when the train split is empty).
+            col_medians = target_values.loc[donor, targets].median(numeric_only=True)
+            for col in targets:
+                bad = ~np.isfinite(pd.to_numeric(out[col], errors="coerce").to_numpy(dtype=float))
+                if bad.any() and pd.notna(col_medians.get(col)):
+                    out.loc[bad, col] = float(col_medians[col])
+            still_bad = ~np.isfinite(
+                out[targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+            )
+            if still_bad.any():
+                raise ValueError(
+                    f"KNN imputation left {int(still_bad.sum())} non-finite Sentinel-2 values"
+                )
+            logger.warning(
+                "Filled remaining non-finite S2 bands with donor column medians "
+                "(%d values)",
+                int(remaining.sum()),
+            )
+        logger.info("KNN imputed %d S2 rows from %d observed donors", n_miss, n_donors)
+
+    if targets:
+        still = ~np.isfinite(
+            out[targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+        )
+        if still.any():
+            raise ValueError(
+                f"Sentinel-2 features still non-finite after ffill/KNN: {int(still.sum())} values"
+            )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out.to_parquet(out_dir / "all.parquet", index=False)
