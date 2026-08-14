@@ -1,9 +1,8 @@
 # Technical Report — Champion Wildfire Model
-## Milestone 5: Final Model Training Pipeline (`Wildfire_Training_final.ipynb`)
+## Milestone 5: Final Model Training Pipeline
 
-**Project**: AI-Powered Wildfire Early Detection and Alerting System · DSAI Lab · IIT Madras · Group 8
-**Model**: Champion LightGBM Dual-Head (Stage C KNN · High–Medium Fire Cells · Neighbor Fire History ON · Fire Season May–Nov)
-**Notebook**: `Milestone 5/Wildfire_Training_final.ipynb` (41 cells: 21 markdown, 20 code)
+**Project**: AI-Powered Wildfire Early Detection and Alerting System · Group 8
+**Model**: Champion LightGBM Dual-Head
 
 ---
 
@@ -23,24 +22,44 @@
 12. [Evaluation Protocol & Results](#12-evaluation-protocol--results)
 13. [Model Interpretability (SHAP)](#13-model-interpretability-shap)
 14. [Artifacts & Deployment](#14-artifacts--deployment)
-15. [Reproducibility](#15-reproducibility)
+15. [Deployment](#15-deployment)
 16. [Limitations & Future Work](#16-limitations--future-work)
 
 ---
 
 ## 1. Executive Summary
 
-This report documents the complete technical pipeline of the final champion model trained in `Wildfire_Training_final.ipynb`: a **LightGBM dual-head system** (binary classifier + LambdaRank ranker) that predicts **next-day wildfire occurrence** for 437 high/medium fire-prone grid cells across California.
+This technical report documents the end-to-end technical pipeline and empirical performance of the **Champion Wildfire Early Detection System** - an AI powered system designed to predict **next-day wildfire occurrence** across 437 high- and medium-risk grid cells in California.
 
-The pipeline ingests a precomputed Stage-C KNN-imputed feature table (63 raw source columns spanning ERA5 weather, Copernicus DEM terrain, Sentinel-2 optical imagery, and Sentinel-5P atmospheric composition), engineers **107 candidate features**, prunes to **86** via TreeSHAP, and produces a daily **Top-25 alert roster** by blending within-day percentile scores (30% classifier / 70% ranker) with Platt-style probability calibration.
+The pipeline ingests data from various sources combining into a single table of 63 raw source columns across ERA5 atmospheric physics, Copernicus DEM topography, Sentinel-2 optical vegetation indices, and Sentinel-5P atmospheric composition. From these raw inputs, **107 candidate features** (including spatiotemporal lags, rolling statistics, and environmental interaction ratios) were engineered and pruned down to **86 optimal predictors** via TreeSHAP feature evaluation. The core architecture integrates a **LightGBM dual-head system**—combining a binary classifier for absolute probability estimation and a LambdaRank ranker for relative daily risk ordering—calibrated using Platt-style probability scaling. By blending within-day percentile scores (30% classifier weight / 70% ranker weight), the system produces a prioritized daily **Top-25 alert roster** for operational resource pre-positioning.
 
-**Held-out 2025 test performance**: PR-AUC **0.1451** (15.6× the naive baseline), ROC-AUC **0.7718**, Recall@25 **36.4%**, Recall@50 **48.2%**, Brier score **0.0131**.
+- **Held-Out 2025 Test Performance**:
+  - **PR-AUC**: **0.1451** (**15.6×** lift over the naive baseline of 0.0093)
+  - **ROC-AUC**: **0.7718**
+  - **Recall@25**: **36.4%** (captures over a third of all fire events in the top 25 daily alerts)
+  - **Recall@50**: **48.2%**
+  - **Brier Score**: **0.0131** (reflecting strong probabilistic calibration)
 
 ---
 
 ## 2. System Overview
 
 ```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Raw Data Ingestion to GCS (GEE, ECMWF CDS API, NASA FIRMS)                  │
+│  • S5P_daily_parquet | FIRMS_daily_tif | ERA5_daily_parquet | S2_5day_parquet│
+└──────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Combining the data                                                          │
+│  1. StageA_ERA5_FIRMS_DEM  ─► Merge ERA5 weather, FIRMS labels & DEM static  │
+│  2. StageB_attach_S2       ─► Attach Sentinel-2 optical imagery              │
+│  3. StageC_attach_S5P      ─► Attach Sentinel-5P atmospheric metrics         │
+│  4. StageC_KNN_impute      ─► Execute KNN feature imputation                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                         STAGE C KNN SOURCE TABLE                             │
 │   all.parquet · 1,718,304 cell-days · 672 cells · 2,557 days (2019–2025)     │
@@ -68,7 +87,7 @@ The pipeline ingests a precomputed Stage-C KNN-imputed feature table (63 raw sou
                                       │
                                       ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  CHRONOLOGICAL SPLITS (strictly non-overlapping)                             │
+│  CHRONOLOGICAL SPLITS                                                        │
 │  Train 2019–2022 · Validation 2023 · Calibration 2024 · Test 2025            │
 └──────────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -86,7 +105,6 @@ The pipeline ingests a precomputed Stage-C KNN-imputed feature table (63 raw sou
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  OUTPUT                                                                      │
 │  Calibrated p_fire + blended alert_score → daily Top-25 alert roster         │
-│  champion_model.joblib · booster weights · metrics · predictions · SHAP      │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,9 +112,13 @@ The pipeline ingests a precomputed Stage-C KNN-imputed feature table (63 raw sou
 
 ## 3. Data Sources & Raw Features
 
-### 3.1 Source Table
+### 3.1 Source Ingestion & Table
 
-The notebook consumes a single fused parquet table produced upstream by the Stage C data pipeline (see Milestone 2 data pipelines). No raw GCS/satellite ingestion happens inside this notebook.
+The raw dataset spans 5 environmental data sources ingested via the `daily_pipeline` module in `Milestone 6/`:
+- **Sentinel-2** (Vegetation & Optics) & **Sentinel-5P** (Atmospheric Composition): Exported/downloaded via **Google Earth Engine (GEE)** Python API tasks.
+- **ERA5 Reanalysis** (Atmospheric Physics & Weather): Downloaded directly from the **ECMWF Copernicus Climate Data Store (CDS API)** as daily NetCDF files using `cdsapi`.
+- **FIRMS Active Fire Labels**: Exported via **NASA FIRMS** / GEE active fire datasets.
+- **Copernicus DEM** (Terrain & Elevation): Static elevation dataset (`COPERNICUS/DEM/GLO30`). 
 
 | Item | Value |
 |------|-------|
@@ -105,7 +127,6 @@ The notebook consumes a single fused parquet table produced upstream by the Stag
 | Companion metadata | `meta.json`, `metadata/dataset_metadata.json`, `metadata/feature_columns.json` |
 | Fire-region classification | `fire_analysis2.csv` |
 | Rows | **1,718,304** cell-days |
-| Columns on disk | 77 (63 allowlisted Stage-C features + IDs/dates/label/QC) |
 | Calendar coverage | **2,557 days** (2019-01-01 → 2025-12-31) |
 | Spatial coverage | **672** California land cells (0.25° grid, ~25 km) |
 | Positive cell-days | **21,615** (1.258%) |
@@ -176,20 +197,27 @@ Neighborhood (`s2n_*`) aggregates of the cell's Sentinel-2 tiles.
 
 ## 4. Preprocessing & Imputation
 
-### 4.1 KNN Imputation of Sentinel-2 (precomputed, `stage_c_knn`)
+### 4.1 KNN Imputation of Sentinel-2 (`stage_c_knn`)
 
-Cloud cover and orbital gaps make raw Sentinel-2 observations intermittent. The Stage C KNN pipeline fills missing optical features with a spatial-temporal nearest-neighbor donor model, computed **before** this training notebook runs:
+Cloud cover and orbital gaps make raw Sentinel-2 optical observations intermittent across California's 5-day revisit cycle. Rather than filling missing optical features with zero or median values - which introduces artificial distribution distortion into vegetation indices - the pipeline resolves observational gaps using **Spatial-Temporal K-Nearest Neighbors (KNN)** imputation.
+
+#### Literature Foundation
+Reconstructing missing satellite optical features via spatial-temporal KNN is strongly supported by Earth observation literature:
+- **Liu et al. (2020), *Remote Sensing*** ([MDPI Article 1884](https://www.mdpi.com/2072-4292/12/11/1884)): Demonstrated that spatial-temporal K-Nearest Neighbors algorithms effectively reconstruct cloud-masked optical reflectance and vegetation indices from satellite imagery by exploiting spatial autocorrelation and multi-sensor environmental covariates (weather physics and terrain elevation) without zero or median bias.
+
+#### Implementation
+In the Milestone 6 production pipeline (`daily_pipeline`), KNN imputation is executed upstream during Stage C (`build_stage_c_day.py` ──► `StageC_KNN_impute`) to produce inference-ready daily feature tables (`stage_c_knn_day.parquet` / `D_test.parquet`):
 
 | Setting | Value |
 |---------|-------|
-| Algorithm | KNN imputer, `n_neighbors = 5`, `weights = "distance"` |
-| Donor pool | Training years ≤ 2022 **and** `s2n_available == 1` (no test leakage into donors) |
-| Imputation targets | All 19 S2 band / index / QC columns |
-| Predictors | ERA5 + DEM + S5P columns (S2 targets excluded) |
-| Flag column | `s2n_knn_imputed = 1` on imputed rows (`s2n_available` stays 0) |
-| Imputed rows | 3,360 in full archive; **2,185** in the 437-cell subset |
+| **Algorithm** | KNN Imputer (`n_neighbors = 5`, `weights = "distance"`) |
+| **Donor Pool** | Restricted strictly to training years ≤ 2022 with valid observations (`s2n_available == 1`), preventing test-set data leakage |
+| **Imputation Targets** | All 19 Sentinel-2 optical spectral bands, vegetation indices (NDVI, NBR, NDWI, EVI), and optical QC features |
+| **Predictors** | ERA5 atmospheric physics + DEM topography + Sentinel-5P gas metrics (S2 targets excluded) |
+| **Tracking Flag** | `s2n_knn_imputed = 1` set on imputed rows (`s2n_available` remains 0) |
+| **Imputed Rows** | 3,360 rows across the full 672-cell archive; **2,185 rows** within the 437-cell model subset |
 
-Because imputation is precomputed, the in-notebook preprocessor is a passthrough `FunctionTransformer` (no NaNs expected). The alternative `stage_c` (median) stage would use `SimpleImputer(strategy="median")`, set unavailable S2 to NaN, and zero-fill S5P.
+Because Stage C precomputes KNN imputation during data staging, the downstream model preprocessor utilizes a passthrough `FunctionTransformer` (guaranteeing complete, `NaN`-free feature vectors during model inference).
 
 ### 4.2 Cleaning
 
@@ -199,7 +227,7 @@ Because imputation is precomputed, the in-notebook preprocessor is a passthrough
 
 ### 4.3 Fire-Prone Cell Subset Selection
 
-To avoid zero-inflated bias from non-burnable urban/desert cells, cells are tiered by cumulative historical FIRMS fire pixels (`groupby('cell_id')['y_fire'].sum()`) using quartile rules (Low ≤ Q1, Medium Q1–Q3, High ≥ Q3, outliers beyond 1.5·IQR), stored in `fire_analysis2.csv`:
+To avoid zero-inflated bias from non-burnable urban/desert cells, cells are tiered by cumulative historical FIRMS fire pixels using quartile rules (Low ≤ Q1, Medium Q1–Q3, High ≥ Q3, outliers beyond 1.5·IQR), stored in `Milestone 5/fire_analysis2.csv`:
 
 | Category | Cells |
 |----------|------:|
@@ -305,7 +333,7 @@ A **20% prune** (`drop_fraction: 0.2`) drops the bottom-quintile features by mea
 
 `fire_upwind_count_lag2`, `wind_dir_cos`, `s2n_NDVI_mean`, `s5n_s5p_co_valid_fraction`, `rh_mean`, `swvl1_mean_mean_30d`, `vpd_soil_deficit_interaction`, `i10fg_max`, `fire_wind_spread_potential_7d_lag2`, `fuel_dryness_index`, `vpd_wind_interaction`, `tp_sum_mm`, `vpd_kpa`, `fire_neighbor_any_7d_lag2`, `s2n_available`, `s5n_s5p_aai_valid_fraction`, `s5n_s5p_data_available`, `wind_speed_mean`, `fire_wind_spread_potential_lag2`, `s2n_knn_imputed`, `recent_neighbor_fire_context`
 
-### Final 86-Feature Contract
+### Final 86-Features
 
 | Group | Features |
 |-------|----------|
@@ -320,7 +348,7 @@ A **20% prune** (`drop_fraction: 0.2`) drops the bottom-quintile features by mea
 | Dryness/ignition (2) | `ignition_dry_windy_index`, `vpd_short_long_trend` |
 | Neighbor fire (9) | `fire_neighbor_count_lag2`, `fire_neighbor_count_7d_lag2`, `fire_upwind_count_7d_lag2`, `fire_downwind_count_7d_lag2`, `fire_crosswind_count_7d_lag2`, `fire_distance_weighted_count_lag2`, `fire_distance_weighted_count_7d_lag2`, `fire_context_vpd_interaction`, `fire_context_dry_windy_interaction` |
 
-Note that raw `vpd_kpa`, `tp_sum_mm`, `wind_speed_mean`, and `rh_mean` are dropped individually — the model relies on their rolling aggregates and interaction terms instead.
+Note that raw `vpd_kpa`, `tp_sum_mm`, `wind_speed_mean`, and `rh_mean` are dropped individually - the model relies on their rolling aggregates and interaction terms instead.
 
 ---
 
@@ -329,14 +357,14 @@ Note that raw `vpd_kpa`, `tp_sum_mm`, `wind_speed_mean`, and `rh_mean` are dropp
 The prediction task is **next-day fire occurrence** per grid cell:
 
 ```
-feature_end_date ──(ERA5 5-day lag)──► eo_asof_date ──(+1 day)──► label_date
-   features computed ≤ eo_asof_date        "as of" date            y_fire ∈ {0,1}
+feature_end_date ── (ERA5 5-day lag) ──► eo_asof_date ── (+1 day) ──► label_date
+features computed ≤ eo_asof_date         "as of" date                 y_fire ∈ {0,1}
 ```
 
 | Rule | Enforcement |
 |------|-------------|
-| Next-day label | `label_date − eo_asof_date = 1` day |
-| Weather lag | `eo_asof_date − feature_end_date = 5` days (`era5_lag_days: 5`) |
+| Next-day label | `label_date - eo_asof_date = 1` day |
+| Weather lag | `eo_asof_date - feature_end_date = 5` days (`era5_lag_days: 5`) |
 | Neighbor-fire causality | Neighbor fire features use labels lagged **≥ 2 days** only |
 | No same-cell persistence | Same-cell historical fire features excluded entirely |
 | Sentinel-5P mode | `s5p_2021_mode: "ready"` |
@@ -353,8 +381,8 @@ Strictly forward-chaining, non-overlapping splits (fire-season months May–Nov,
 |-------|-------------|-----:|----------:|--------------:|-------------------|
 | Training | 2019–2022 | 374,072 | 8,659 | 2.315% | Fit classifier, ranker, preprocessing, Optuna search |
 | Validation | 2023 | 93,518 | 2,083 | 2.227% | Champion configuration checks, blend tuning |
-| Calibration | 2024 | 93,518 | 1,734 | 1.854% | Fit probability calibrator **only** |
-| Test | 2025 | 93,518 | 1,325 | 1.417% | Final descriptive evaluation (zero influence on fitting) |
+| Calibration | 2024 | 93,518 | 1,734 | 1.854% | Fit probability calibrator |
+| Test | 2025 | 93,518 | 1,325 | 1.417% | Final descriptive evaluation |
 
 ---
 
@@ -368,7 +396,7 @@ The champion is a **dual-head gradient-boosting pipeline**, combining absolute p
 2. **`LGBMRanker`** (LambdaRank objective) → relative risk ordering **within each calendar day** (group = daily cell cohort), matching the operational Top-25 alert use case.
 3. **Preprocessor**: passthrough `FunctionTransformer` (Stage C KNN data is pre-imputed).
 
-### 9.2 Classifier — Optuna-Tuned Hyperparameters (final)
+### 9.2 Classifier - Optuna-Tuned Hyperparameters (final)
 
 | Parameter | Tuned Value | (Default for comparison) |
 |-----------|------------:|-------------------------:|
@@ -385,7 +413,7 @@ The champion is a **dual-head gradient-boosting pipeline**, combining absolute p
 
 The tuned model is smaller and far more regularized than the default (fewer, shallower trees with heavy subsampling), reflecting Optuna's correction of the large train–validation generalization gap.
 
-### 9.3 Ranker — Fixed Configuration
+### 9.3 Ranker - Fixed Configuration
 
 | Parameter | Value |
 |-----------|-------|
@@ -460,12 +488,12 @@ CPU fit times (initial): classifier **1.4 s**, ranker **8.1 s**. GPU was request
 | Metric | Train | Validation 2023 |
 |--------|------:|----------------:|
 | PR-AUC | 0.3888 | **0.1932** |
-| ROC-AUC | — | **0.8124** |
-| Recall@25 (blended 0.3/0.7) | — | **42.63%** |
-| Precision@25 | — | 16.60% |
-| F1@25 | — | 0.2389 |
+| ROC-AUC | - | **0.8124** |
+| Recall@25 (blended 0.3/0.7) | - | **42.63%** |
+| Precision@25 | - | 16.60% |
+| F1@25 | - | 0.2389 |
 
-Train–validation PR-AUC gap: **0.1955** (flagged by the notebook as a moderate-overfitting warning, > 0.15 threshold).
+Train–validation PR-AUC gap: **0.1955**
 
 ### 12.3 Held-Out Test 2025 (primary results)
 
@@ -476,11 +504,11 @@ Train–validation PR-AUC gap: **0.1955** (flagged by the notebook as a moderate
 | **PR-AUC** | **0.1451** | 0.1315 – 0.1488 |
 | **ROC-AUC** | **0.7718** | 0.7562 – 0.7812 |
 | **Recall@25** | **36.38%** | 35.10% – 40.20% |
-| **Recall@50** | **48.23%** | — |
-| **Precision@25** | **9.01%** | — |
-| **False alerts/day @25** | **22.75** | — |
-| **Brier score** | **0.0131** | — |
-| **Log loss** | **0.0644** | — |
+| **Recall@50** | **48.23%** | - |
+| **Precision@25** | **9.01%** | - |
+| **False alerts/day @25** | **22.75** | - |
+| **Brier score** | **0.0131** | - |
+| **Log loss** | **0.0644** | - |
 
 ### 12.4 Baseline Comparison
 
@@ -530,8 +558,8 @@ Root-cause attribution: ~45% spatial grid discretization (0.25° cells split fir
 
 Global importance over the 86 features via LightGBM gain and native TreeSHAP (`explainability/feature_explanations.csv`):
 
-| Rank | Feature | Mean |SHAP| | Gain share | Interpretation |
-|-----:|---------|-------------:|-----------:|------------|
+| Rank | Feature | Mean SHAP | Gain share | Interpretation |
+|------|---------|----------|------------|----------------|
 | 1 | `fire_distance_weighted_count_7d_lag2` | 0.2557 | 53.77% | 7-day distance-weighted neighbor fire activity |
 | 2 | `fire_distance_weighted_count_lag2` | 0.0875 | 20.63% | Near-term neighbor fire count |
 | 3 | `orographic_index` | 0.0798 | 1.95% | Terrain orographic complexity |
@@ -549,43 +577,18 @@ Global importance over the 86 features via LightGBM gain and native TreeSHAP (`e
 
 ---
 
-## 14. Artifacts & Deployment
+## 15. Deployment
 
-Exported to `notebook_outputs/champion_training_stage_c_knn_high_medium_fire_full/`:
+The system is deployed on Google Cloud Platform (GCP) using a containerized, production-ready architecture:
 
-| Artifact | Contents |
-|----------|----------|
-| `models/champion_model.joblib` | Full bundle: classifier + ranker pipelines, Platt calibrator, 86-feature contract, selected cells, blend weights, data contract |
-| `models/classifier_weights.txt`, `models/ranker_weights.txt` | Plain-text LightGBM boosters |
-| `models/selected_cells.json` | 437 cell IDs |
-| `feature_contract.json` | 86-feature list with groupings |
-| `metrics.json` | All reported metrics |
-| `metrics/optuna_summary.json` | Optuna search record |
-| `metrics/feature_prune_and_blend.json` | Prune and blend configuration |
-| `test_predictions.parquet` | `p_fire_raw`, `p_fire`, `rank_score`, `alert_score` + IDs |
-| `run_manifest.json` | SHA-256 hashes, software versions |
-| `plots/`, `explainability/` | Figures, SHAP/gain CSV + PNG |
+- **Automated Data Extraction & Inference Cron Job**: A dedicated background cron job handles daily data extraction and model inference. The service is Dockerized, stored in Google Cloud Artifact Registry, and scheduled to execute automatically at **6:00 AM PST every day**. All processed model input features and generated inference outputs are persisted directly to a Google Cloud Storage (GCS) bucket.
 
-**Inference handoff**: `Wildfire_Inference.ipynb` reloads the joblib artifact and booster weights (never re-fits), scores new days through the identical feature contract, and emits the daily Top-25 roster for the dashboard. Full statewide scoring completes in ~12–15 ms on CPU with an ~18 MB memory footprint.
+- **FastAPI Backend Application**: The backend is a **FastAPI** application that accommodates model inference and data pipeline execution for data extraction on any specified target date. Background job scheduling, tracking, and system maintenance are managed using an **SQLite**-based job queue.
 
----
+- **React Single-Page Application (SPA) Frontend**: The user interface is a responsive Single-Page Application built with **React, TypeScript, and Vite**, enabling users to generate and inspect model predictions for the latest available date or any historical date. For production deployment, a multi-stage Docker build compiles the UI code, which is then deployed and served via an **Nginx** web server.
 
-## 15. Reproducibility
+- **Cloud Infrastructure & Container Orchestration**: Although the UI and API are built as separate Docker images, they are co-located and deployed together using **Docker Compose** on a **GCP Compute Engine Virtual Machine**.
 
-| Item | Value |
-|------|-------|
-| Python | 3.12.11 |
-| LightGBM | 4.6.0 |
-| scikit-learn | 1.8.0 |
-| pandas | 3.0.3 |
-| numpy | 2.4.5 |
-| Random seed | 42 |
-| Device | CPU (GPU requested; LightGBM build lacked CUDA) |
-| Run mode | `full` (`smoke` mode available: ≤96 cells, 8 Optuna trials) |
-| Env toggles | `CHAMPION_TRAINING_STAGE`, `CELL_SUBSET`, `USE_NEIGHBOR_FIRE`, `FIRE_SEASON_ONLY`, `OPTUNA`, … |
-| Runtime highlights | Load ~2 s · feature build ~0.5 s · Optuna ~1.3 min · fits in seconds |
-
-Artifact integrity is verifiable via SHA-256 hashes in `run_manifest.json`.
 
 ---
 
@@ -598,11 +601,6 @@ Artifact integrity is verifiable via SHA-256 hashes in `run_manifest.json`.
 3. **Grid discretization**: 0.25° cells split fire fronts across boundaries (~45% of errors).
 4. **Fixed daily budget**: Top-25-every-day forces false alerts on genuinely quiet days (~35% of errors).
 5. **Stochastic ignitions**: isolated early-season ignitions in moist, no-neighbor-fire terrain are fundamentally hard to predict from environmental covariates (~20% of errors).
-
-### Improvement Paths
-
-- **Short-term**: hybrid dynamic thresholding (Top-25 ∧ `p_fire ≥ floor`), 1-cell spatial buffer post-processing to merge adjacent alerts.
-- **Long-term**: spatial Graph Neural Networks over wind/slope/fuel cell graphs; multi-task learning (occurrence + burn area + FRP); extended Optuna search with stronger imbalance handling and hard-negative mining for early-season misses.
 
 ---
 

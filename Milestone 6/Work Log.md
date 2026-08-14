@@ -134,8 +134,9 @@ This document aggregates all work logs across **Milestone 1 through Milestone 6*
 - Collated, organized, and analyzed experimental results across all machine learning models developed throughout the milestone.
 
 ### Milestone 6
-- Co-authored the **Non-Technical Report**, articulating the project's real-world impact, operational utility, stakeholder benefits, and ethical deployment guidelines.
-- Supported final presentation synthesis and stakeholder summary preparation.
+- Led the team and formulated strategic plans to partition project deliverables across deployment infrastructure, web application development, automated data pipeline, and report synthesis.
+- Authored the **Non-Technical Report**, articulating the system's real-world impact, operational utility, stakeholder benefits, and deployment guidelines.
+- Contributed significantly to authoring the **Technical Report** and synthesizing the final project presentation deck.
 
 ---
 
