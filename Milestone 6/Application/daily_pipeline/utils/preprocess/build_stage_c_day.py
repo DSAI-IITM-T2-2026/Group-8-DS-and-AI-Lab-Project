@@ -232,6 +232,12 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
     the live window; every one of those observations is still available no
     later than D−1. This keeps the deployed stage finite without silently
     turning the model's passthrough preprocessor into a different estimator.
+
+    Before KNN, apply optional per-cell causal forward-fill
+    (``preprocess.s2_forward_fill_max_days``). Any row whose S2 band values are
+    still non-finite is treated as missing — including cases where
+    ``s2n_available==1`` but individual bands are NaN (common on live 2026
+    windows when train-median fill is skipped).
     """
     from sklearn.neighbors import NearestNeighbors
     from sklearn.preprocessing import StandardScaler
@@ -259,11 +265,20 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
 
     targets = s2_targets(df.columns.tolist())
     preds = predictors(df.columns.tolist())
+    max_ffill = int(daily_cfg.get("preprocess", {}).get("s2_forward_fill_max_days", 7))
+    if targets and max_ffill > 0:
+        df = _forward_fill_s2(df, targets, max_ffill)
+
     years = pd.to_datetime(df["label_date"]).dt.year
-    miss = df["s2n_available"].fillna(0).astype(int).to_numpy() == 0
-    observed = df["s2n_available"].fillna(0).astype(int).to_numpy() == 1
-    target_values = df[targets].apply(pd.to_numeric, errors="coerce")
-    observed &= np.isfinite(target_values.to_numpy(dtype=float)).all(axis=1)
+    target_values = df[targets].apply(pd.to_numeric, errors="coerce") if targets else pd.DataFrame(index=df.index)
+    finite_s2 = (
+        np.isfinite(target_values.to_numpy(dtype=float)).all(axis=1)
+        if targets
+        else np.ones(len(df), dtype=bool)
+    )
+    # Treat non-finite bands as missing even when the attach flag says available.
+    miss = ~finite_s2
+    observed = finite_s2
     historical_donor = observed & (years.to_numpy() <= 2022)
     donor = historical_donor if historical_donor.any() else observed
 
@@ -303,14 +318,40 @@ def _apply_knn(stage_c_path: Path, out_dir: Path, daily_cfg: dict) -> Path:
         for i, row_idx in enumerate(np.flatnonzero(miss)):
             out.loc[row_idx, targets] = (donor_vals[idx[i]] * weights[i][:, None]).sum(axis=0)
             out.loc[row_idx, "s2n_knn_imputed"] = 1
+            out.loc[row_idx, "s2n_available"] = 1
         remaining = ~np.isfinite(
             out.loc[miss, targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
         )
         if remaining.any():
-            raise ValueError(
-                f"KNN imputation left {int(remaining.sum())} non-finite Sentinel-2 values"
+            # Last resort for live panels: column medians from finite donors
+            # (train-median fill is skipped when the train split is empty).
+            col_medians = target_values.loc[donor, targets].median(numeric_only=True)
+            for col in targets:
+                bad = ~np.isfinite(pd.to_numeric(out[col], errors="coerce").to_numpy(dtype=float))
+                if bad.any() and pd.notna(col_medians.get(col)):
+                    out.loc[bad, col] = float(col_medians[col])
+            still_bad = ~np.isfinite(
+                out[targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+            )
+            if still_bad.any():
+                raise ValueError(
+                    f"KNN imputation left {int(still_bad.sum())} non-finite Sentinel-2 values"
+                )
+            logger.warning(
+                "Filled remaining non-finite S2 bands with donor column medians "
+                "(%d values)",
+                int(remaining.sum()),
             )
         logger.info("KNN imputed %d S2 rows from %d observed donors", n_miss, n_donors)
+
+    if targets:
+        still = ~np.isfinite(
+            out[targets].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+        )
+        if still.any():
+            raise ValueError(
+                f"Sentinel-2 features still non-finite after ffill/KNN: {int(still.sum())} values"
+            )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out.to_parquet(out_dir / "all.parquet", index=False)
