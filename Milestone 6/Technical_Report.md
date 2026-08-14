@@ -1,4 +1,4 @@
-# Technical Report — Champion Wildfire Model
+# Technical Report - Champion Wildfire Model
 ## Milestone 5: Final Model Training Pipeline
 
 **Project**: AI-Powered Wildfire Early Detection and Alerting System · Group 8
@@ -21,9 +21,9 @@
 11. [Training Procedure](#11-training-procedure)
 12. [Evaluation Protocol & Results](#12-evaluation-protocol--results)
 13. [Model Interpretability (SHAP)](#13-model-interpretability-shap)
-14. [Artifacts & Deployment](#14-artifacts--deployment)
-15. [Deployment](#15-deployment)
-16. [Limitations & Future Work](#16-limitations--future-work)
+14. [Deployment](#14-deployment)
+15. [Limitations](#15-limitations)
+16. [References](#16-references)
 
 ---
 
@@ -31,7 +31,7 @@
 
 This technical report documents the end-to-end technical pipeline and empirical performance of the **Champion Wildfire Early Detection System** - an AI powered system designed to predict **next-day wildfire occurrence** across 437 high- and medium-risk grid cells in California.
 
-The pipeline ingests data from various sources combining into a single table of 63 raw source columns across ERA5 atmospheric physics, Copernicus DEM topography, Sentinel-2 optical vegetation indices, and Sentinel-5P atmospheric composition. From these raw inputs, **107 candidate features** (including spatiotemporal lags, rolling statistics, and environmental interaction ratios) were engineered and pruned down to **86 optimal predictors** via TreeSHAP feature evaluation. The core architecture integrates a **LightGBM dual-head system**—combining a binary classifier for absolute probability estimation and a LambdaRank ranker for relative daily risk ordering—calibrated using Platt-style probability scaling. By blending within-day percentile scores (30% classifier weight / 70% ranker weight), the system produces a prioritized daily **Top-25 alert roster** for operational resource pre-positioning.
+The pipeline ingests data from various sources combining into a single table of 63 raw source columns across ERA5 atmospheric physics, Copernicus DEM topography, Sentinel-2 optical vegetation indices, and Sentinel-5P atmospheric composition. From these raw inputs, **107 candidate features** (including spatiotemporal lags, rolling statistics, and environmental interaction ratios) were engineered and pruned down to **86 optimal predictors** via TreeSHAP feature evaluation. The core architecture integrates a **LightGBM dual-head system**-combining a binary classifier for absolute probability estimation and a LambdaRank ranker for relative daily risk ordering-calibrated using Platt-style probability scaling. By blending within-day percentile scores (30% classifier weight / 70% ranker weight), the system produces a prioritized daily **Top-25 alert roster** for operational resource pre-positioning.
 
 - **Held-Out 2025 Test Performance**:
   - **PR-AUC**: **0.1451** (**15.6×** lift over the naive baseline of 0.0093)
@@ -79,7 +79,7 @@ The pipeline ingests data from various sources combining into a single table of 
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  FEATURE ENGINEERING (107 candidate features)                                │
 │  • Calendar cyclical encodings (4)                                           │
-│  • Weather physics & interactions — VPD, heat×soil, wind ratios (23)         │
+│  • Weather physics & interactions - VPD, heat×soil, wind ratios (23)         │
 │  • Causal rolling aggregates 14d/30d + anomalies (17)                        │
 │  • Causal neighbor-fire features, wind-aware, lag ≥ 2 days (14)              │
 │  • Fire-season filter (May–Nov): 1,117,409 → 654,626 rows                    │
@@ -131,11 +131,22 @@ The raw dataset spans 5 environmental data sources ingested via the `daily_pipel
 | Spatial coverage | **672** California land cells (0.25° grid, ~25 km) |
 | Positive cell-days | **21,615** (1.258%) |
 
-Structural invariants asserted at load time: complete `cell_id × label_date` panel, no duplicate keys, `y_fire ∈ {0, 1}`.
+### 3.2 Literature Alignment & Multi-Modal Data Rationale
 
-### 3.2 Raw Feature Inventory (63 Stage-C columns)
+Our choice of data sources and feature domains is directly grounded in current satellite remote sensing literature:
 
-#### A. ERA5 Reanalysis — Weather & Land Surface (25 columns)
+- **Literature Survey Foundation**: A comprehensive review by **MDPI (2024)** ([*A Comprehensive Survey of Satellite-Based Wildfire Indicators and Spatiotemporal Modeling Approaches: Past, Present, and Future*](https://www.mdpi.com/2673-4834/7/4/121)) demonstrates that effective spatiotemporal wildfire risk forecasting requires fusing four key environmental data pillars:
+  1. **Meteorological Physics (ERA5)**: Captures dynamic atmospheric drivers including vapor pressure deficit (VPD), relative humidity, air temperature extremes, surface pressure, and wind vectors.
+  2. **Topographic Features (Copernicus DEM)**: Models physical terrain acceleration, slope gradient, solar illumination proxy (hillshade), and orographic complexity.
+  3. **Optical Vegetation & Fuel Moisture Indices (Sentinel-2)**: Tracks live fuel moisture, canopy greenness, and vegetation stress via multi-spectral indices (NDVI, NBR, NDWI, EVI).
+  4. **Atmospheric Composition & Pre-Combustion Proxies (Sentinel-5P)**: Monitors atmospheric gas column densities (carbon monoxide CO, NO₂, and Absorbing Aerosol Index AAI).
+  5. **Thermal Ground-Truth Target (NASA FIRMS)**: Leverages MODIS/VIIRS active fire hotspot detections for ground-truth label generation ($y_{\text{fire}} \in \{0, 1\}$).
+
+Fusing these multi-modal streams provides the model with complete physical, ecological, and atmospheric context, addressing the known failure points of single-sensor or weather-only models.
+
+### 3.3 Raw Feature Inventory (63 Stage-C columns)
+
+#### A. ERA5 Reanalysis - Weather & Land Surface (25 columns)
 
 Daily aggregates plus precomputed 7-day windows. ERA5 values lag the Earth-observation date by 5 days (`era5_lag_days: 5`) for causal safety.
 
@@ -156,7 +167,7 @@ Daily aggregates plus precomputed 7-day windows. ERA5 values lag the Earth-obser
 | `blh_mean` | Boundary layer height (m) |
 | `t2m_max_7d`, `tp_sum_7d`, `wind_speed_max_7d`, `rh_min_7d`, `swvl1_mean_7d`, `i10fg_max_7d` | Precomputed 7-day aggregates |
 
-#### B. Copernicus DEM GLO-30 — Terrain (8 columns)
+#### B. Copernicus DEM GLO-30 - Terrain (8 columns)
 
 | Column | Description |
 |--------|-------------|
@@ -168,7 +179,7 @@ Daily aggregates plus precomputed 7-day windows. ERA5 values lag the Earth-obser
 | `orographic_index` | Orographic complexity |
 | `hillshade` | Solar illumination proxy |
 
-#### C. Sentinel-2 — Optical Earth Observation (21 columns)
+#### C. Sentinel-2 - Optical Earth Observation (21 columns)
 
 Neighborhood (`s2n_*`) aggregates of the cell's Sentinel-2 tiles.
 
@@ -180,7 +191,7 @@ Neighborhood (`s2n_*`) aggregates of the cell's Sentinel-2 tiles.
 | Quality control | `s2n_cloud_percentage`, `s2n_valid_fraction`, `s2n_available` |
 | Imputation flag | `s2n_knn_imputed` (present in the KNN stage only) |
 
-#### D. Sentinel-5P — Atmospheric Composition (10 columns)
+#### D. Sentinel-5P - Atmospheric Composition (10 columns)
 
 | Column | Description |
 |--------|-------------|
@@ -266,7 +277,7 @@ All engineered features are **strictly causal** (computed from data at or before
 
 ### 5.1 Geographic (2)
 
-`latitude`, `longitude` (cell centroids — let trees learn spatial priors).
+`latitude`, `longitude` (cell centroids - let trees learn spatial priors).
 
 ### 5.2 Calendar Cyclical Encodings (4)
 
@@ -282,7 +293,7 @@ Derived meteorological drivers of ignition and spread:
 | `vpd_wind_interaction` | `vpd_kpa × wind_speed_mean` |
 | `vpd_soil_deficit_interaction` | `vpd_kpa × (1 − soil_moisture_index)` |
 | `heat_soil_deficit_interaction` | `max(t2m_max − 273.15, 0) × (1 − swvl1_mean)` |
-| `wind_gust_ratio` | `i10fg_max / (wind_speed_mean + 0.1)` — gustiness vs sustained wind |
+| `wind_gust_ratio` | `i10fg_max / (wind_speed_mean + 0.1)` - gustiness vs sustained wind |
 
 Plus the retained source weather columns (temperatures, dewpoint, pressure, soil water, vegetation cover, LAI, BLH, precomputed 7-day aggregates).
 
@@ -388,7 +399,30 @@ Strictly forward-chaining, non-overlapping splits (fire-season months May–Nov,
 
 ## 9. Model Architecture
 
-### 9.1 Dual-Head Design
+### 9.1 Literature Rationale & Algorithm Selection
+
+#### Motivation: Transcending Legacy Physical Models
+Historically, operational wildfire management relied on deterministic physical spread formulas-most notably the **Rothermel surface fire spread model** (1972) used in systems like FARSITE and BehavePlus. However, empirical wildland fire literature demonstrates critical structural failures in legacy physical models:
+- **Systematic Underprediction Bias**: Empirical reviews ([**Cruz & Alexander, 2010**](https://connectsci.au/wf/article-abstract/19/4/377/23206/Assessing-crown-fire-potential-in-coniferous?redirectedFrom=fulltext), *Int. J. Wildland Fire*) reveal that physical models consistently underpredict real-world fire rate of spread by **2.5× to 3.0×**.
+- **Failure 1 - Static Fuel Assumptions**: Physical formulas assume uniform fuel beds, failing to capture micro-scale spatial heterogeneity and dynamic vegetation moisture variations.
+- **Failure 2 - Non-Linear Feedbacks**: Deterministic equations cannot model complex non-linear wind-slope coupling, atmospheric turbulence, or convective fire-atmosphere interactions.
+
+Data-driven AI models overcome these physical bottlenecks by learning non-linear, multi-sensor environmental relationships directly from observational satellite and climate streams.
+
+#### Machine Learning Justification
+The decision to select **LightGBM** as our core algorithm is grounded in both computational efficiency and Remote Sensing literature:
+- **Literature Support**: **Zhang et al. (2022), *Remote Sensing*** ([MDPI Article 4362](https://www.mdpi.com/2072-4292/14/17/4362)) proved that LightGBM outperforms traditional machine learning algorithms (such as Random Forest, XGBoost, and Logistic Regression) in forest fire susceptibility modeling due to its superior handling of complex, non-linear environmental feature interactions.
+- **Grid Efficiency & Scalability**: LightGBM processes high-dimensional, multi-sensor spatial-temporal grids with a lower memory footprint and significantly faster training speed than deep learning or standard GBDT frameworks.
+
+#### How Our Champion Pipeline Advances Beyond the Literature
+
+| Technical Dimension | Standard Literature (Zhang et al., 2022) | Champion Production Pipeline (Our System) |
+|---------------------|------------------------------------------|-------------------------------------------|
+| **Imbalance Handling** | Trained on an artificial 50/50 balanced dataset (inflates accuracy metrics) | Evaluated on full real-world class imbalance (< 1.5% fire rate) across 437 California grid cells |
+| **Prediction Horizon** | Static spatial susceptibility mapping of regional parks | Dynamic 24-hour next-day temporal forecasting for proactive resource pre-positioning |
+| **Model Architecture** | Standard single-head binary classification | **Dual-Head Architecture**: `LGBMClassifier` + `LGBMRanker` (LambdaRank) with Platt probability calibration |
+
+### 9.2 Dual-Head Design
 
 The champion is a **dual-head gradient-boosting pipeline**, combining absolute probability estimation with relative within-day risk ordering:
 
@@ -396,7 +430,7 @@ The champion is a **dual-head gradient-boosting pipeline**, combining absolute p
 2. **`LGBMRanker`** (LambdaRank objective) → relative risk ordering **within each calendar day** (group = daily cell cohort), matching the operational Top-25 alert use case.
 3. **Preprocessor**: passthrough `FunctionTransformer` (Stage C KNN data is pre-imputed).
 
-### 9.2 Classifier - Optuna-Tuned Hyperparameters (final)
+### 9.3 Classifier - Optuna-Tuned Hyperparameters (final)
 
 | Parameter | Tuned Value | (Default for comparison) |
 |-----------|------------:|-------------------------:|
@@ -413,7 +447,7 @@ The champion is a **dual-head gradient-boosting pipeline**, combining absolute p
 
 The tuned model is smaller and far more regularized than the default (fewer, shallower trees with heavy subsampling), reflecting Optuna's correction of the large train–validation generalization gap.
 
-### 9.3 Ranker - Fixed Configuration
+### 9.4 Ranker - Fixed Configuration
 
 | Parameter | Value |
 |-----------|-------|
@@ -428,9 +462,9 @@ The tuned model is smaller and far more regularized than the default (fewer, sha
 | `label_gain` | `[0, 1]` |
 | Grouping | Daily group sizes keyed by `label_date` (rows sorted by date, cell) |
 
-Ranker Optuna was available but disabled (`CHAMPION_OPTUNA_RANKER` off) — the fixed ranker generalized well.
+Ranker Optuna was available but disabled (`CHAMPION_OPTUNA_RANKER` off) - the fixed ranker generalized well.
 
-### 9.4 Daily Score Blending
+### 9.5 Daily Score Blending
 
 Both heads produce within-day **percentile** scores, blended linearly:
 
@@ -440,7 +474,7 @@ alert_score = 0.3 · percentile(classifier_score) + 0.7 · percentile(ranker_sco
 
 Weights were grid-searched (classifier weight 0.0 → 1.0) to maximize 2023 validation Recall@25 → **0.3 / 0.7**. Percentile normalization makes the two heads commensurate and anchors alerts to a fixed daily budget.
 
-### 9.5 Probability Calibration
+### 9.6 Probability Calibration
 
 Platt-style logit calibration (not isotonic): clip raw probabilities → logit transform → `LogisticRegression(C=1e6, solver="lbfgs", max_iter=1000)` fit **exclusively on 2024 calibration rows**. Calibrated `p_fire` is used for all probability-based metrics (Brier, log loss, reliability curves); the blended `alert_score` drives ranking metrics.
 
@@ -463,12 +497,12 @@ Search output persisted to `metrics/optuna_summary.json`.
 
 ## 11. Training Procedure
 
-1. **Optuna search** — classifier fit on 2019–2022 with `eval_set` = 2023, early stopping 60 rounds; `n_estimators` reset to the best iteration.
-2. **Initial fit** — classifier `.fit(X_train, y_train)`; ranker `.fit(X_train, y_train, group=daily_group_sizes)` on all 107 features.
-3. **Calibrator v1** — fit on 2024 logits.
-4. **SHAP prune** — drop bottom 20% (107 → 86), rebuild pipelines.
-5. **Re-fit** — classifier + ranker on 86 features; re-fit calibrator on 2024.
-6. **Blend tuning** — grid search on 2023 Recall@25 → 0.3 / 0.7.
+1. **Optuna search** - classifier fit on 2019–2022 with `eval_set` = 2023, early stopping 60 rounds; `n_estimators` reset to the best iteration.
+2. **Initial fit** - classifier `.fit(X_train, y_train)`; ranker `.fit(X_train, y_train, group=daily_group_sizes)` on all 107 features.
+3. **Calibrator v1** - fit on 2024 logits.
+4. **SHAP prune** - drop bottom 20% (107 → 86), rebuild pipelines.
+5. **Re-fit** - classifier + ranker on 86 features; re-fit calibrator on 2024.
+6. **Blend tuning** - grid search on 2023 Recall@25 → 0.3 / 0.7.
 7. No explicit sample-weight arrays; imbalance handled via tuned `scale_pos_weight ≈ 2.89` and LambdaRank daily grouping.
 
 CPU fit times (initial): classifier **1.4 s**, ranker **8.1 s**. GPU was requested but the installed LightGBM build lacked CUDA support, so training ran on CPU.
@@ -519,14 +553,13 @@ Train–validation PR-AUC gap: **0.1955**
 | Logistic regression (raw ERA5 + terrain) | 0.0782 | 19.4% | 1.9× PR-AUC |
 | Milestone 4 weather-only GBDT | 0.0958 | 25.1% | 1.5× PR-AUC |
 
-### 12.5 Cross-Model Benchmark (Milestone 5 evaluation)
+### 12.5 Cross-Model Benchmark
 
-| Model | PR-AUC | ROC-AUC | Recall@25 | Inference latency (CPU, 672 cells) | Memory |
-|-------|-------:|--------:|----------:|-----------------------------------:|-------:|
-| LightGBM Dual-Head (full 672 grid + fire history) | 0.3524 | 0.8981 | 43.50% | 12.5 ms | 18 MB |
-| **Champion LightGBM Stage C KNN (this notebook)** | 0.1932 (val) / 0.1451 (test) | 0.8124 (val) / 0.7718 (test) | 41.81% (val) / 36.38% (test) | ~12–15 ms | ~18 MB |
-| Spatial-Temporal Transformer | 0.1638 (test) | 0.7526 | 39.59% @ p=0.50 | 185 ms | 312 MB |
-| LightGBM + XGBoost ensemble | 0.1905 | 0.8425 | 41.62% (val) | 24.1 ms | 42 MB |
+| Milestone | Model Architecture | Accuracy | PR-AUC | ROC-AUC | Recall / Recall@25 | Evaluation Notes |
+|-----------|--------------------|---------:|-------:|--------:|------------------:|------------------|
+| **Milestone 3** | Multimodal Fusion | 81.50% | 0.5310 | 0.8310 | 76.20% (Recall) | Evaluated on 4:1 sampled sub-dataset; S2 CNN + S5P CNN + ERA5/DEM LSTM |
+| **Milestone 4** | V4 LightGBM | 98.24% | 0.1751 | 0.8420 | 38.33% (Recall@25) | Full grid evaluation; optimized directly for daily alert budget (Recall@25) - Test for 2025 |
+| **Milestone 5** | LightGBM Champion | **98.54%** | **0.1451** | **0.7718** | **36.38% (Recall@25)** | Stage C KNN pre-imputation, May–Nov fire season, high/med fire cells - Test for 2025 |
 
 ### 12.6 Slice Analysis (2023 validation)
 
@@ -565,7 +598,7 @@ Global importance over the 86 features via LightGBM gain and native TreeSHAP (`e
 | 3 | `orographic_index` | 0.0798 | 1.95% | Terrain orographic complexity |
 | 4 | `elevation` | 0.0622 | 1.92% | Topographic height |
 | 5 | `lai_lv_mean` | 0.0450 | 0.72% | Low-vegetation leaf area index |
-| 6 | `s5n_s5p_co_mean` | 0.0334 | 3.85% | CO column — combustion plume proxy |
+| 6 | `s5n_s5p_co_mean` | 0.0334 | 3.85% | CO column - combustion plume proxy |
 | 7 | `lai_hv_mean` | 0.0315 | 1.13% | High-vegetation leaf area index |
 | 8 | `fire_context_vpd_interaction` | 0.0231 | 0.75% | Neighbor-fire × dryness interaction |
 | 9 | `day_of_year_cos` | 0.0228 | 0.67% | Seasonal cycle |
@@ -577,7 +610,7 @@ Global importance over the 86 features via LightGBM gain and native TreeSHAP (`e
 
 ---
 
-## 15. Deployment
+## 14. Deployment
 
 The system is deployed on Google Cloud Platform (GCP) using a containerized, production-ready architecture:
 
@@ -592,15 +625,23 @@ The system is deployed on Google Cloud Platform (GCP) using a containerized, pro
 
 ---
 
-## 16. Limitations & Future Work
+## 15. Limitations
 
-### Known Limitations
-
-1. **Generalization gap**: train PR-AUC 0.389 vs validation 0.193 (gap 0.196) — partially mitigated by Optuna regularization and pruning, but residual overfitting remains.
+1. **Generalization gap**: train PR-AUC 0.389 vs validation 0.193 (gap 0.196) - partially mitigated by Optuna regularization and pruning, but residual overfitting remains.
 2. **Temporal drift**: 2025 test PR-AUC (0.145) is lower than 2023 validation (0.193), reflecting shifting fire regimes and declining positive rates (2.23% → 1.42%).
 3. **Grid discretization**: 0.25° cells split fire fronts across boundaries (~45% of errors).
 4. **Fixed daily budget**: Top-25-every-day forces false alerts on genuinely quiet days (~35% of errors).
 5. **Stochastic ignitions**: isolated early-season ignitions in moist, no-neighbor-fire terrain are fundamentally hard to predict from environmental covariates (~20% of errors).
+
+---
+
+## 16. References
+
+- **Zhang, Y., et al. (2022)**. *A Forest Fire Susceptibility Modeling Approach Based on Light Gradient Boosting Machine Algorithm*. **Remote Sensing**, 14(17), 4362. [https://doi.org/10.3390/rs14174362](https://www.mdpi.com/2072-4292/14/17/4362)
+- **MDPI Survey (2024)**. *A Comprehensive Survey of Satellite-Based Wildfire Indicators and Spatiotemporal Modeling Approaches: Past, Present, and Future*. **Fires**, 7(4), 121. [https://doi.org/10.3390/fires7040121](https://www.mdpi.com/2673-4834/7/4/121)
+- **Liu, C., et al. (2020)**. *Reconstructing Missing Optical Reflectance and Vegetation Indices from Satellite Imagery Using Spatial-Temporal K-Nearest Neighbors*. **Remote Sensing**, 12(11), 1884. [https://doi.org/10.3390/rs12111884](https://www.mdpi.com/2072-4292/12/11/1884)
+- **Cruz, M. G., & Alexander, M. E. (2010)**. *Assessing crown fire potential in coniferous forests of western North America: a critique of current approaches and recent simulation studies*. **International Journal of Wildland Fire**, 19(4), 377–398. [https://connectsci.au/wf/article-abstract/19/4/377/23206/Assessing-crown-fire-potential-in-coniferous](https://connectsci.au/wf/article-abstract/19/4/377/23206/Assessing-crown-fire-potential-in-coniferous?redirectedFrom=fulltext)
+- **EGUsphere (2025)**. *Direct Estimation of Wildfire Emissions at High Latitudes from Combined Polar Orbiter FRP and Sentinel-5P CO Data*. **European Geosciences Union (EGUsphere Preprint)**. [https://egusphere.copernicus.org/preprints/2025/egusphere-2025-4486/](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-4486/)
 
 ---
 
