@@ -169,7 +169,13 @@ This document aggregates all work logs across **Milestone 1 through Milestone 6*
 - Initiated historical fire pixel spatial hotspot analysis for risk classification.
 
 ### Milestone 6
-- Led team coordination for Milestone 6 deliverables, overseeing technical and non-technical report completion, presentation deck preparation, and final project sign-off.
+- Designed and implemented the FastAPI backend to support model inference and data pipeline execution for user-specified dates, providing an API layer for interacting with the wildfire prediction workflow.
+
+- Containerized the application components using Docker and established the deployment architecture across GCP services, including Cloud Run, Compute Engine, Artifact Registry, and GCS.
+
+- Wrote the Docker Compose manifest and Nginx configuration to orchestrate and serve the frontend and backend services together on a GCP Compute Engine VM.
+
+- Designed the deployment workflow for the automated daily extraction and inference pipeline, with containerized jobs stored in Artifact Registry, scheduled execution, and model inputs and inference outputs persisted to GCS.
 
 ---
 
