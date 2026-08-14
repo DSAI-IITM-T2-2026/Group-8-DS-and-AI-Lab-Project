@@ -16,6 +16,10 @@ gcs:
   era5_legacy_prefix: wildfire_satellite/era5/raw
   # Keep in sync with gcs.bucket when you change the bucket name:
   firms_vsigs_prefix: /vsigs/wildfire-detection-first/firms_daily_geotiff
+  # Combined 2019–2025 champion panel; Generate slices one label day when
+  # final_processed/YYYY-MM-DD_test.parquet is missing. Override with
+  # WILDFIRE_HISTORICAL_ARCHIVE_URI (gs:// or local path).
+  historical_archive: final_processed/2019_2025/2019-2025.parquet
 
 gee:
   project_id: plated-mechanic-418917

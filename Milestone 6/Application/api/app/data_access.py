@@ -1,14 +1,14 @@
 """Locates the real 86-feature ``final_processed/<date>_test.parquet`` table.
 
-Two real sources, tried in order, exactly matching how
-``daily_pipeline/utils/preprocess/export_inference_day.py`` writes this
-file:
+Sources, tried in order:
 
 1. GCS: ``gs://<bucket>/final_processed/<date>_test.parquet`` (only if
    ``WILDFIRE_ALLOW_GCS`` is enabled). The object is streamed into memory.
-2. The pipeline's local cache, as an offline-development fallback only.
+2. The pipeline's local cache, as an offline-development fallback.
+3. For 2019–2025 only: slice the combined historical archive into a daily
+   parquet (same path as Generate's ``existing_final_artifact``), then load it.
 
-If neither has the requested day, callers get ``None`` and must raise a
+If none has the requested day, callers get ``None`` and must raise a
 documented error (409/503) -- this module never returns synthetic rows.
 """
 
@@ -55,6 +55,32 @@ def _gcs_uri(label_date: date) -> str:
     return f"gs://{bucket}/{prefix}/{label_date.isoformat()}_test.parquet"
 
 
+def _from_local(local: Path) -> PreparedDay | None:
+    if not local.is_file():
+        return None
+    stat = local.stat()
+    return PreparedDay(
+        frame=pd.read_parquet(local),
+        identity=f"local:{stat.st_size}:{stat.st_mtime_ns}",
+    )
+
+
+def _materialize_historical_day(label_date: date) -> PreparedDay | None:
+    """Reuse Generate's archive slice so scoring does not 409 after historical reuse."""
+    ensure_pipeline_on_path()
+    from preprocess.final_artifact import materialize_from_historical_archive
+
+    artifact = materialize_from_historical_archive(label_date, get_pipeline_config())
+    if artifact is None:
+        return None
+    local = _local_path(label_date)
+    prepared = _from_local(local)
+    if prepared is not None:
+        return prepared
+    # Materialize may have uploaded only; identity still ties to the object URI.
+    return None
+
+
 def load_prepared_day(label_date: date) -> PreparedDay | None:
     """Load a prepared day plus a cache identity tied to its parquet object."""
     local = _local_path(label_date)
@@ -69,13 +95,10 @@ def load_prepared_day(label_date: date) -> PreparedDay | None:
 
             blob = storage.Client().bucket(bucket_name).blob(blob_name)
             if not blob.exists():
-                if local.is_file():
-                    stat = local.stat()
-                    return PreparedDay(
-                        frame=pd.read_parquet(local),
-                        identity=f"local:{stat.st_size}:{stat.st_mtime_ns}",
-                    )
-                return None
+                prepared = _from_local(local)
+                if prepared is not None:
+                    return prepared
+                return _materialize_historical_day(label_date)
             blob.reload()
             payload = blob.download_as_bytes()
             return PreparedDay(
@@ -106,13 +129,10 @@ def load_prepared_day(label_date: date) -> PreparedDay | None:
             raise PreparedDataAccessError(
                 "storage_unavailable", "The prepared-data object could not be read."
             ) from exc
-    if local.is_file():
-        stat = local.stat()
-        return PreparedDay(
-            frame=pd.read_parquet(local),
-            identity=f"local:{stat.st_size}:{stat.st_mtime_ns}",
-        )
-    return None
+    prepared = _from_local(local)
+    if prepared is not None:
+        return prepared
+    return _materialize_historical_day(label_date)
 
 
 def load_final_processed(label_date: date) -> pd.DataFrame | None:

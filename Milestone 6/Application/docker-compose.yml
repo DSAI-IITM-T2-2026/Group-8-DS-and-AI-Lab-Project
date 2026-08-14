@@ -13,7 +13,7 @@ services:
       # Uncomment to mount a service-account key and set
       # GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json in
       # backend/.env or daily_pipeline/.env:
-      # - ./secrets/service-account.json:/secrets/service-account.json:ro
+      - ./secrets/service-account.json:/secrets/service-account.json:ro
     ports:
       - "8000:8000"
     networks:

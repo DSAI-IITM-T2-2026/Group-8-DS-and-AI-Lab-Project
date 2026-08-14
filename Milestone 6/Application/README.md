@@ -219,6 +219,21 @@ origin) so the browser can call the backend.
 
 Tail logs with `docker compose logs -f backend` (or `frontend`).
 
+**Prepared parquet reuse:** Generate (`run_daily.py all`) skips download/Stage A–C when
+`gs://…/final_processed/YYYY-MM-DD_test.parquet` already exists and passes the
+86-feature contract. For dates in **2019–2025**, if that daily object is missing,
+the pipeline slices `final_processed/2019_2025/2019-2025.parquet` (override with
+`WILDFIRE_HISTORICAL_ARCHIVE_URI`), validates the day, caches it under
+`.cache/final_processed/`, and uploads the daily object when GCS writes are
+allowed. Dates from 2026 onward still run the live Earth Engine / CDS path when
+no daily parquet exists.
+
+**SSL / CA certs:** The backend image installs `ca-certificates` so Google OAuth
+and GCS TLS work inside Compose. After pulling this change, rebuild:
+`docker compose up --build -d`. Without CA certs you may see
+`CERTIFICATE_VERIFY_FAILED` on `oauth2.googleapis.com/token` (including on the
+`/api/v1/health` model reload).
+
 ## Deployment configuration
 
 Deploy the backend and frontend separately.

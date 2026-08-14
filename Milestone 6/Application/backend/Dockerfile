@@ -9,8 +9,10 @@ FROM python:3.12-slim
 
 # libgomp1: required at runtime by lightgbm/xgboost on slim Debian images.
 # curl: used by the container HEALTHCHECK below.
+# ca-certificates: required for GCS OAuth (oauth2.googleapis.com TLS verify).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 curl \
+    && apt-get install -y --no-install-recommends libgomp1 curl ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

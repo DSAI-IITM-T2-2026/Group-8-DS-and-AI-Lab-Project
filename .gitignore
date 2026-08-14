@@ -11,3 +11,6 @@ data/processed/
 logs/
 .env
 .cache/
+secrets/
+**/*service-account*.json
+*.pem

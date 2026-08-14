@@ -13,7 +13,10 @@ UTILS = Path(__file__).resolve().parents[1] / "utils"
 if str(UTILS) not in sys.path:
     sys.path.insert(0, str(UTILS))
 
-from preprocess.final_artifact import existing_final_artifact  # noqa: E402
+from preprocess.final_artifact import (  # noqa: E402
+    _slice_historical_archive,
+    existing_final_artifact,
+)
 
 
 FEATURES = [f"feature_{index}" for index in range(86)]
@@ -75,20 +78,26 @@ def config(tmp_path):
             "bucket": "test-bucket",
             "project": "test-project",
             "prefixes": {"final_processed": "final_processed"},
+            "historical_archive": "final_processed/2019_2025/2019-2025.parquet",
         },
         "task": {"era5_lag_days": 5, "lead_days": 1},
         "preprocess": {"cell_subset": "high_medium_fire"},
-        "paths": {"contracts": str(contract), "fire_region_csv": str(cells)},
+        "paths": {
+            "contracts": str(contract),
+            "fire_region_csv": str(cells),
+            "local_cache": str(tmp_path / "cache"),
+        },
         "_utils_root": str(tmp_path),
     }
 
 
-def prepared_frame():
+def prepared_frame(label_date: date = date(2026, 8, 12)):
     frame = pd.DataFrame({feature: [1.0, 2.0] for feature in FEATURES})
     frame["cell_id"] = ["cell-a", "cell-b"]
-    frame["label_date"] = pd.Timestamp("2026-08-12")
-    frame["eo_asof_date"] = pd.Timestamp("2026-08-11")
-    frame["feature_end_date"] = pd.Timestamp("2026-08-06")
+    day = pd.Timestamp(label_date)
+    frame["label_date"] = day
+    frame["eo_asof_date"] = day - pd.Timedelta(days=1)
+    frame["feature_end_date"] = day - pd.Timedelta(days=6)
     return frame
 
 
@@ -138,5 +147,71 @@ def test_unreadable_existing_object_requests_rebuild(tmp_path):
         date(2026, 8, 12),
         config(tmp_path),
         storage_client=FakeClient(FakeBlob(b"not a parquet file")),
+    )
+    assert artifact is None
+
+
+def test_2026_missing_daily_does_not_touch_archive(tmp_path, monkeypatch):
+    archive = tmp_path / "archive.parquet"
+    prepared_frame(date(2025, 6, 15)).to_parquet(archive, index=False)
+    monkeypatch.setenv("WILDFIRE_HISTORICAL_ARCHIVE_URI", str(archive))
+    monkeypatch.setenv("WILDFIRE_ALLOW_GCS", "false")
+
+    calls: list[tuple[str, date]] = []
+
+    def _spy(source, label_date):
+        calls.append((source, label_date))
+        return _slice_historical_archive(source, label_date)
+
+    monkeypatch.setattr(
+        "preprocess.final_artifact._slice_historical_archive",
+        _spy,
+    )
+
+    artifact = existing_final_artifact(
+        date(2026, 8, 12),
+        config(tmp_path),
+        storage_client=FakeClient(FakeBlob(None)),
+    )
+    assert artifact is None
+    assert calls == []
+
+
+def test_2025_missing_daily_slices_archive(tmp_path, monkeypatch):
+    label = date(2025, 6, 15)
+    archive = tmp_path / "archive.parquet"
+    # Archive holds the requested day plus a distractor day.
+    pd.concat(
+        [prepared_frame(label), prepared_frame(date(2025, 6, 16))],
+        ignore_index=True,
+    ).to_parquet(archive, index=False)
+    monkeypatch.setenv("WILDFIRE_HISTORICAL_ARCHIVE_URI", str(archive))
+    monkeypatch.setenv("WILDFIRE_ALLOW_GCS", "false")
+
+    cfg = config(tmp_path)
+    artifact = existing_final_artifact(
+        label, cfg, storage_client=FakeClient(FakeBlob(None))
+    )
+
+    assert artifact is not None
+    assert artifact["labelDate"] == "2025-06-15"
+    assert artifact["featureCount"] == 86
+    assert artifact["cellCount"] == 2
+    cached = Path(cfg["paths"]["local_cache"]) / "final_processed" / "2025-06-15_test.parquet"
+    assert cached.is_file()
+    cached_frame = pd.read_parquet(cached)
+    assert set(cached_frame["label_date"].astype(str)) == {"2025-06-15"}
+
+
+def test_day_absent_from_archive_returns_none(tmp_path, monkeypatch):
+    archive = tmp_path / "archive.parquet"
+    prepared_frame(date(2025, 6, 15)).to_parquet(archive, index=False)
+    monkeypatch.setenv("WILDFIRE_HISTORICAL_ARCHIVE_URI", str(archive))
+    monkeypatch.setenv("WILDFIRE_ALLOW_GCS", "false")
+
+    artifact = existing_final_artifact(
+        date(2025, 7, 1),
+        config(tmp_path),
+        storage_client=FakeClient(FakeBlob(None)),
     )
     assert artifact is None
