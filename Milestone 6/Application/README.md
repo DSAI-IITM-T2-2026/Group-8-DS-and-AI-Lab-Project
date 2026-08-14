@@ -232,7 +232,9 @@ no daily parquet exists.
 and GCS TLS work inside Compose. After pulling this change, rebuild:
 `docker compose up --build -d`. Without CA certs you may see
 `CERTIFICATE_VERIFY_FAILED` on `oauth2.googleapis.com/token` (including on the
-`/api/v1/health` model reload).
+`/api/v1/health` model reload). The image also installs `libexpat1` so Stage C
+(`rasterio` / FIRMS) can run on days that must rebuild features instead of
+reusing an existing `final_processed` parquet.
 
 ## Deployment configuration
 
