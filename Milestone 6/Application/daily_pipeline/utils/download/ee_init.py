@@ -4,10 +4,38 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+
+
+_EE_SCOPES = (
+    "https://www.googleapis.com/auth/earthengine",
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/devstorage.full_control",
+)
+
+
+def _load_ee_credentials():
+    """Prefer the mounted service-account JSON; never rely on interactive EE tokens."""
+    from google.auth import default as google_auth_default
+    from google.oauth2 import service_account
+
+    key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if key_path and Path(key_path).is_file():
+        return service_account.Credentials.from_service_account_file(
+            key_path, scopes=list(_EE_SCOPES)
+        )
+
+    credentials, _project = google_auth_default(scopes=list(_EE_SCOPES))
+    return credentials
 
 
 def initialize_ee(project_id: str) -> None:
     """Initialize EE with ADC / service-account credentials.
+
+    Explicitly passes credentials into ``ee.Initialize``. Newer earthengine-api
+    builds otherwise call ``get_persistent_credentials()`` (user oauth from
+    ``earthengine authenticate``), which fails on VMs/cron even when a service
+    account JSON is mounted.
 
     Interactive ``ee.Authenticate()`` is disabled by default, even on a TTY,
     because API workers may inherit a terminal and accidentally open a browser.
@@ -17,7 +45,8 @@ def initialize_ee(project_id: str) -> None:
     import ee
 
     try:
-        ee.Initialize(project=project_id)
+        credentials = _load_ee_credentials()
+        ee.Initialize(credentials=credentials, project=project_id)
         return
     except Exception as exc:
         interactive_allowed = (
