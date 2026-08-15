@@ -7,9 +7,13 @@ that need the most attention.
 > Wildfire IQ is a decision-support tool, not an emergency warning system.
 > Follow official local and state guidance during a wildfire emergency.
 
+## Access the application
+
+Open [Wildfire IQ](http://34.9.154.237:8080/) in your web browser.
+
 ## Create a forecast
 
-1. Open Wildfire IQ in your browser.
+1. Open the application using the link above.
 2. Under **Select prediction date**, choose a date within the displayed range.
 3. Select **Generate wildfire forecast**.
 4. Follow the progress shown under **Forecast run**.

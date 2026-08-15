@@ -1,7 +1,7 @@
 # Wildfire IQ Developer Guide
 
 This guide covers the essentials for running, understanding, and changing the
-application. See the [application README](../README.md) for full deployment and
+application. See the [application README](Application/README.md) for full deployment and
 cloud configuration details.
 
 ## How the application works
@@ -122,7 +122,7 @@ can recover after a restart.
   feature contract, and pipeline tests together.
 
 Keep frontend and backend response types aligned. The detailed contract is in
-[`frontend-backend-api-contract.md`](frontend-backend-api-contract.md).
+[`frontend-backend-api-contract.md`](Application/documentation/frontend-backend-api-contract.md).
 
 ## Troubleshooting
 
