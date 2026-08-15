@@ -74,6 +74,8 @@ This document aggregates all work logs across **Milestone 1 through Milestone 6*
 ### Milestone 6
 - Structured and validated Kaggle dataset publishing and environment configurations for 100% reproducible execution of the champion model pipeline.
 - Contributed to final non-technical and technical documentation verification.
+- Built the end-to-end daily wildfire data pipeline (download → Stage C features → 86-feature parquet export → GCS), including causal next-day labeling, GCS reuse for 2019–2025.
+- With Aditya, set up the Cloud Run cron job on GCP and deployed the Wildfire IQ application on a GCE VM with Docker Compose (backend + frontend), verified Generate/prediction for live dates, and confirmed cron EE exports against GCS.
 
 ---
 
