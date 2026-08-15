@@ -584,6 +584,7 @@ Root-cause attribution: ~45% spatial grid discretization (0.25° cells split fir
 
 ![Calibration and PR curves](images/calibration_and_precision_recall.png)
 ![Peak-day risk map](images/peak_day_risk_map.png)
+![Sample grid confusion map (2025-05-14)](images/grid_confusion_2025-05-14.png)
 
 ---
 
