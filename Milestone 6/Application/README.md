@@ -10,6 +10,13 @@ causal source data, creates and validates
 `final_processed/YYYY-MM-DD_test.parquet`, scores every supported grid cell with
 the champion model, and displays the daily risk map and ranked results.
 
+## Guides
+
+- [User Guide](documentation/user-guide.md) — create a forecast and understand
+  the results.
+- [Developer Guide](documentation/developer-guide.md) — understand, run, test,
+  and change the application.
+
 ## Application structure
 
 ```text
