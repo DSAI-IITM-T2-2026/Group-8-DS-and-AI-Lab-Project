@@ -82,31 +82,44 @@ This document aggregates all work logs across **Milestone 1 through Milestone 6*
 ## Roushan Kumar Singh (Roll Number: 23F1002240)
 
 ### Milestone 1
-- Conducted a thorough review of past works in wildfire prediction, analyzing methodologies employed across remote sensing and machine learning literature.
-- Documented critical research gaps and extracted actionable insights to guide team methodology.
+- Conducted a thorough review of past works in this field, specifically analyzing the methodologies they employed.
+- Documented critical research gaps and extracted actionable insights to help guide and improve our own approach.
 
 ### Milestone 2
-- **Sentinel-2**: Built a data fetch pipeline for Sentinel-2 imagery over the California target AOI using Google Earth Engine and exported rasters to GCS.
-- **Sentinel-5P**: Built a data fetch pipeline for Sentinel-5P (TROPOMI) atmospheric imagery over the AOI using GEE and exported to GCS.
-- **Landsat-8**: Built a data fetch pipeline for Landsat-8/9 imagery over the AOI via GEE and exported to GCS.
+
+#### Sentinel-2
+- Built a data fetch pipeline for Sentinel-2 imagery over the target AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+#### Sentinel-5P
+- Built a data fetch pipeline for Sentinel-5P (TROPOMI) imagery over the same AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+#### Landsat-8
+- Built a data fetch pipeline for Landsat-8/9 imagery over the same AOI.
+- Fetched the data using Google Earth Engine and exported it to GCS bucket.
+
+#### Output
+- All three datasets (Sentinel-2, Sentinel-5P, and Landsat-8) are now available in the GCS bucket for further processing.
 
 ### Milestone 3
-- Developed a data pipeline to fetch and process numeric data from Sentinel-2 and Sentinel-5P datasets, enabling a streamlined workflow for downstream tabular analysis.
-- Conducted experiments with multimodal models, focusing on hyperparameter tuning to evaluate parameter configurations on model performance.
+- Developed a data pipeline to fetch and process numeric data from Sentinel-2 and Sentinel-5P datasets, enabling a streamlined workflow for downstream analysis and model development.
+- Conducted experiments with multimodal models, focusing on hyperparameter tuning to evaluate the impact of different configurations on model performance and identify optimal settings.
 - Performed exploratory analysis and iterative testing to validate the data pipeline and assess model behavior under various parameter combinations.
 
 ### Milestone 4
-- Audited the prepared numerical archive for D+1 labels, ERA5 through D−5 features, chronological train/validation/test splits, and data leakage risks.
-- Implemented and tuned the isolated V1–V5 LightGBM/MLP experiment track, adding causal fire-history and direction-aware features, classifier–ranker blending, and hard-negative reranking; retained V4 with 38.33% Recall@25.
-- Added reproducible training/evaluation scripts, 30 unit tests, metric comparisons, California risk maps, and consolidated report documentation.
+- Audited the prepared numerical archive for D+1 labels, ERA5 through D−5, chronological train/validation/test splits, and potential data leakage.
+- Implemented and tuned the isolated V1–V5 LightGBM/MLP experiment track, adding causal fire-history and direction-aware features, classifier–ranker blending and hard-negative reranking; retained V4 with 38.33% Recall@25.
+- Added reproducible training/evaluation scripts, 30 tests, metric comparisons, California risk maps and the consolidated Milestone 4 report while excluding large input data, caches, virtual environments and model weights from Git.
 
 ### Milestone 5
-- Integrated train/test split scripts with existing training and inference notebooks.
-- Created refined training and inference notebooks from Milestone 4 code for improved experimentation, validation, and model testing.
+- Integrate Lakshay’s train / test split script with existing training / inference notebook.
+- created training and inference notebooks from the milestone 4 code for better experimentation, validation and testing of the models. and understanding of models.
 
 ### Milestone 6
-- Conducted final code auditing, ensuring all script paths, test suites, and model loading functions operate smoothly in production deployment environments.
-- Supported final documentation and repository organization.
+- Worked on the end-to-end application development by creating the front-end UI and wiring the existing data pipeline and prediction APIs together to create the full-fledged application.
+- Created a concise user guide covering application access, forecast generation, result interpretation, retries, and important usage limitations.
+- Created a developer guide documenting the application architecture, local and Docker setup, environment configuration, testing, logs, troubleshooting, and common development workflows.
 
 ---
 
