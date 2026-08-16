@@ -6,9 +6,14 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from .. import validation_service
-from ..schemas import ValidationEventsResponse
+from ..schemas import DailyValidationResponse, ValidationEventsResponse
 
 router = APIRouter(prefix="/validation", tags=["validation"])
+
+
+@router.get("/day", response_model=DailyValidationResponse, response_model_by_alias=True)
+def get_daily_validation(date_: date = Query(..., alias="date")) -> DailyValidationResponse:
+    return DailyValidationResponse(**validation_service.daily_validation(date_))
 
 
 @router.get("/events", response_model=ValidationEventsResponse, response_model_by_alias=True)

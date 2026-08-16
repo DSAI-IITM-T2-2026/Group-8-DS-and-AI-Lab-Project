@@ -7,6 +7,11 @@ services:
     env_file:
       - backend/.env
       - daily_pipeline/.env
+    environment:
+      # Container paths must override any host-only values in backend/.env.
+      PIPELINE_PYTHON: /usr/local/bin/python
+      PIPELINE_ROOT: /app/daily_pipeline
+      PIPELINE_STATE_DIR: /app/backend/.state
     volumes:
       - backend-state:/app/backend/.state
       - pipeline-cache:/app/daily_pipeline/.cache

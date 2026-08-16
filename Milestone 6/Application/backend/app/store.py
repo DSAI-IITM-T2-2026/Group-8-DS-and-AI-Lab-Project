@@ -92,7 +92,33 @@ class RunStore:
             db.commit()
             return self.get(str(row["run_id"]))
 
-    def update(self, run_id: str, **values) -> None:
+    def cancel(self, run_id: str) -> dict | None:
+        """Atomically interrupt an active run so it cannot be claimed or updated."""
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM pipeline_runs WHERE run_id=?", (run_id,)).fetchone()
+            if row is None:
+                db.commit()
+                return None
+            if row["status"] in ACTIVE:
+                placeholders = ",".join("?" for _ in ACTIVE)
+                db.execute(
+                    f"UPDATE pipeline_runs SET status='interrupted', message=?, error_code=?, "
+                    f"finished_at=?, pid=NULL WHERE run_id=? AND status IN ({placeholders})",
+                    (
+                        "Forecast preparation was stopped by the user.",
+                        "cancelled_by_user",
+                        now,
+                        run_id,
+                        *ACTIVE,
+                    ),
+                )
+            db.commit()
+            updated = db.execute("SELECT * FROM pipeline_runs WHERE run_id=?", (run_id,)).fetchone()
+            return self._row(updated)
+
+    def update(self, run_id: str, *, only_if_active: bool = False, **values) -> None:
         mapping = {
             "status": "status", "stage": "stage", "message": "message",
             "progressCompleted": "progress_completed", "progressTotal": "progress_total",
@@ -107,13 +133,18 @@ class RunStore:
                 columns.append("artifact_json=?"); params.append(json.dumps(value))
             elif key in mapping:
                 columns.append(f"{mapping[key]}=?"); params.append(value)
-        if values.get("status") in {"succeeded", "failed", "interrupted"}:
+        if values.get("status") in {"succeeded", "unavailable", "failed", "interrupted"}:
             columns.append("finished_at=?"); params.append(datetime.now(timezone.utc).isoformat())
         if not columns:
             return
         params.append(run_id)
+        where = "run_id=?"
+        if only_if_active:
+            placeholders = ",".join("?" for _ in ACTIVE)
+            where += f" AND status IN ({placeholders})"
+            params.extend(ACTIVE)
         with self._connect() as db:
-            db.execute(f"UPDATE pipeline_runs SET {','.join(columns)} WHERE run_id=?", params)
+            db.execute(f"UPDATE pipeline_runs SET {','.join(columns)} WHERE {where}", params)
 
     @staticmethod
     def _row(row: sqlite3.Row) -> dict:

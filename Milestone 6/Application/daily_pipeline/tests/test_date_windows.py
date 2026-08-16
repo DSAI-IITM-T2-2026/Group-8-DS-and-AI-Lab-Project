@@ -58,11 +58,12 @@ def test_era5_window_includes_history_and_never_passes_d_minus_six():
     assert days[-1] == date(2025, 7, 26)
 
 
-def test_future_labels_are_bounded_by_as_of():
-    target = date(2026, 8, 20)
+def test_tomorrow_windows_use_today_as_eo_and_today_minus_five_for_era5():
     as_of = date(2026, 8, 13)
+    target = date(2026, 8, 14)
     assert max(run_daily.eo_asof_dates_needed([target], config(), as_of=as_of)) == as_of
-    assert max(run_daily.era5_days_needed([target], config(), as_of=as_of)) == date(2026, 8, 7)
+    assert max(run_daily.firms_label_dates_needed([target], config(), as_of=as_of)) == as_of
+    assert max(run_daily.era5_days_needed([target], config(), as_of=as_of)) == date(2026, 8, 8)
 
 
 def _all_args(target):
@@ -116,3 +117,80 @@ def test_all_falls_through_when_final_is_missing(monkeypatch):
 
     assert run_daily.cmd_all(_all_args(target), config()) == 0
     assert calls == {"download": 1, "build": 1}
+
+
+def test_tomorrow_reuses_existing_final_before_preflight(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = as_of + run_daily.timedelta(days=1)
+    artifact = {"labelDate": target.isoformat(), "featureCount": 86}
+    events = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: artifact)
+    monkeypatch.setattr(
+        run_daily,
+        "preflight_source_inventory",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("preflight should be skipped")),
+    )
+    monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: events.append((args, kwargs)))
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    assert events[-1][0][1] == "succeeded"
+
+
+def test_tomorrow_missing_inventory_is_unavailable_without_cloud_work(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = as_of + run_daily.timedelta(days=1)
+    inventory = {
+        "era5": {"required": 38, "available": 38, "missing": 0, "scheduled": 0, "pending": 0},
+        "firms": {"required": 31, "available": 30, "missing": 1, "scheduled": 0, "pending": 0},
+        "sentinel2": {"required": 7, "available": 7, "missing": 0, "scheduled": 0, "pending": 0},
+        "sentinel5p": {"required": 31, "available": 31, "missing": 0, "scheduled": 0, "pending": 0},
+    }
+    events = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: None)
+    monkeypatch.setattr(run_daily, "preflight_source_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: events.append((args, kwargs)))
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_download_for_labels",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("download must not run")),
+    )
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_all_one",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("preprocessing must not run")),
+    )
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    unavailable = [event for event in events if event[0][1] == "unavailable"]
+    assert len(unavailable) == 1
+    assert unavailable[0][0][2] == "Tomorrow's data is not available yet."
+    assert unavailable[0][1]["inventory"] == inventory
+
+
+def test_tomorrow_complete_inventory_builds_without_download_scheduling(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = as_of + run_daily.timedelta(days=1)
+    inventory = {
+        key: {"required": 1, "available": 1, "missing": 0, "scheduled": 0, "pending": 0}
+        for key in ("era5", "firms", "sentinel2", "sentinel5p")
+    }
+    built = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: None)
+    monkeypatch.setattr(run_daily, "preflight_source_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "emit_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_download_for_labels",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("download must not run")),
+    )
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_all_one",
+        lambda _args, _cfg, label, **kwargs: built.append((label, kwargs["skip_download"])) or 0,
+    )
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    assert built == [(target, True)]

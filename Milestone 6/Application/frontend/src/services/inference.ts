@@ -1,5 +1,7 @@
 import type {
+  DailyValidationResponse,
   InferenceServiceError,
+  ModelEvaluationResponse,
   PredictionResponse,
   RegionGeometryResponse,
   RiskMapResponse,
@@ -36,6 +38,14 @@ export class HttpInferenceService {
 
   getGeometry(): Promise<RegionGeometryResponse> {
     return this.request("/regions/california/geometry");
+  }
+
+  getModelEvaluation(): Promise<ModelEvaluationResponse> {
+    return this.request("/model/evaluation");
+  }
+
+  getDailyValidation(predictionDate: string): Promise<DailyValidationResponse> {
+    return this.request(`/validation/day?date=${encodeURIComponent(predictionDate)}`);
   }
 
   getRiskMap(predictionDate: string): Promise<RiskMapResponse> {

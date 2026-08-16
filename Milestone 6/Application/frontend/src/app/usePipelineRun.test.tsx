@@ -5,6 +5,7 @@ import type { PipelineRun } from "../domain/pipeline";
 
 const config = { minPredictionDate: "2019-01-01", maxPredictionDate: "2026-08-13", timezone: "America/Los_Angeles", lookbackDays: 30, expectedFeatureCount: 86 };
 const queued: PipelineRun = { runId: "run-1", predictionDate: "2025-08-01", status: "queued", stage: "validating", message: "Queued", progressCompleted: 0, progressTotal: 0, sourceInventory: {}, createdAt: "2026-08-13T00:00:00Z" };
+const cancelled: PipelineRun = { ...queued, status: "interrupted", message: "Forecast preparation was stopped by the user.", errorCode: "cancelled_by_user", finishedAt: "2026-08-13T00:01:00Z" };
 
 describe("usePipelineRun", () => {
   beforeEach(() => localStorage.clear());
@@ -32,5 +33,23 @@ describe("usePipelineRun", () => {
     const { result } = renderHook(() => usePipelineRun(service));
     await waitFor(() => expect(result.current.run?.runId).toBe("run-1"));
     expect(service.getRun).toHaveBeenCalledWith("run-1");
+  });
+
+  it("stops an active run and keeps the terminal response", async () => {
+    const service = {
+      getConfig: vi.fn().mockResolvedValue(config),
+      getRun: vi.fn().mockResolvedValue(queued),
+      createRun: vi.fn().mockResolvedValue(queued),
+      cancelRun: vi.fn().mockResolvedValue(cancelled),
+    } as any;
+    const { result } = renderHook(() => usePipelineRun(service));
+    await waitFor(() => expect(result.current.selectedDate).toBe(config.maxPredictionDate));
+    act(() => result.current.selectDate("2025-08-01"));
+    await act(async () => result.current.start());
+    await act(async () => result.current.stop());
+
+    expect(service.cancelRun).toHaveBeenCalledWith("run-1");
+    expect(result.current.run).toEqual(cancelled);
+    expect(result.current.isStopping).toBe(false);
   });
 });

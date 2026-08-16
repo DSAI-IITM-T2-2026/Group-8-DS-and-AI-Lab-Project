@@ -17,7 +17,13 @@ answers a documented `503`/`409` instead of inventing numbers.
 | `GET /regions/{id}/geometry` | ✅ Live, semantic caveat | Each polygon is a real 0.25°×0.25° grid cell the model actually scores (id = `cell_id`, e.g. `"37.75_-119.25"`), not a county. The pipeline has no county boundaries — see "Design decisions". |
 | `GET /risk-map` | ⚠️ Wired, needs a model | Streams the real `final_processed/<date>_test.parquet` from GCS (with local fallback), validates its causal 86-feature contract, and scores the complete day with the classifier, calibrator, ranker, and daily blend. Without `WILDFIRE_MODEL_URI` configured, returns `503 model_unavailable`. `mode=forecast_7d` returns `422` (the pipeline only supports a 1-day lead). |
 | `POST /predictions` | ⚠️ Wired, needs a model | Same as above, for one grid cell, with real scenario `featureOverrides` applied on top of the real feature row. |
+| `GET /validation/day` | ⚠️ Wired, needs a model + matured FIRMS truth | Reuses the exact scored day from `/risk-map`. Reads 2019–2025 truth through a predicate-pushed historical archive slice and 2026+ truth from a completed daily FIRMS GeoTIFF. Today/tomorrow are `not_mature`; missing prior-day truth is `pending`. |
 | `GET /validation/events` | ⚠️ Wired, needs a model + archive | Needs both a loaded model and a local copy of the multi-year historical archive (not shipped — see below). Returns `503` otherwise. |
+
+Pipeline lifecycle endpoints are served by the unified backend. In particular,
+`POST /pipeline-runs/{runId}/cancel` persists an active run as user-cancelled
+before terminating its local process group, so late pipeline output cannot
+change it back to running or failed.
 
 Nothing here returns mock/sample rows dressed up as real ones: the
 "⚠️ Wired" endpoints are fully implemented against real pipeline output and
@@ -73,6 +79,10 @@ then set `WILDFIRE_HISTORICAL_ARCHIVE=/tmp/2019-2025.parquet` in `.env`.
 - **`actualAcres` is always `null`.** FIRMS gives thermal-anomaly pixel
   counts, not burned acreage; this pipeline never computes acres anywhere,
   so the field is honestly omitted rather than estimated.
+- **Daily truth never enters model features.** `/validation/day` reads labels
+  after scoring and joins them in memory by supported grid-cell ID. Missing,
+  unauthorized, or corrupt truth sources are never interpreted as zero fires,
+  and this path never launches cloud preparation work.
 
 ## Running
 

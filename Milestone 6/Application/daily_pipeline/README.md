@@ -28,7 +28,12 @@ Folder notes: `[utils/README.md](utils/README.md)`.
 
 ### Date range
 
-`--start-date` / `--end-date` are **label dates** (inclusive). Future labels past **today** are capped (no S2/S5P through 31 Aug when today is earlier). ERA5 uses **daily** `era5/YYYY/era5_YYYY_MM_DD.nc` when present, or **monthly** under `era5/raw/YYYY/`.
+`--start-date` / `--end-date` are **label dates** (inclusive). Labels are capped
+at California **tomorrow**, the model's one-day horizon. Tomorrow is
+preflight-only: the command reuses a valid final parquet or requires every raw
+source object to be present, and returns an `unavailable` pipeline event
+without scheduling cloud work when anything is missing. ERA5 uses **daily**
+`era5/YYYY/era5_YYYY_MM_DD.nc` when present, or **monthly** under `era5/raw/YYYY/`.
 
 ```bash
 # Inclusive label dates (each day: download → preprocess → export)
@@ -77,7 +82,9 @@ With `lookback_days: 30` for D = 2026-08-10 … 2026-08-12:
 
 ## Demo download (July–August 2026)
 
-Do **not** request labels through 31 Aug. Cap at today (or the last day you will score).
+Do **not** request labels through 31 Aug. Cap at tomorrow (or the last day you
+will score); tomorrow succeeds only when its complete causal source set already
+exists.
 
 ### Recommended: few live days (start ASAP)
 

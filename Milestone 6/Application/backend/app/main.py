@@ -125,6 +125,13 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
             raise HTTPException(status_code=404, detail={"code": "run_not_found", "message": "Pipeline run not found."})
         return PipelineRun.model_validate(run)
 
+    @app.post("/api/v1/pipeline-runs/{run_id}/cancel", response_model=PipelineRun)
+    def cancel_run(run_id: str) -> PipelineRun:
+        run = worker.cancel(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail={"code": "run_not_found", "message": "Pipeline run not found."})
+        return PipelineRun.model_validate(run)
+
     @app.get("/api/v1/pipeline-runs", response_model=list[PipelineRun])
     def list_runs(predictionDate: date | None = None, limit: int = Query(20, ge=1, le=100)) -> list[PipelineRun]:
         return [PipelineRun.model_validate(item) for item in store.list(predictionDate.isoformat() if predictionDate else None, limit)]

@@ -24,4 +24,14 @@ describe("HttpPipelineService", () => {
       fieldErrors: { predictionDate: "Outside range." },
     } satisfies Partial<PipelineApiError>);
   });
+
+  it("cancels an active run through the public run endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ runId: "run-1", status: "interrupted", errorCode: "cancelled_by_user" }), { status: 200 }),
+    );
+
+    await new HttpPipelineService("/api/v1").cancelRun("run-1");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/pipeline-runs/run-1/cancel", expect.objectContaining({ method: "POST" }));
+  });
 });

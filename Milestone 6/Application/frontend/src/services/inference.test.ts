@@ -14,6 +14,26 @@ describe("HttpInferenceService", () => {
     );
   });
 
+  it("requests the versioned model evaluation", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ metrics: [] }), { status: 200 }));
+    const service = new HttpInferenceService("/api/v1");
+    await service.getModelEvaluation();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/model/evaluation",
+      expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/json" }) }),
+    );
+  });
+
+  it("requests selected-day FIRMS validation", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ status: "pending" }), { status: 200 }));
+    const service = new HttpInferenceService("/api/v1");
+    await service.getDailyValidation("2025-08-01");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/validation/day?date=2025-08-01",
+      expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/json" }) }),
+    );
+  });
+
   it("preserves safe inference error codes", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ code: "model_unavailable", message: "Model is not loaded." }), { status: 503 }));
     const service = new HttpInferenceService("/api/v1");

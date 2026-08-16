@@ -13,12 +13,15 @@ The browser submits a prediction date and polls a persistent backend job. After 
 | `GET` | `/pipeline/config` | Supported dates, timezone, lookback, and feature count |
 | `POST` | `/pipeline-runs` | Queue or reuse an active run for a prediction date |
 | `GET` | `/pipeline-runs/{runId}` | Read progress and the final artifact |
+| `POST` | `/pipeline-runs/{runId}/cancel` | Stop queued or locally running preparation |
 | `GET` | `/pipeline-runs` | Recover recent runs, optionally filtered by date |
 | `GET` | `/model/metadata` | Loaded model version, explanation capability, and data freshness |
+| `GET` | `/model/evaluation` | Versioned held-out champion evaluation scorecard |
 | `GET` | `/model/features` | Frozen 86-feature model catalog |
 | `GET` | `/regions/california/geometry` | Supported 0.25° California model grid |
 | `GET` | `/risk-map` | Complete-day calibrated probability and priority results |
 | `POST` | `/predictions` | Detailed result for one already-scored grid cell |
+| `GET` | `/validation/day?date=YYYY-MM-DD` | Selected-day FIRMS truth and Top-25 capture summary |
 | `GET` | `/validation/events` | Optional historical actual-versus-predicted records |
 
 ### Configuration
@@ -26,7 +29,7 @@ The browser submits a prediction date and polls a persistent backend job. After 
 ```json
 {
   "minPredictionDate": "2019-01-01",
-  "maxPredictionDate": "2026-08-13",
+  "maxPredictionDate": "2026-08-14",
   "timezone": "America/Los_Angeles",
   "lookbackDays": 30,
   "expectedFeatureCount": 86
@@ -69,8 +72,15 @@ The API returns `202 Accepted`. If the same date already has a `queued`, `runnin
 Statuses:
 
 ```text
-queued | running | waiting_external | succeeded | failed | interrupted
+queued | running | waiting_external | succeeded | unavailable | failed | interrupted
 ```
+
+Cancellation is idempotent. Cancelling an active run persists terminal
+`interrupted` with `errorCode: "cancelled_by_user"` before terminating the
+local pipeline process group. This prevents queued work from being claimed and
+prevents late pipeline events from replacing the stopped state. Earth Engine
+exports submitted before cancellation may continue remotely and can be reused
+by a later run.
 
 Stages:
 
@@ -98,12 +108,46 @@ Successful runs contain:
 
 ## Date and data policy
 
-- Accept `2019-01-01` through California's current date.
+- Accept `2019-01-01` through California tomorrow; reject later dates.
 - Treat the selected date as label/prediction day `D`.
 - Use EO and prior-fire information through `D−1` and ERA5 through `D−6`.
 - Build rolling features from the preceding 30 label days.
+- For tomorrow, reuse a validated final artifact or perform a read-only source
+  inventory. If any source object is missing, return terminal `unavailable`
+  without scheduling downloads or Earth Engine work.
 - Reject unsupported dates with `422` and a `fieldErrors.predictionDate` entry.
 - Do not expose credentials, local paths, tracebacks, or private configuration.
+
+## Model evaluation contract
+
+`GET /model/evaluation` returns a versioned held-out 2025 summary with model
+identity, split label, row and positive counts, the naive PR-AUC baseline, and
+PR-AUC, ROC-AUC, Recall@25, Precision@25, Brier score, and PR-AUC lift metric
+entries. Each metric includes a numeric value, display value, and description.
+The frontend must label this as historical model-level evaluation, never as
+measured quality for the selected forecast.
+
+## Selected-day validation contract
+
+`GET /validation/day?date=YYYY-MM-DD` compares the exact complete-day scored
+roster used by `/risk-map` with post-event FIRMS labels. It returns
+`available`, `not_mature`, or `pending`. California today and tomorrow are
+always `not_mature`; a completed prior day whose truth object has not arrived
+is `pending`. Neither state schedules downloads, exports, or inference.
+
+For 2019–2025, labels are sliced from the configured historical archive with
+Parquet predicate pushdown. From 2026 onward, labels come from the completed
+`firms_daily_geotiff/YYYY-MM-DD.tif`, using confidence `>= 30`, mapped onto the
+supported 0.25-degree model grid. Storage authentication and corrupt-raster
+errors are explicit service errors and must not be converted to an all-negative
+day.
+
+An available response provides each cell's `actualEvent`, `alertTop25`, FIRMS
+pixel evidence when present, and TP/FP/FN/TN outcome. The summary includes
+observed cells, captured cells, Recall@25, Precision@25, false alerts, and the
+actual returned Top-25 count. Recall is `null` when there are no positive
+cells. Observations remain separate from feature and prediction artifacts to
+prevent target leakage.
 
 ## Inference contract
 

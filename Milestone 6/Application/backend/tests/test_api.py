@@ -1,4 +1,6 @@
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 
@@ -22,10 +24,23 @@ def settings(tmp_path: Path) -> Settings:
 
 
 def test_config_and_date_validation(tmp_path: Path):
-    with TestClient(create_app(settings(tmp_path), start_worker=False)) as client:
+    configured = settings(tmp_path)
+    with TestClient(create_app(configured, start_worker=False)) as client:
         config = client.get("/api/v1/pipeline/config")
         assert config.status_code == 200
         assert config.json()["minPredictionDate"] == "2019-01-01"
+        california_today = datetime.now(ZoneInfo(configured.timezone)).date()
+        assert config.json()["maxPredictionDate"] == (california_today + timedelta(days=1)).isoformat()
+        accepted = client.post(
+            "/api/v1/pipeline-runs",
+            json={"predictionDate": (california_today + timedelta(days=1)).isoformat()},
+        )
+        assert accepted.status_code == 202
+        rejected_future = client.post(
+            "/api/v1/pipeline-runs",
+            json={"predictionDate": (california_today + timedelta(days=2)).isoformat()},
+        )
+        assert rejected_future.status_code == 422
         rejected = client.post("/api/v1/pipeline-runs", json={"predictionDate": "2016-11-21"})
         assert rejected.status_code == 422
 
@@ -48,6 +63,21 @@ def test_run_listing_and_not_found(tmp_path: Path):
         assert client.get(f"/api/v1/pipeline-runs/{created['runId']}").status_code == 200
         assert len(client.get("/api/v1/pipeline-runs?predictionDate=2025-09-15").json()) == 1
         assert client.get("/api/v1/pipeline-runs/missing").status_code == 404
+
+
+def test_active_run_can_be_cancelled_and_will_not_be_claimed(tmp_path: Path):
+    app = create_app(settings(tmp_path), start_worker=False)
+    with TestClient(app) as client:
+        created = client.post("/api/v1/pipeline-runs", json={"predictionDate": "2025-09-15"}).json()
+        cancelled = client.post(f"/api/v1/pipeline-runs/{created['runId']}/cancel")
+
+        assert cancelled.status_code == 200
+        assert cancelled.json()["status"] == "interrupted"
+        assert cancelled.json()["errorCode"] == "cancelled_by_user"
+        assert cancelled.json()["finishedAt"] is not None
+        assert app.state.store.claim_next() is None
+        assert client.post(f"/api/v1/pipeline-runs/{created['runId']}/cancel").json() == cancelled.json()
+        assert client.post("/api/v1/pipeline-runs/missing/cancel").status_code == 404
 
 
 def test_malformed_date_uses_safe_error_contract(tmp_path: Path):
@@ -80,6 +110,56 @@ def test_inference_routes_are_exposed_by_the_unified_backend(tmp_path: Path):
         assert regions.status_code == 200
         assert regions.json()[0]["id"] == "california"
         assert "modelLoaded" in health.json()
+
+
+def test_model_evaluation_exposes_versioned_held_out_metrics(tmp_path: Path):
+    with TestClient(create_app(settings(tmp_path), start_worker=False)) as client:
+        response = client.get("/api/v1/model/evaluation")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["evaluationVersion"] == "milestone-5-champion-2025-v1"
+    assert payload["split"] == "Held-out 2025 test set"
+    assert payload["rows"] == 93_518
+    assert payload["positives"] == 1_325
+    assert payload["baseline"]["prAuc"] == 0.0093
+    assert {item["key"]: item["displayValue"] for item in payload["metrics"]} == {
+        "pr_auc": "0.1451",
+        "roc_auc": "0.7718",
+        "recall_at_25": "36.38%",
+        "precision_at_25": "9.01%",
+        "brier": "0.0131",
+        "pr_auc_lift": "15.6×",
+    }
+
+
+def test_today_validation_labels_are_not_mature(tmp_path: Path):
+    configured = settings(tmp_path)
+    california_today = datetime.now(ZoneInfo(configured.timezone)).date()
+    with TestClient(create_app(configured, start_worker=False)) as client:
+        response = client.get("/api/v1/validation/day", params={"date": california_today.isoformat()})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "not_mature"
+    assert response.json()["items"] == []
+    assert response.json()["summary"] is None
+
+
+def test_unavailable_run_is_terminal(tmp_path: Path):
+    app = create_app(settings(tmp_path), start_worker=False)
+    with TestClient(app) as client:
+        created = client.post("/api/v1/pipeline-runs", json={"predictionDate": "2025-08-01"}).json()
+        app.state.store.update(
+            created["runId"],
+            status="unavailable",
+            stage="inventory",
+            message="Tomorrow's data is not available yet.",
+        )
+        result = client.get(f"/api/v1/pipeline-runs/{created['runId']}").json()
+
+    assert result["status"] == "unavailable"
+    assert result["finishedAt"] is not None
+    assert result["errorCode"] is None
 
 
 def test_risk_map_fails_safely_without_a_model(tmp_path: Path):

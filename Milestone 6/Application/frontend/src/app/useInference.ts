@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PredictionResponse, RegionGeometryResponse, RiskMapResponse } from "../domain/inference";
+import type { DailyValidationResponse, PredictionResponse, RegionGeometryResponse, RiskMapResponse } from "../domain/inference";
 import { InferenceApiError, type HttpInferenceService } from "../services/inference";
 
 function errorDetails(error: unknown) {
@@ -12,10 +12,13 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
   const [geometry, setGeometry] = useState<RegionGeometryResponse>();
   const [riskMap, setRiskMap] = useState<RiskMapResponse>();
   const [prediction, setPrediction] = useState<PredictionResponse>();
+  const [validation, setValidation] = useState<DailyValidationResponse>();
   const [selectedCellId, setSelectedCellId] = useState<string>();
   const [error, setError] = useState<{ message: string; code: string }>();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isLoadingValidation, setIsLoadingValidation] = useState(false);
+  const [validationError, setValidationError] = useState<string>();
   const geometryRef = useRef<RegionGeometryResponse | undefined>(undefined);
 
   const load = useCallback(async () => {
@@ -23,6 +26,8 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
     setIsLoading(true);
     setError(undefined);
     setPrediction(undefined);
+    setValidation(undefined);
+    setValidationError(undefined);
     try {
       const [nextGeometry, nextRiskMap] = await Promise.all([
         geometryRef.current ? Promise.resolve(geometryRef.current) : service.getGeometry(),
@@ -31,6 +36,14 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
       geometryRef.current = nextGeometry;
       setGeometry(nextGeometry);
       setRiskMap(nextRiskMap);
+      setIsLoadingValidation(true);
+      try {
+        setValidation(await service.getDailyValidation(predictionDate));
+      } catch (caught) {
+        setValidationError(errorDetails(caught).message);
+      } finally {
+        setIsLoadingValidation(false);
+      }
       const firstCellId = nextRiskMap.items[0]?.areaId;
       setSelectedCellId(firstCellId);
       if (firstCellId) {
@@ -72,10 +85,13 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
     geometry,
     riskMap,
     prediction,
+    validation,
     selectedCellId,
     error,
     isLoading,
     isLoadingDetail,
+    isLoadingValidation,
+    validationError,
     retry: load,
     selectCell,
   };

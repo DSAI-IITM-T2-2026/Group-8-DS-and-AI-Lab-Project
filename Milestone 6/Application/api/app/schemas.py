@@ -21,6 +21,7 @@ FreshnessStatus = Literal["fresh", "stale", "partial", "unavailable"]
 ExplanationCapability = Literal["available", "unavailable", "unknown"]
 RegionAvailability = Literal["supported", "experimental", "validation_only", "unavailable"]
 ValidationOutcome = Literal["true_positive", "true_negative", "false_positive", "false_negative"]
+ValidationAvailability = Literal["available", "not_mature", "pending"]
 
 
 class ApiModel(BaseModel):
@@ -54,6 +55,31 @@ class ModelMetadataResponse(ApiModel):
     explanation_capability: ExplanationCapability
     data_freshness: DataFreshness
     provenance: Literal["model"] = "model"
+
+
+class EvaluationMetric(ApiModel):
+    key: str
+    label: str
+    value: float
+    display_value: str
+    description: str
+
+
+class EvaluationBaseline(ApiModel):
+    label: str
+    pr_auc: float
+
+
+class ModelEvaluationResponse(ApiModel):
+    evaluation_version: str
+    model_version: str
+    split: str
+    label_year: int
+    rows: int
+    positives: int
+    baseline: EvaluationBaseline
+    metrics: List[EvaluationMetric]
+    provenance: Literal["held_out_evaluation"] = "held_out_evaluation"
 
 
 # --- 3.3 Feature metadata -----------------------------------------------------
@@ -206,3 +232,32 @@ class ValidationEventsResponse(ApiModel):
     next_cursor: Optional[str] = None
     total: int
     provenance: Literal["model"] = "model"
+
+
+class DailyValidationCell(ApiModel):
+    area_id: str
+    actual_event: bool
+    firms_pixel_count: Optional[int] = None
+    firms_max_confidence: Optional[float] = None
+    alert_top_25: bool
+    outcome: ValidationOutcome
+
+
+class DailyValidationSummary(ApiModel):
+    observed_fire_cells: int
+    captured_in_top_25: int
+    recall_at_25: Optional[float] = None
+    precision_at_25: Optional[float] = None
+    false_alerts: int
+    top_25_count: int
+
+
+class DailyValidationResponse(ApiModel):
+    status: ValidationAvailability
+    date: str
+    model_version: str
+    label_source: Optional[Literal["historical_archive", "firms_daily_geotiff"]] = None
+    message: str
+    items: List[DailyValidationCell] = Field(default_factory=list)
+    summary: Optional[DailyValidationSummary] = None
+    provenance: Literal["firms_observation"] = "firms_observation"

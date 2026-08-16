@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import yaml
 
@@ -46,7 +46,7 @@ class Settings:
 
     @property
     def max_prediction_date(self) -> str:
-        return datetime.now(ZoneInfo(self.timezone)).date().isoformat()
+        return (datetime.now(ZoneInfo(self.timezone)).date() + timedelta(days=1)).isoformat()
 
 
 def load_settings() -> Settings:

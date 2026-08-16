@@ -4,16 +4,20 @@ import {
   CalendarBlank,
   CheckCircle,
   CloudArrowDown,
+  ClockCountdown,
   Database,
   FileArrowDown,
   Fire,
   HourglassMedium,
   Play,
+  StopCircle,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { appConfig } from "./app/config";
 import { useInference } from "./app/useInference";
+import { useModelEvaluation } from "./app/useModelEvaluation";
 import { usePipelineRun } from "./app/usePipelineRun";
+import { ModelEvaluationScorecard } from "./components/ModelEvaluationScorecard";
 import { RiskResults } from "./components/RiskResults";
 import { HttpInferenceService } from "./services/inference";
 import { HttpPipelineService } from "./services/pipeline";
@@ -54,11 +58,13 @@ export function App() {
   const service = useMemo(() => new HttpPipelineService(appConfig.apiBaseUrl), []);
   const inferenceService = useMemo(() => new HttpInferenceService(appConfig.apiBaseUrl), []);
   const pipeline = usePipelineRun(service);
+  const modelEvaluation = useModelEvaluation(inferenceService);
   const inferenceDate = pipeline.run?.status === "succeeded" ? pipeline.run.artifact?.labelDate : undefined;
   const inference = useInference(inferenceService, inferenceDate);
   const activeIndex = STAGES.findIndex((stage) => stage.id === pipeline.run?.stage);
   const isActive = pipeline.run && ["queued", "running", "waiting_external"].includes(pipeline.run.status);
-  const hasError = pipeline.error || pipeline.run?.status === "failed" || pipeline.run?.status === "interrupted";
+  const wasCancelled = pipeline.run?.status === "interrupted" && pipeline.run.errorCode === "cancelled_by_user";
+  const hasError = pipeline.error || pipeline.run?.status === "failed" || (pipeline.run?.status === "interrupted" && !wasCancelled);
 
   return (
     <div className="app-shell">
@@ -80,7 +86,17 @@ export function App() {
         <section className="workspace-grid">
           <article className="card request-card">
             <div className="card-heading"><span className="icon-box"><CalendarBlank /></span><div><small>Step 01</small><h2>Select prediction date</h2></div></div>
-            <label htmlFor="prediction-date">Prediction day</label>
+            <div className="date-label-row">
+              <label htmlFor="prediction-date">Prediction day</label>
+              <button
+                type="button"
+                className={pipeline.selectedDate === pipeline.config?.maxPredictionDate ? "tomorrow-shortcut is-selected" : "tomorrow-shortcut"}
+                onClick={() => pipeline.config && pipeline.selectDate(pipeline.config.maxPredictionDate)}
+                disabled={!pipeline.config || Boolean(isActive)}
+              >
+                <ClockCountdown /> Tomorrow
+              </button>
+            </div>
             <div className="date-row">
               <input
                 id="prediction-date"
@@ -120,9 +136,21 @@ export function App() {
           </aside>
         </section>
 
+        <ModelEvaluationScorecard
+          evaluation={modelEvaluation.evaluation}
+          isLoading={modelEvaluation.isLoading}
+          isUnavailable={modelEvaluation.isUnavailable}
+        />
+
         {(pipeline.run || hasError) ? (
           <section className="run-section" aria-live="polite">
-            <div className="section-heading"><div><small>Step 02</small><h2>Forecast run</h2></div>{pipeline.run ? <span className={`status-pill status-pill--${pipeline.run.status}`}>{pipeline.run.status.replace("_", " ")}</span> : null}</div>
+            <div className="section-heading">
+              <div><small>Step 02</small><h2>Forecast run</h2></div>
+              <div className="run-actions">
+                {pipeline.run ? <span className={`status-pill status-pill--${pipeline.run.status} ${wasCancelled ? "status-pill--cancelled" : ""}`}>{wasCancelled ? "stopped" : pipeline.run.status.replace("_", " ")}</span> : null}
+                {isActive ? <button type="button" className="stop-run-button" disabled={pipeline.isStopping} onClick={() => void pipeline.stop()}><StopCircle weight="fill" /> {pipeline.isStopping ? "Stopping…" : "Stop forecast"}</button> : null}
+              </div>
+            </div>
 
             {hasError ? (
               <div className="error-panel" role="alert"><WarningCircle weight="fill" /><div><strong>Preparation needs attention</strong><p>{pipeline.error || pipeline.run?.message}</p><small>{pipeline.run?.errorCode}</small></div><button type="button" onClick={() => void pipeline.retry()}><ArrowClockwise /> Retry</button></div>
@@ -132,7 +160,15 @@ export function App() {
               <div className="waiting-panel"><HourglassMedium /><div><strong>Waiting for Google Earth Engine</strong><p>Satellite exports may take 30 minutes or longer. This page can be closed—the worker will continue and the run will be restored when you return.</p></div></div>
             ) : null}
 
-            {pipeline.run ? (
+            {pipeline.run?.status === "unavailable" ? (
+              <div className="data-unavailable-panel"><ClockCountdown /><div><strong>Tomorrow’s data is not available yet</strong><p>The required causal source files are not complete. No cloud preparation was started; check again later.</p></div></div>
+            ) : null}
+
+            {wasCancelled ? (
+              <div className="stopped-panel"><StopCircle weight="fill" /><div><strong>Forecast stopped</strong><p>The local preparation process was stopped. Cloud exports submitted before cancellation may finish and will be reused by a later run.</p></div></div>
+            ) : null}
+
+            {pipeline.run && pipeline.run.status !== "unavailable" ? (
               <div className="progress-card card">
                 <div className="progress-header"><div><small>Current activity</small><strong>{pipeline.run.message}</strong></div>{pipeline.run.progressTotal > 0 ? <b>{pipeline.run.progressCompleted}/{pipeline.run.progressTotal}</b> : null}</div>
                 <ol className="stage-track">
@@ -163,10 +199,13 @@ export function App() {
             geometry={inference.geometry}
             riskMap={inference.riskMap}
             prediction={inference.prediction}
+            validation={inference.validation}
             selectedCellId={inference.selectedCellId}
             error={inference.error}
             isLoading={inference.isLoading}
             isLoadingDetail={inference.isLoadingDetail}
+            isLoadingValidation={inference.isLoadingValidation}
+            validationError={inference.validationError}
             onRetry={() => void inference.retry()}
             onSelectCell={(cellId) => void inference.selectCell(cellId)}
           />

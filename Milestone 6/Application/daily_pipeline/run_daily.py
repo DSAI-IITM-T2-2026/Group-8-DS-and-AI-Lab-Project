@@ -114,15 +114,19 @@ def firms_label_dates_needed(labels: list[date], cfg: dict, *, as_of: date | Non
 
 
 def era5_days_needed(labels: list[date], cfg: dict, *, as_of: date | None = None) -> list[date]:
-    """ERA5 calendar days ending at each label's feature_end (D−6); never past as_of−6."""
+    """ERA5 days through D−6, bounded by the configured publication lag."""
     as_of = as_of or pipeline_today(cfg)
     lookback = int(cfg["task"].get("lookback_days", 30))
     history = int(cfg["task"].get("history_days", 7))
     lag = int(cfg["task"]["era5_lag_days"])
     lead = int(cfg["task"]["lead_days"])
     label_start = min(labels) - timedelta(days=lookback)
-    label_end = min(max(labels), as_of)
-    era5_end = min(label_end - timedelta(days=lag + lead), as_of - timedelta(days=lag + lead))
+    latest_supported_label = as_of + timedelta(days=lead)
+    label_end = min(max(labels), latest_supported_label)
+    era5_end = min(
+        label_end - timedelta(days=lag + lead),
+        as_of - timedelta(days=lag),
+    )
     era5_start = label_start - timedelta(days=history + lag + lead)
     if era5_end < era5_start:
         return []
@@ -229,6 +233,27 @@ def build_source_inventory(labels: list[date], cfg: dict, *, as_of: date) -> dic
         "sentinel2": summary(len(s2_windows), s2_ready),
         "sentinel5p": summary(len(eo_days), s5p_ready),
     }
+
+
+def preflight_source_inventory(
+    labels: list[date], cfg: dict, *, as_of: date
+) -> dict[str, dict[str, int]]:
+    """Refresh GCS listings and report readiness without scheduling any work."""
+    from download.gcs_listing import prefetch_download_prefixes
+
+    days = (
+        era5_days_needed(labels, cfg, as_of=as_of)
+        + firms_label_dates_needed(labels, cfg, as_of=as_of)
+        + eo_asof_dates_needed(labels, cfg, as_of=as_of)
+    )
+    years = sorted({day.year for day in days})
+    prefetch_download_prefixes(
+        cfg["gcs"]["bucket"],
+        cfg["gcs"]["prefixes"],
+        years=years,
+        project=cfg["gee"]["project_id"],
+    )
+    return build_source_inventory(labels, cfg, as_of=as_of)
 
 
 def _month_is_finished(day: date, *, as_of: date) -> bool:
@@ -403,15 +428,16 @@ def cmd_download_for_labels(args: argparse.Namespace, cfg: dict, labels: list[da
     """Download ERA5 + FIRMS(through D−1) + S2/S5P(eo_asof≤today) for the lookback window."""
     skip, force_s5p = _download_flags(args, cfg)
     as_of = pipeline_today(cfg)
-    # Cap requested labels at today for live demos (no future Aug 13–31).
-    capped = [d for d in labels if d <= as_of]
+    # The model has a one-day lead, so tomorrow is the latest causal label.
+    latest_supported = as_of + timedelta(days=int(cfg["task"].get("lead_days", 1)))
+    capped = [d for d in labels if d <= latest_supported]
     if not capped:
-        logger.error("All requested labels are after as_of=%s", as_of)
+        logger.error("All requested labels are after latest_supported=%s", latest_supported)
         return 1
     if len(capped) < len(labels):
         logger.warning(
-            "Capped label range to as_of=%s (%d → %d days); skipped future labels",
-            as_of,
+            "Capped label range to latest_supported=%s (%d → %d days); skipped unsupported labels",
+            latest_supported,
             len(labels),
             len(capped),
         )
@@ -702,14 +728,16 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
     labels = resolve_label_dates(args)
     emit_event("validating", "running", "Validated the requested prediction date.")
     as_of = pipeline_today(cfg)
-    capped = [d for d in labels if d <= as_of]
+    lead = int(cfg["task"].get("lead_days", 1))
+    latest_supported = as_of + timedelta(days=lead)
+    capped = [d for d in labels if d <= latest_supported]
     if not capped:
-        logger.error("All requested labels are after as_of=%s", as_of)
+        logger.error("All requested labels are after latest_supported=%s", latest_supported)
         return 1
     if len(capped) < len(labels):
         logger.warning(
-            "Capped label range to as_of=%s (%d → %d days); skipped future labels",
-            as_of,
+            "Capped label range to latest_supported=%s (%d → %d days); skipped unsupported labels",
+            latest_supported,
             len(labels),
             len(capped),
         )
@@ -758,11 +786,34 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             "Prepared prediction data is missing or invalid; checking required source files.",
         )
 
-    t_dl = time.perf_counter()
-    rc = cmd_download_for_labels(args, cfg, labels)
-    logger.info("Timing range download: %s", _fmt_secs(time.perf_counter() - t_dl))
-    if rc != 0:
-        return rc
+    tomorrow = as_of + timedelta(days=1)
+    preflight_ready: set[date] = set()
+    if tomorrow in labels:
+        inventory = preflight_source_inventory([tomorrow], cfg, as_of=as_of)
+        if any(item["missing"] > 0 for item in inventory.values()):
+            emit_event(
+                "inventory",
+                "unavailable",
+                "Tomorrow's data is not available yet.",
+                inventory=inventory,
+            )
+            logger.info("Tomorrow preflight found missing source data; no cloud work was scheduled")
+            return 0
+        preflight_ready.add(tomorrow)
+        emit_event(
+            "inventory",
+            "running",
+            "All source data required for tomorrow is already available.",
+            inventory=inventory,
+        )
+
+    download_labels = [label for label in labels if label not in preflight_ready]
+    if download_labels:
+        t_dl = time.perf_counter()
+        rc = cmd_download_for_labels(args, cfg, download_labels)
+        logger.info("Timing range download: %s", _fmt_secs(time.perf_counter() - t_dl))
+        if rc != 0:
+            return rc
 
     for i, label in enumerate(labels, 1):
         logger.info("[%d/%d] label_date=%s", i, len(labels), label)

@@ -5,7 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-RunStatus = Literal["queued", "running", "waiting_external", "succeeded", "failed", "interrupted"]
+RunStatus = Literal[
+    "queued", "running", "waiting_external", "succeeded", "unavailable", "failed", "interrupted",
+]
 PipelineStage = Literal[
     "validating", "inventory", "era5", "firms", "sentinel2", "sentinel5p",
     "preprocessing", "exporting", "completed",

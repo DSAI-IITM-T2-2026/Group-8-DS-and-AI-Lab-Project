@@ -15,6 +15,7 @@ export function usePipelineRun(service: HttpPipelineService) {
   const [run, setRun] = useState<PipelineRun>();
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +51,18 @@ export function usePipelineRun(service: HttpPipelineService) {
   }, [selectedDate, service]);
 
   const retry = useCallback(async () => { setRun(undefined); await start(); }, [start]);
+  const stop = useCallback(async () => {
+    if (!run || !ACTIVE.has(run.status)) return;
+    setIsStopping(true);
+    setError(undefined);
+    try {
+      setRun(await service.cancelRun(run.runId));
+    } catch (caught) {
+      setError(messageFrom(caught));
+    } finally {
+      setIsStopping(false);
+    }
+  }, [run, service]);
   const selectDate = useCallback((value: string) => { setSelectedDate(value); setRun(undefined); setError(undefined); localStorage.removeItem(RUN_KEY); }, []);
-  return { config, selectedDate, run, error, isSubmitting, start, retry, selectDate };
+  return { config, selectedDate, run, error, isSubmitting, isStopping, start, retry, stop, selectDate };
 }

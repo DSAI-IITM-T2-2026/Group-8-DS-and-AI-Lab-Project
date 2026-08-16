@@ -39,6 +39,13 @@ class PreparedDay:
     identity: str
 
 
+@dataclass(frozen=True)
+class ObservedLabelDay:
+    frame: pd.DataFrame
+    source: str
+    identity: str
+
+
 def _local_path(label_date: date) -> Path:
     ensure_pipeline_on_path()
     from paths import resolve_path
@@ -154,3 +161,101 @@ def load_historical_archive() -> pd.DataFrame | None:
     if path is None or not path.is_file():
         return None
     return pd.read_parquet(path)
+
+
+def _historical_label_day(label_date: date) -> ObservedLabelDay | None:
+    ensure_pipeline_on_path()
+    from preprocess.final_artifact import historical_archive_uri, slice_historical_archive
+
+    cfg = get_pipeline_config()
+    source = historical_archive_uri(cfg)
+    if not source:
+        return None
+    try:
+        frame = slice_historical_archive(source, label_date)
+    except Exception as exc:
+        raise PreparedDataAccessError(
+            "validation_storage_unavailable",
+            "The historical FIRMS label archive could not be read.",
+        ) from exc
+    if frame is None or frame.empty:
+        return None
+    required = {"cell_id", "y_fire"}
+    if not required.issubset(frame.columns):
+        raise PreparedDataAccessError(
+            "invalid_validation_data",
+            "The historical label archive is missing required FIRMS label columns.",
+        )
+    return ObservedLabelDay(
+        frame=frame,
+        source="historical_archive",
+        identity=f"archive:{source}:{label_date.isoformat()}",
+    )
+
+
+def _live_firms_label_day(label_date: date) -> ObservedLabelDay | None:
+    settings = get_settings()
+    if not settings.allow_gcs_reads:
+        raise PreparedDataAccessError(
+            "validation_storage_unavailable",
+            "Cloud reads are disabled, so completed FIRMS labels cannot be loaded.",
+        )
+    cfg = get_pipeline_config()
+    bucket_name = cfg["gcs"]["bucket"]
+    prefix = cfg["gcs"]["prefixes"]["firms"].rstrip("/")
+    object_name = f"{prefix}/{label_date.isoformat()}.tif"
+    try:
+        from google.cloud import storage
+
+        blob = storage.Client(project=cfg["gcs"].get("project")).bucket(bucket_name).blob(object_name)
+        if not blob.exists():
+            return None
+        blob.reload()
+        if not blob.size:
+            raise PreparedDataAccessError(
+                "invalid_validation_data", "The completed FIRMS label object is empty."
+            )
+
+        ensure_pipeline_on_path()
+        from config_loader import load_m4_config, setup_m4_imports
+
+        setup_m4_imports(cfg)
+        from numerical_nextday.data.m3_imports import load_mvp_modules
+
+        firms_module = load_mvp_modules(load_m4_config(cfg))["firms_labels"]
+        frame = firms_module.label_day_to_cells(
+            pd.Timestamp(label_date),
+            cfg["gcs"]["firms_vsigs_prefix"],
+            float(cfg["task"].get("firms_confidence_min", 30)),
+            strict=True,
+        )
+    except PreparedDataAccessError:
+        raise
+    except Exception as exc:
+        try:
+            from google.auth.exceptions import DefaultCredentialsError
+            from google.api_core.exceptions import Forbidden
+        except ImportError:  # pragma: no cover
+            DefaultCredentialsError = Forbidden = ()  # type: ignore
+        if isinstance(exc, (DefaultCredentialsError, Forbidden)):
+            raise PreparedDataAccessError(
+                "validation_storage_access_denied",
+                "The backend identity cannot read completed FIRMS labels.",
+            ) from exc
+        raise PreparedDataAccessError(
+            "invalid_validation_data",
+            "The completed FIRMS label object could not be decoded safely.",
+        ) from exc
+
+    return ObservedLabelDay(
+        frame=frame,
+        source="firms_daily_geotiff",
+        identity=f"gcs:{blob.generation}:{blob.size}",
+    )
+
+
+def load_observed_label_day(label_date: date) -> ObservedLabelDay | None:
+    """Load post-event truth without mutating or trusting prediction artifacts."""
+    if label_date.year <= 2025:
+        return _historical_label_day(label_date)
+    return _live_firms_label_day(label_date)

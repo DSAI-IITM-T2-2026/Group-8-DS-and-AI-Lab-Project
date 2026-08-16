@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import threading
 from contextlib import contextmanager
@@ -69,6 +70,9 @@ class PipelineWorker:
         self.store = store
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._process_lock = threading.RLock()
+        self._active_run_id: str | None = None
+        self._active_process: subprocess.Popen[str] | None = None
 
     @property
     def alive(self) -> bool:
@@ -85,6 +89,38 @@ class PipelineWorker:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3)
+
+    @staticmethod
+    def _signal_process(process: subprocess.Popen[str], sig: signal.Signals) -> None:
+        if process.poll() is not None:
+            return
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            return
+
+    def _force_kill_after_grace(self, process: subprocess.Popen[str]) -> None:
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self._signal_process(process, signal.SIGKILL)
+
+    def cancel(self, run_id: str) -> dict | None:
+        """Persist cancellation, then stop the matching local process group."""
+        run = self.store.cancel(run_id)
+        if run is None or run.get("errorCode") != "cancelled_by_user":
+            return run
+        with self._process_lock:
+            process = self._active_process if self._active_run_id == run_id else None
+        if process is not None and process.poll() is None:
+            self._signal_process(process, signal.SIGTERM)
+            threading.Thread(
+                target=self._force_kill_after_grace,
+                args=(process,),
+                name=f"pipeline-cancel-{run_id}",
+                daemon=True,
+            ).start()
+        return self.store.get(run_id)
 
     def _loop(self) -> None:
         while not self._stop.is_set():
@@ -104,15 +140,25 @@ class PipelineWorker:
         ]
         env = os.environ.copy()
         lines: list[str] = []
+        process: subprocess.Popen[str] | None = None
         try:
             with pipeline_lock(self.settings.pipeline_root):
+                current = self.store.get(run_id) or {}
+                if current.get("status") == "interrupted":
+                    return
                 with log_path.open("a", encoding="utf-8") as log:
                     process = subprocess.Popen(
                         command, cwd=self.settings.pipeline_root, env=env,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                        text=True, bufsize=1,
+                        text=True, bufsize=1, start_new_session=True,
                     )
-                    self.store.update(run_id, pid=process.pid)
+                    with self._process_lock:
+                        self._active_run_id = run_id
+                        self._active_process = process
+                    self.store.update(run_id, only_if_active=True, pid=process.pid)
+                    current = self.store.get(run_id) or {}
+                    if current.get("status") == "interrupted":
+                        self._signal_process(process, signal.SIGTERM)
                     assert process.stdout is not None
                     for raw in process.stdout:
                         log.write(raw); log.flush()
@@ -134,11 +180,15 @@ class PipelineWorker:
                                 updates["sourceInventory"] = event["sourceInventory"]
                             if "artifact" in event:
                                 updates["artifact"] = event["artifact"]
-                            self.store.update(run_id, **updates)
+                            self.store.update(run_id, only_if_active=True, **updates)
                     code = process.wait()
+            current = self.store.get(run_id) or {}
+            if current.get("status") == "interrupted":
+                return
             if code == 0:
-                current = self.store.get(run_id) or {}
-                if current.get("artifact"):
+                if current.get("status") == "unavailable":
+                    pass
+                elif current.get("artifact"):
                     self.store.update(run_id, status="succeeded", stage="completed", message="Prediction data is ready.")
                 else:
                     self.store.update(run_id, status="failed", stage="completed", message="The pipeline ended without a verified artifact.", errorCode="artifact_missing")
@@ -146,9 +196,19 @@ class PipelineWorker:
                 output = "\n".join(lines[-80:])
                 self.store.update(run_id, status="failed", message="The preparation pipeline failed. Review the server log and retry after correcting the dependency.", errorCode=safe_error_code(output))
         except RuntimeError as exc:
+            current = self.store.get(run_id) or {}
+            if current.get("status") == "interrupted":
+                return
             if str(exc) == "pipeline_already_running":
                 self.store.update(run_id, status="failed", message="Another scheduled pipeline run is already using the shared cache. Retry after it finishes.", errorCode="pipeline_busy")
             else:
                 self.store.update(run_id, status="failed", message="The worker could not start the preparation pipeline.", errorCode="worker_start_failed")
         except Exception:
-            self.store.update(run_id, status="failed", message="The worker could not start the preparation pipeline.", errorCode="worker_start_failed")
+            current = self.store.get(run_id) or {}
+            if current.get("status") != "interrupted":
+                self.store.update(run_id, status="failed", message="The worker could not start the preparation pipeline.", errorCode="worker_start_failed")
+        finally:
+            with self._process_lock:
+                if self._active_run_id == run_id:
+                    self._active_run_id = None
+                    self._active_process = None

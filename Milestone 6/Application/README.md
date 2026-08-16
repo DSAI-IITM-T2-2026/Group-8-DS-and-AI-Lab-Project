@@ -10,6 +10,11 @@ causal source data, creates and validates
 `final_processed/YYYY-MM-DD_test.parquet`, scores every supported grid cell with
 the champion model, and displays the daily risk map and ranked results.
 
+The newest supported date is California tomorrow. Tomorrow is selected by
+default and uses a preflight-only policy: a validated final parquet is reused,
+or all raw source objects must already exist. Missing tomorrow inputs produce a
+neutral unavailable result and never launch cloud preparation jobs.
+
 ## Guides
 
 - [User Guide](../USER_GUIDE.md) — create a forecast and understand
@@ -134,6 +139,15 @@ backend at `http://127.0.0.1:8000`, so no frontend URL change is needed.
 6. The pipeline builds and validates the 86-feature parquet.
 7. The inference service scores the full supported California grid and the UI
    displays the map, top-25 cells, ranked list, probabilities, and cell details.
+8. For a completed prior day, the UI loads FIRMS-derived observations and can
+   switch the map to **Actual vs Top-25**, with capture metrics and per-cell
+   TP/FP/FN/TN outcomes. Today and tomorrow remain forecast-only because their
+   observed labels are not mature.
+
+While steps 4–6 are active, **Stop forecast** atomically marks the run stopped
+and terminates the local pipeline process group. A queued run will not start.
+Earth Engine exports already submitted before cancellation may continue and
+will be reused by a later run.
 
 Earth Engine exports can remain in a waiting state for several minutes. A
 completed cloud export and local pipeline cache are retained across retries.
@@ -205,6 +219,7 @@ docker compose up --build
 
 - Frontend: `http://localhost:8080`
 - Backend health: `http://localhost:8000/api/v1/health`
+- Model evaluation: `http://localhost:8000/api/v1/model/evaluation`
 
 The backend image bundles `api/` and `daily_pipeline/` as source (they are not
 separate services — see `backend/README.md`), and the frontend image builds
@@ -216,8 +231,8 @@ needed.
 (processed cache and EE task registry) persist in named Docker volumes across
 restarts. To start over with a clean state: `docker compose down -v`.
 
-For cloud credentials, either mount a service-account key by uncommenting the
-`secrets/service-account.json` volume line in `docker-compose.yml` and setting
+For cloud credentials, mount a service-account key at
+`secrets/service-account.json` and set
 `GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json` in
 `backend/.env` and `daily_pipeline/.env`, or otherwise provide Application
 Default Credentials to the container. Also set `PIPELINE_CORS_ORIGINS` in

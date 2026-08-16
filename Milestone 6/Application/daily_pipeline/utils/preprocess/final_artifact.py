@@ -132,6 +132,11 @@ def _slice_historical_archive(source: str, label_date: date) -> pd.DataFrame | N
     return frame.reset_index(drop=True)
 
 
+def slice_historical_archive(source: str, label_date: date) -> pd.DataFrame | None:
+    """Public read-only day slice used by preparation and validation APIs."""
+    return _slice_historical_archive(source, label_date)
+
+
 def _materialize_day_parquet(
     frame: pd.DataFrame,
     label_date: date,

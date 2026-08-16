@@ -28,6 +28,9 @@ export class HttpPipelineService {
   createRun(predictionDate: string): Promise<PipelineRun> {
     return this.request("/pipeline-runs", { method: "POST", body: JSON.stringify({ predictionDate }) });
   }
+  cancelRun(runId: string): Promise<PipelineRun> {
+    return this.request(`/pipeline-runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" });
+  }
   getRun(runId: string): Promise<PipelineRun> { return this.request(`/pipeline-runs/${encodeURIComponent(runId)}`); }
   listRuns(predictionDate?: string): Promise<PipelineRun[]> {
     const query = predictionDate ? `?predictionDate=${encodeURIComponent(predictionDate)}&limit=10` : "?limit=10";

@@ -33,6 +33,8 @@ def label_day_to_cells(
     vsigs_prefix: str,
     confidence_min: float,
     resolution: float = 0.25,
+    *,
+    strict: bool = False,
 ) -> pd.DataFrame:
     """Map FIRMS fire pixels (confidence >= threshold) onto ERA5 cell_ids for one day."""
     os.environ.setdefault("GS_NO_SIGN_REQUEST", "YES")
@@ -58,6 +60,8 @@ def label_day_to_cells(
             lats = np.asarray(ys, dtype="float64")
             cell_ids = lonlat_to_cell_ids(lons, lats, resolution=resolution)
     except Exception as exc:
+        if strict:
+            raise RuntimeError(f"FIRMS read failed for {date.date()} ({path})") from exc
         logger.warning("FIRMS read failed for %s (%s): %s", date.date(), path, exc)
         return pd.DataFrame(columns=_EMPTY_COLS)
 

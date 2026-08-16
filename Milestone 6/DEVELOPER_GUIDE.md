@@ -30,6 +30,34 @@ prepares missing causal inputs, validates the 86-feature contract, and writes
 `final_processed/YYYY-MM-DD_test.parquet`. The inference service then scores
 the California grid and returns the risk map and ranked cells.
 
+`POST /api/v1/pipeline-runs/{runId}/cancel` atomically changes an active run to
+`interrupted` with `cancelled_by_user`, then sends `SIGTERM` to the pipeline's
+process group and escalates to `SIGKILL` after a short grace period. Conditional
+store updates keep buffered pipeline events from overwriting the terminal
+state. Queued cancellation prevents the worker from claiming the run. This
+stops local orchestration only; already-submitted Earth Engine exports are not
+deleted.
+
+The supported maximum label date is tomorrow in `America/Los_Angeles`. A
+tomorrow request first reuses a valid final parquet, then performs a read-only
+GCS source inventory. If any required object is missing, the run terminates as
+`unavailable`; it does not schedule downloads or Earth Engine exports. Today
+and historical dates retain the normal prepare-missing-inputs behavior.
+
+The frontend also reads `GET /api/v1/model/evaluation`. This versioned response
+contains the champion model's held-out 2025 scorecard and must remain clearly
+labeled as historical evaluation rather than selected-forecast performance.
+
+After a risk map succeeds, the frontend requests
+`GET /api/v1/validation/day?date=YYYY-MM-DD`. Dates before California today use
+the exact `load_scored_day` roster already cached for the map. Truth comes from
+a predicate-pushed historical archive slice for 2019–2025 or a completed daily
+FIRMS GeoTIFF for 2026 onward. FIRMS confidence must be at least 30. Today and
+tomorrow return `not_mature`; absent completed prior-day objects return
+`pending`, without scheduling any cloud work. Authentication and decode errors
+remain explicit 503 responses. Keep this label path read-only and separate from
+the 86-feature parquet so observed outcomes can never leak into inference.
+
 ## Requirements
 
 - Python 3.12
@@ -134,3 +162,5 @@ Keep frontend and backend response types aligned. The detailed contract is in
   a non-interactive service account with the required GCS/Earth Engine access.
 - **A run appears stuck:** inspect its file in `backend/.state/logs/`; external
   Earth Engine exports may legitimately take several minutes.
+- **Tomorrow is unavailable:** inspect the returned source inventory. This is a
+  terminal non-error state and intentionally starts no cloud preparation.

@@ -98,6 +98,7 @@ def prepared_frame(label_date: date = date(2026, 8, 12)):
     frame["label_date"] = day
     frame["eo_asof_date"] = day - pd.Timedelta(days=1)
     frame["feature_end_date"] = day - pd.Timedelta(days=6)
+    frame["y_fire"] = [1, 0]
     return frame
 
 
@@ -201,6 +202,7 @@ def test_2025_missing_daily_slices_archive(tmp_path, monkeypatch):
     assert cached.is_file()
     cached_frame = pd.read_parquet(cached)
     assert set(cached_frame["label_date"].astype(str)) == {"2025-06-15"}
+    assert cached_frame["y_fire"].tolist() == [1, 0]
 
 
 def test_day_absent_from_archive_returns_none(tmp_path, monkeypatch):

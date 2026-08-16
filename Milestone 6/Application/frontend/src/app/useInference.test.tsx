@@ -20,25 +20,35 @@ const riskMap = {
   }],
 } as const;
 
+const validation = {
+  status: "available", date: "2025-08-01", modelVersion: "model-v1",
+  labelSource: "historical_archive", message: "Ready", provenance: "firms_observation",
+  items: [], summary: { observedFireCells: 0, capturedInTop25: 0, recallAt25: null, precisionAt25: 0, falseAlerts: 1, top25Count: 1 },
+} as const;
+
 describe("useInference", () => {
   it("automatically scores and loads the highest-priority cell", async () => {
     const service = {
       getGeometry: vi.fn().mockResolvedValue(geometry),
       getRiskMap: vi.fn().mockResolvedValue(riskMap),
+      getDailyValidation: vi.fn().mockResolvedValue(validation),
       getPrediction: vi.fn().mockResolvedValue({ regionId: "cell-a" }),
     } as any;
     const { result } = renderHook(() => useInference(service, "2025-08-01"));
 
     await waitFor(() => expect(result.current.riskMap?.items[0].areaId).toBe("cell-a"));
     await waitFor(() => expect(result.current.prediction?.regionId).toBe("cell-a"));
+    await waitFor(() => expect(result.current.validation?.status).toBe("available"));
     expect(service.getRiskMap).toHaveBeenCalledWith("2025-08-01");
     expect(service.getPrediction).toHaveBeenCalledWith("cell-a", "2025-08-01");
+    expect(service.getDailyValidation).toHaveBeenCalledWith("2025-08-01");
   });
 
   it("keeps inference errors separate from pipeline state", async () => {
     const service = {
       getGeometry: vi.fn().mockResolvedValue(geometry),
       getRiskMap: vi.fn().mockRejectedValue(new Error("Model unavailable")),
+      getDailyValidation: vi.fn(),
       getPrediction: vi.fn(),
     } as any;
     const { result } = renderHook(() => useInference(service, "2025-08-01"));
