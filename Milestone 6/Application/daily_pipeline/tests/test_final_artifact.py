@@ -16,6 +16,7 @@ if str(UTILS) not in sys.path:
 from preprocess.final_artifact import (  # noqa: E402
     _slice_historical_archive,
     existing_final_artifact,
+    write_artifact_provenance,
 )
 
 
@@ -121,6 +122,43 @@ def test_valid_existing_parquet_is_reused_without_local_file(tmp_path):
     assert artifact["featureCount"] == 86
     assert artifact["cellCount"] == 2
     assert blob.download_calls == 1
+
+
+def test_live_artifact_without_provenance_requires_reconstruction(tmp_path):
+    artifact = existing_final_artifact(
+        date(2026, 8, 12),
+        config(tmp_path),
+        storage_client=FakeClient(FakeBlob(parquet_bytes(prepared_frame()))),
+        require_provenance=True,
+        expected_cutoff="2026-08-11T06:30:00-07:00",
+    )
+    assert artifact is None
+
+
+def test_local_provenance_records_cutoff_and_ordered_features(tmp_path):
+    cfg = config(tmp_path)
+    cfg["task"]["timezone"] = "America/Los_Angeles"
+    cfg["_forecast_context"] = {
+        "cutoffAt": "2026-08-11T06:30:00-07:00",
+        "timezone": "America/Los_Angeles",
+        "forecastMode": "provisional_tomorrow",
+        "sourceSnapshots": {"dem": {"ready": True, "mode": "static"}},
+    }
+    target = tmp_path / "2026-08-12_test.parquet"
+    frame = prepared_frame()
+    frame.to_parquet(target, index=False)
+    artifact, provenance_uri = write_artifact_provenance(
+        frame,
+        date(2026, 8, 12),
+        cfg,
+        object_uri=str(target),
+        feature_cols=FEATURES,
+        created_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
+    )
+    payload = __import__("json").loads(Path(provenance_uri).read_text())
+    assert artifact["forecastMode"] == "provisional_tomorrow"
+    assert payload["orderedFeatures"] == FEATURES
+    assert payload["cutoffAt"] == "2026-08-11T06:30:00-07:00"
 
 
 def test_missing_parquet_does_not_download(tmp_path):

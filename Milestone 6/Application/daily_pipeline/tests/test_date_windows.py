@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 import importlib.util
 from pathlib import Path
 import sys
@@ -18,6 +18,7 @@ export_module.export_champion_day = lambda *args, **kwargs: None
 export_module.validate_champion_artifact = lambda *args, **kwargs: []
 final_module = types.ModuleType("preprocess.final_artifact")
 final_module.existing_final_artifact = lambda *args, **kwargs: None
+final_module.write_artifact_provenance = lambda *args, **kwargs: ({}, "")
 module_stubs = {
     "preprocess": preprocess_pkg,
     "preprocess.build_stage_c_day": stage_module,
@@ -39,7 +40,7 @@ for name, previous in saved_modules.items():
 
 def config():
     return {
-        "task": {"lookback_days": 30, "history_days": 7, "era5_lag_days": 5, "lead_days": 1},
+        "task": {"lookback_days": 30, "history_days": 7, "era5_lag_days": 5, "lead_days": 1, "timezone": "America/Los_Angeles", "forecast_cutoff_local_time": "06:30"},
     }
 
 
@@ -82,7 +83,7 @@ def test_all_reuses_valid_final_before_raw_inventory(monkeypatch):
     artifact = {"labelDate": target.isoformat(), "featureCount": 86}
     events = []
     monkeypatch.setattr(run_daily, "pipeline_today", lambda _: target)
-    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: artifact)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: artifact)
     monkeypatch.setattr(
         run_daily,
         "cmd_download_for_labels",
@@ -102,7 +103,7 @@ def test_all_falls_through_when_final_is_missing(monkeypatch):
     target = date(2026, 8, 12)
     calls = {"download": 0, "build": 0}
     monkeypatch.setattr(run_daily, "pipeline_today", lambda _: target)
-    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: None)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: None)
     monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         run_daily,
@@ -125,7 +126,7 @@ def test_tomorrow_reuses_existing_final_before_preflight(monkeypatch):
     artifact = {"labelDate": target.isoformat(), "featureCount": 86}
     events = []
     monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
-    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: artifact)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: artifact)
     monkeypatch.setattr(
         run_daily,
         "preflight_source_inventory",
@@ -137,6 +138,27 @@ def test_tomorrow_reuses_existing_final_before_preflight(monkeypatch):
     assert events[-1][0][1] == "succeeded"
 
 
+def test_tomorrow_before_cutoff_is_unavailable_before_artifact_reuse(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = date(2026, 8, 14)
+    events = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(
+        run_daily,
+        "california_now",
+        lambda _: datetime.fromisoformat("2026-08-13T06:29:59-07:00"),
+    )
+    monkeypatch.setattr(
+        run_daily,
+        "existing_final_artifact",
+        lambda *_, **__: (_ for _ in ()).throw(AssertionError("reuse must wait for cutoff")),
+    )
+    monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: events.append((args, kwargs)))
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    assert events[-1][0][1] == "unavailable"
+    assert "06:30 California time" in events[-1][0][2]
+
+
 def test_tomorrow_missing_inventory_is_unavailable_without_cloud_work(monkeypatch):
     as_of = date(2026, 8, 13)
     target = as_of + run_daily.timedelta(days=1)
@@ -146,10 +168,13 @@ def test_tomorrow_missing_inventory_is_unavailable_without_cloud_work(monkeypatc
         "sentinel2": {"required": 7, "available": 7, "missing": 0, "scheduled": 0, "pending": 0},
         "sentinel5p": {"required": 31, "available": 31, "missing": 0, "scheduled": 0, "pending": 0},
     }
+    for item in inventory.values():
+        item["ready"] = item["missing"] == 0
+        item["message"] = "ready" if item["ready"] else "FIRMS history is incomplete."
     events = []
     monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
-    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: None)
-    monkeypatch.setattr(run_daily, "preflight_source_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: None)
+    monkeypatch.setattr(run_daily, "build_cutoff_inventory", lambda *_args, **_kwargs: inventory)
     monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: events.append((args, kwargs)))
     monkeypatch.setattr(
         run_daily,
@@ -165,7 +190,7 @@ def test_tomorrow_missing_inventory_is_unavailable_without_cloud_work(monkeypatc
     assert run_daily.cmd_all(_all_args(target), config()) == 0
     unavailable = [event for event in events if event[0][1] == "unavailable"]
     assert len(unavailable) == 1
-    assert unavailable[0][0][2] == "Tomorrow's data is not available yet."
+    assert unavailable[0][0][2] == "FIRMS history is incomplete."
     assert unavailable[0][1]["inventory"] == inventory
 
 
@@ -173,13 +198,13 @@ def test_tomorrow_complete_inventory_builds_without_download_scheduling(monkeypa
     as_of = date(2026, 8, 13)
     target = as_of + run_daily.timedelta(days=1)
     inventory = {
-        key: {"required": 1, "available": 1, "missing": 0, "scheduled": 0, "pending": 0}
+        key: {"required": 1, "available": 1, "missing": 0, "scheduled": 0, "pending": 0, "ready": True, "message": "ready"}
         for key in ("era5", "firms", "sentinel2", "sentinel5p")
     }
     built = []
     monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
-    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_: None)
-    monkeypatch.setattr(run_daily, "preflight_source_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: None)
+    monkeypatch.setattr(run_daily, "build_cutoff_inventory", lambda *_args, **_kwargs: inventory)
     monkeypatch.setattr(run_daily, "emit_event", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         run_daily,

@@ -33,6 +33,7 @@ class Settings:
     cors_origins: tuple[str, ...]
     timezone: str
     lookback_days: int
+    cutoff_local_time: str = "06:30"
     expected_feature_count: int = 86
     min_prediction_date: str = "2019-01-01"
 
@@ -85,5 +86,6 @@ def load_settings() -> Settings:
         python_executable=python_executable,
         cors_origins=cors,
         timezone=str(raw["task"].get("timezone", "America/Los_Angeles")),
+        cutoff_local_time=str(raw["task"].get("forecast_cutoff_local_time", "06:30")),
         lookback_days=int(raw["task"].get("lookback_days", 30)),
     )

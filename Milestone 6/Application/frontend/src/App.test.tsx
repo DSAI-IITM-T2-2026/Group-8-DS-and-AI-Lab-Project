@@ -6,6 +6,7 @@ const config = {
   minPredictionDate: "2019-01-01",
   maxPredictionDate: "2026-08-17",
   timezone: "America/Los_Angeles",
+  cutoffLocalTime: "06:30",
   lookbackDays: 30,
   expectedFeatureCount: 86,
 };
@@ -39,9 +40,11 @@ describe("App tomorrow workflow", () => {
     });
 
     render(<App />);
-    const input = await screen.findByLabelText("Prediction day");
+    const input = await screen.findByLabelText("Prediction day (California time)");
     await waitFor(() => expect(input).toHaveValue("2026-08-17"));
     expect(screen.getByRole("button", { name: /tomorrow/i })).toHaveClass("is-selected");
+    expect(screen.getByText("All prediction dates and data cutoffs use California time.")).toBeInTheDocument();
+    expect(screen.getByText(/Data cutoff: 06:30 California time/)).toBeInTheDocument();
   });
 
   it("renders missing tomorrow data as a neutral unavailable state", async () => {
@@ -67,7 +70,7 @@ describe("App tomorrow workflow", () => {
     });
 
     render(<App />);
-    expect(await screen.findByText("Tomorrow’s data is not available yet")).toBeInTheDocument();
+    expect(await screen.findByText("Provisional tomorrow forecast is unavailable")).toBeInTheDocument();
     expect(screen.queryByText("Preparation needs attention")).not.toBeInTheDocument();
     expect(screen.queryByText("Prediction results")).not.toBeInTheDocument();
   });

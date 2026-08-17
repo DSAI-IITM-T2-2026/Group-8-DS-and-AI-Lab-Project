@@ -10,6 +10,12 @@ button, input { font: inherit; }
 button { cursor: pointer; }
 .app-shell { min-height: 100vh; }
 .topbar { height: 78px; padding: 0 clamp(24px, 5vw, 76px); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.9); border-bottom: 1px solid #dfe6e8; backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 10; }
+.california-time-notice { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 9px 18px; background: #244f45; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; position: sticky; top: 78px; z-index: 9; }
+.california-time-notice svg { width: 16px; height: 16px; }
+.cutoff-note, .run-time-context, .results-time-context { color: #46665f; font-size: 12px; }
+.cutoff-note { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; }
+.run-time-context { margin: -8px 0 18px; font-weight: 700; }
+.results-time-context { margin: 5px 0 0; font-weight: 600; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #192b31; }
 .brand img { width: 56px; height: 60px; object-fit: contain; flex: 0 0 auto; }
 .brand span { display: grid; gap: 2px; }
@@ -125,7 +131,8 @@ input[type="date"]:focus { border-color: #3b8a71; box-shadow: 0 0 0 4px #dff0ea;
 .stage-track .is-complete > span { border: 0; }
 .stage-track .is-current { color: #bd563f; }
 .stage-track .is-current > span { border-color: #d9634b; box-shadow: 0 0 0 5px #fae9e5; }
-.source-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.source-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.source-grid--unavailable { margin-bottom: 16px; }
 .source-card { display: flex; gap: 10px; padding: 14px; background: #f7f9f9; border-radius: 12px; }
 .source-card > svg { color: #3c806b; width: 21px; height: 21px; flex: 0 0 auto; }
 .source-card strong, .source-card small { display: block; }
@@ -247,6 +254,7 @@ footer { padding: 30px; text-align: center; color: #94a0a4; font-size: 10px; }
 }
 @media (max-width: 620px) {
   .topbar { height: 68px; padding: 0 18px; }
+  .california-time-notice { top: 68px; }
   .brand img { width: 48px; height: 52px; }
   .system-state { display: none; }
   main { padding: 45px 18px 35px; }

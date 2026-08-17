@@ -5,6 +5,7 @@ export interface PipelineConfig {
   minPredictionDate: string;
   maxPredictionDate: string;
   timezone: string;
+  cutoffLocalTime: string;
   lookbackDays: number;
   expectedFeatureCount: number;
 }
@@ -15,6 +16,13 @@ export interface SourceInventoryItem {
   missing: number;
   scheduled: number;
   pending: number;
+  requiredThroughDate?: string;
+  selectedThroughDate?: string;
+  selectedWindowStartDate?: string;
+  ageDays?: number;
+  mode?: "exact" | "latest_causal" | "imputed" | "static";
+  ready?: boolean;
+  message?: string;
 }
 
 export interface ArtifactSummary {
@@ -26,6 +34,11 @@ export interface ArtifactSummary {
   eoAsOfDate: string;
   featureEndDate: string;
   createdAt: string;
+  cutoffAt?: string;
+  timezone?: string;
+  forecastMode?: string;
+  sourceSnapshots?: Record<string, SourceInventoryItem>;
+  provenanceUri?: string;
 }
 
 export interface PipelineRun {

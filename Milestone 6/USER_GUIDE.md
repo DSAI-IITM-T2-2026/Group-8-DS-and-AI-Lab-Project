@@ -14,7 +14,7 @@ Open [Wildfire IQ](http://34.9.154.237:8080/) in your web browser.
 ## Create a forecast
 
 1. Open the application using the link above.
-2. Under **Select prediction date**, use the default **Tomorrow** selection or
+2. Under **Select prediction date**, use **Tomorrow in California** or
    choose an earlier date within the displayed range.
 3. Select **Generate wildfire forecast**.
 4. Follow the progress shown under **Forecast run**.
@@ -30,11 +30,16 @@ to **Stopped** and can be started again later. Cloud exports already submitted
 before stopping may continue remotely; their completed data is reused by the
 next run rather than discarded.
 
-Tomorrow is handled conservatively. The app uses an existing validated daily
-artifact or proceeds only when every required causal source file is already
-available. It does not launch long cloud preparation jobs for tomorrow. If the
-source set is incomplete, the page simply reports that tomorrow's data is not
-available yet; check again later.
+All prediction dates and data cutoffs use California time
+(`America/Los_Angeles`). Tomorrow becomes eligible at 06:30 California time on
+the preceding day. It is labelled **Provisional tomorrow forecast** and uses
+the unchanged trained model with the causal inputs available by the cutoff.
+The page shows the actual selected date and freshness for each source.
+
+Tomorrow preparation is read-only. It does not launch cloud preparation jobs.
+If exact ERA5 through D−6, FIRMS through D−2, the static DEM, a completed causal
+Sentinel-2 window, or a Sentinel-5P observation no more than seven days old is
+unavailable, the page identifies that source and asks you to check again later.
 
 ## Understand the model evaluation scorecard
 
@@ -78,8 +83,8 @@ no observed fire cells.
 
 - **Forecast is still waiting:** Earth Engine may still be preparing satellite
   data. Leave the run active and check again later.
-- **Tomorrow's data is not available yet:** no cloud preparation was started.
-  Check again after the daily source files have arrived.
+- **Provisional tomorrow forecast is unavailable:** read the source-specific
+  message and freshness cards. No cloud preparation was started.
 - **Preparation needs attention:** read the message and select **Retry**.
 - **Scoring needs attention:** select **Retry scoring**.
 - **The app does not load:** contact the application administrator and include
@@ -88,6 +93,7 @@ no observed fire cells.
 ## Good to know
 
 - Forecasts use only information available before the selected prediction day.
+- All displayed dates, generation times, and cutoffs use California time.
 - Map areas are model grid cells, not counties.
 - A high rank is relative to other cells on that day; it does not guarantee
   that a wildfire will occur.

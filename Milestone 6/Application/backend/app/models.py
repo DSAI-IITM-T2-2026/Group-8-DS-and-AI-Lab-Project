@@ -24,6 +24,13 @@ class SourceInventoryItem(BaseModel):
     missing: int = 0
     scheduled: int = 0
     pending: int = 0
+    requiredThroughDate: date | None = None
+    selectedThroughDate: date | None = None
+    selectedWindowStartDate: date | None = None
+    ageDays: int | None = None
+    mode: Literal["exact", "latest_causal", "imputed", "static"] | None = None
+    ready: bool | None = None
+    message: str | None = None
 
 
 class ArtifactSummary(BaseModel):
@@ -35,6 +42,11 @@ class ArtifactSummary(BaseModel):
     eoAsOfDate: date
     featureEndDate: date
     createdAt: datetime
+    cutoffAt: datetime | None = None
+    timezone: str | None = None
+    forecastMode: str = "standard"
+    sourceSnapshots: dict[str, SourceInventoryItem] = Field(default_factory=dict)
+    provenanceUri: str | None = None
 
 
 class PipelineRun(BaseModel):
@@ -57,6 +69,7 @@ class PipelineConfig(BaseModel):
     minPredictionDate: date
     maxPredictionDate: date
     timezone: str
+    cutoffLocalTime: str
     lookbackDays: int
     expectedFeatureCount: int
 

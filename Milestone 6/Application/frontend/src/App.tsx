@@ -37,9 +37,10 @@ const STAGES: Array<{ id: PipelineStage; label: string }> = [
 
 const SOURCES = [
   ["era5", "ERA5", "Weather history through D−6"],
-  ["firms", "FIRMS", "Prior fire context through D−1"],
-  ["sentinel2", "Sentinel-2", "Optical snapshot through D−1"],
-  ["sentinel5p", "Sentinel-5P", "Atmospheric snapshot through D−1"],
+  ["firms", "FIRMS", "Neighbour-fire history through D−2"],
+  ["sentinel2", "Sentinel-2", "Latest causal completed window"],
+  ["sentinel5p", "Sentinel-5P", "Latest causal observation (maximum age 7 days)"],
+  ["dem", "Copernicus DEM", "Verified static terrain artifact"],
 ] as const;
 
 function dateShift(value: string, amount: number) {
@@ -50,6 +51,7 @@ function dateShift(value: string, amount: number) {
 
 function sourceSummary(item?: SourceInventoryItem) {
   if (!item) return "Checked when the run starts";
+  if (item.message) return item.message;
   if (item.missing === 0) return `${item.available} of ${item.required} already available`;
   return `${item.available} available · ${item.missing} to prepare`;
 }
@@ -65,6 +67,8 @@ export function App() {
   const isActive = pipeline.run && ["queued", "running", "waiting_external"].includes(pipeline.run.status);
   const wasCancelled = pipeline.run?.status === "interrupted" && pipeline.run.errorCode === "cancelled_by_user";
   const hasError = pipeline.error || pipeline.run?.status === "failed" || (pipeline.run?.status === "interrupted" && !wasCancelled);
+  const isTomorrow = pipeline.selectedDate === pipeline.config?.maxPredictionDate;
+  const cutoffDate = pipeline.selectedDate ? dateShift(pipeline.selectedDate, -1) : "";
 
   return (
     <div className="app-shell">
@@ -75,6 +79,7 @@ export function App() {
         </a>
         <div className="system-state"><span /> Pipeline workspace <b>Local / VM</b></div>
       </header>
+      <div className="california-time-notice"><ClockCountdown weight="fill" /> All prediction dates and data cutoffs use California time.</div>
 
       <main id="top">
         <section className="hero">
@@ -87,14 +92,14 @@ export function App() {
           <article className="card request-card">
             <div className="card-heading"><span className="icon-box"><CalendarBlank /></span><div><small>Step 01</small><h2>Select prediction date</h2></div></div>
             <div className="date-label-row">
-              <label htmlFor="prediction-date">Prediction day</label>
+              <label htmlFor="prediction-date">Prediction day (California time)</label>
               <button
                 type="button"
                 className={pipeline.selectedDate === pipeline.config?.maxPredictionDate ? "tomorrow-shortcut is-selected" : "tomorrow-shortcut"}
                 onClick={() => pipeline.config && pipeline.selectDate(pipeline.config.maxPredictionDate)}
                 disabled={!pipeline.config || Boolean(isActive)}
               >
-                <ClockCountdown /> Tomorrow
+                <ClockCountdown /> Tomorrow in California
               </button>
             </div>
             <div className="date-row">
@@ -117,12 +122,13 @@ export function App() {
                 <i />
                 <div><small>ERA5 feature end</small><strong>{dateShift(pipeline.selectedDate, -6)}</strong></div>
                 <i />
-                <div><small>Satellite / fire as-of</small><strong>{dateShift(pipeline.selectedDate, -1)}</strong></div>
+                <div><small>Satellite as-of</small><strong>{dateShift(pipeline.selectedDate, -1)}</strong></div>
                 <i />
                 <div className="target-date"><small>Prediction day</small><strong>{pipeline.selectedDate}</strong></div>
               </div>
             ) : <div className="window-card window-card--loading">Connecting to the forecasting service…</div>}
             <p className="causal-note"><CheckCircle weight="fill" /> Only information available before the prediction day is used. No future fire labels enter the model features.</p>
+            {isTomorrow ? <p className="cutoff-note"><ClockCountdown /> Data cutoff: {pipeline.config?.cutoffLocalTime ?? "06:30"} California time on {cutoffDate}. FIRMS context ends on {dateShift(pipeline.selectedDate, -2)}.</p> : null}
           </article>
 
           <aside className="card readiness-card">
@@ -130,7 +136,8 @@ export function App() {
             <div className="contract-number"><strong>{pipeline.config?.expectedFeatureCount ?? 86}</strong><span>locked model features<br />across high & medium-risk cells</span></div>
             <dl>
               <div><dt>Supported dates</dt><dd>{pipeline.config ? `${pipeline.config.minPredictionDate} — ${pipeline.config.maxPredictionDate}` : "Loading…"}</dd></div>
-              <div><dt>Time reference</dt><dd>California · {pipeline.config?.timezone ?? "America/Los_Angeles"}</dd></div>
+              <div><dt>Time reference</dt><dd>California time · {pipeline.config?.timezone ?? "America/Los_Angeles"}</dd></div>
+              <div><dt>Tomorrow cutoff</dt><dd>{pipeline.config?.cutoffLocalTime ?? "06:30"} California time</dd></div>
               <div><dt>Final object</dt><dd><code>final_processed/D_test.parquet</code></dd></div>
             </dl>
           </aside>
@@ -151,6 +158,7 @@ export function App() {
                 {isActive ? <button type="button" className="stop-run-button" disabled={pipeline.isStopping} onClick={() => void pipeline.stop()}><StopCircle weight="fill" /> {pipeline.isStopping ? "Stopping…" : "Stop forecast"}</button> : null}
               </div>
             </div>
+            <p className="run-time-context">California time · America/Los_Angeles{isTomorrow ? ` · Data cutoff ${pipeline.config?.cutoffLocalTime ?? "06:30"} on ${cutoffDate}` : ""}</p>
 
             {hasError ? (
               <div className="error-panel" role="alert"><WarningCircle weight="fill" /><div><strong>Preparation needs attention</strong><p>{pipeline.error || pipeline.run?.message}</p><small>{pipeline.run?.errorCode}</small></div><button type="button" onClick={() => void pipeline.retry()}><ArrowClockwise /> Retry</button></div>
@@ -161,7 +169,7 @@ export function App() {
             ) : null}
 
             {pipeline.run?.status === "unavailable" ? (
-              <div className="data-unavailable-panel"><ClockCountdown /><div><strong>Tomorrow’s data is not available yet</strong><p>The required causal source files are not complete. No cloud preparation was started; check again later.</p></div></div>
+              <><div className="data-unavailable-panel"><ClockCountdown /><div><strong>Provisional tomorrow forecast is unavailable</strong><p>{pipeline.run.message}</p></div></div><div className="source-grid source-grid--unavailable">{SOURCES.map(([key, name, detail]) => { const item = pipeline.run?.sourceInventory[key]; return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small><p>{sourceSummary(item)}</p></div></div>; })}</div></>
             ) : null}
 
             {wasCancelled ? (
@@ -180,7 +188,7 @@ export function App() {
                 </ol>
                 <div className="source-grid">
                   {SOURCES.map(([key, name, detail]) => {
-                    const item = pipeline.run?.sourceInventory[key];
+                    const item = pipeline.run?.sourceInventory[key] ?? pipeline.run?.artifact?.sourceSnapshots?.[key];
                     return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small><p>{sourceSummary(item)}</p></div></div>;
                   })}
                 </div>
@@ -188,7 +196,7 @@ export function App() {
             ) : null}
 
             {pipeline.run?.status === "succeeded" && pipeline.run.artifact ? (
-              <div className="success-panel"><div className="success-icon"><FileArrowDown weight="fill" /></div><div className="success-copy"><small>Model input ready</small><h2>{pipeline.run.artifact.labelDate}_test.parquet</h2><p>The causal feature contract passed. Wildfire IQ is scoring the complete daily grid from this verified artifact.</p><code>{pipeline.run.artifact.objectUri}</code></div><div className="success-metrics"><div><strong>{pipeline.run.artifact.featureCount}</strong><small>features</small></div><div><strong>{pipeline.run.artifact.cellCount}</strong><small>cells</small></div><div><strong>{pipeline.run.artifact.rowCount}</strong><small>rows</small></div></div></div>
+              <div className="success-panel"><div className="success-icon"><FileArrowDown weight="fill" /></div><div className="success-copy"><small>{pipeline.run.artifact.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Model input ready"}</small><h2>{pipeline.run.artifact.labelDate}_test.parquet</h2><p>The causal feature contract passed. Generated {new Date(pipeline.run.artifact.createdAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time{pipeline.run.artifact.cutoffAt ? ` · cutoff ${new Date(pipeline.run.artifact.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}` : ""}.</p><code>{pipeline.run.artifact.objectUri}</code></div><div className="success-metrics"><div><strong>{pipeline.run.artifact.featureCount}</strong><small>features</small></div><div><strong>{pipeline.run.artifact.cellCount}</strong><small>cells</small></div><div><strong>{pipeline.run.artifact.rowCount}</strong><small>rows</small></div></div></div>
             ) : null}
           </section>
         ) : null}
@@ -196,6 +204,8 @@ export function App() {
         {inferenceDate ? (
           <RiskResults
             predictionDate={inferenceDate}
+            cutoffAt={pipeline.run?.artifact?.cutoffAt}
+            forecastMode={pipeline.run?.artifact?.forecastMode}
             geometry={inference.geometry}
             riskMap={inference.riskMap}
             prediction={inference.prediction}

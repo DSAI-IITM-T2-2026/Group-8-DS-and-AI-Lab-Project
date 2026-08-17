@@ -4,6 +4,8 @@ import type { DailyValidationResponse, GridFeature, PredictionResponse, RegionGe
 
 interface RiskResultsProps {
   predictionDate: string;
+  cutoffAt?: string;
+  forecastMode?: string;
   geometry?: RegionGeometryResponse;
   riskMap?: RiskMapResponse;
   prediction?: PredictionResponse;
@@ -132,7 +134,7 @@ export function RiskResults(props: RiskResultsProps) {
   return (
     <section className="results-section" aria-live="polite">
       <div className="section-heading">
-        <div><small>Step 03</small><h2>Prediction results</h2></div>
+        <div><small>{props.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Step 03"}</small><h2>Prediction results</h2>{props.cutoffAt ? <p className="results-time-context">Data cutoff: {new Date(props.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time · America/Los_Angeles</p> : <p className="results-time-context">California time · America/Los_Angeles</p>}</div>
         {props.riskMap ? <span className="status-pill status-pill--succeeded">Model scored</span> : null}
       </div>
 

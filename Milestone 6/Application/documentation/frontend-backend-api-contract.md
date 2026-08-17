@@ -31,6 +31,7 @@ The browser submits a prediction date and polls a persistent backend job. After 
   "minPredictionDate": "2019-01-01",
   "maxPredictionDate": "2026-08-14",
   "timezone": "America/Los_Angeles",
+  "cutoffLocalTime": "06:30",
   "lookbackDays": 30,
   "expectedFeatureCount": 86
 }
@@ -59,7 +60,12 @@ The API returns `202 Accepted`. If the same date already has a `queued`, `runnin
   "progressCompleted": 12,
   "progressTotal": 31,
   "sourceInventory": {
-    "era5": { "required": 44, "available": 44, "missing": 0, "scheduled": 0, "pending": 0 }
+    "era5": {
+      "required": 44, "available": 44, "missing": 0, "scheduled": 0, "pending": 0,
+      "requiredThroughDate": "2026-08-08", "selectedThroughDate": "2026-08-08",
+      "ageDays": 0, "mode": "exact", "ready": true,
+      "message": "ERA5 history is complete through 2026-08-08."
+    }
   },
   "artifact": null,
   "errorCode": null,
@@ -94,14 +100,19 @@ Successful runs contain:
 ```json
 {
   "artifact": {
-    "objectUri": "gs://wildfire-detection-first/final_processed/2025-08-01_test.parquet",
+    "objectUri": "gs://wildfire-detection-first/final_processed/2026-08-14_test.parquet",
     "rowCount": 437,
     "featureCount": 86,
     "cellCount": 437,
-    "labelDate": "2025-08-01",
-    "eoAsOfDate": "2025-07-31",
-    "featureEndDate": "2025-07-26",
-    "createdAt": "2026-08-13T11:00:00Z"
+    "labelDate": "2026-08-14",
+    "eoAsOfDate": "2026-08-13",
+    "featureEndDate": "2026-08-08",
+    "createdAt": "2026-08-13T11:00:00Z",
+    "cutoffAt": "2026-08-13T06:30:00-07:00",
+    "timezone": "America/Los_Angeles",
+    "forecastMode": "provisional_tomorrow",
+    "sourceSnapshots": {},
+    "provenanceUri": "gs://wildfire-detection-first/final_processed/2026-08-14_test.provenance.json"
   }
 }
 ```
@@ -110,11 +121,15 @@ Successful runs contain:
 
 - Accept `2019-01-01` through California tomorrow; reject later dates.
 - Treat the selected date as label/prediction day `D`.
-- Use EO and prior-fire information through `D−1` and ERA5 through `D−6`.
+- Use ERA5 through `D−6` and FIRMS neighbour history through `D−2`.
+- For tomorrow, use the latest completed Sentinel-2 window ending no later
+  than `D−1`, the latest Sentinel-5P observation through `D−1` with maximum
+  age seven days, and the verified static DEM.
 - Build rolling features from the preceding 30 label days.
-- For tomorrow, reuse a validated final artifact or perform a read-only source
-  inventory. If any source object is missing, return terminal `unavailable`
-  without scheduling downloads or Earth Engine work.
+- A tomorrow run is eligible at 06:30 California time on `D−1`. Reuse requires
+  a matching parquet and provenance sidecar. Otherwise perform a cutoff-aware,
+  read-only inventory and return source-specific `unavailable` without
+  scheduling downloads or Earth Engine work when a causal input is missing.
 - Reject unsupported dates with `422` and a `fieldErrors.predictionDate` entry.
 - Do not expose credentials, local paths, tracebacks, or private configuration.
 

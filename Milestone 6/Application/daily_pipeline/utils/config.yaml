@@ -27,8 +27,9 @@ gee:
   grid_asset_id: projects/plated-mechanic-418917/assets/california_s2_grid_1km_v3
 
 task:
-  # Used by cron and date.today() caps so IST/UTC hosts still mean California "today".
+  # Used by cron and date.today() caps so every host uses California "today".
   timezone: America/Los_Angeles
+  forecast_cutoff_local_time: "06:30"
   history_days: 7
   lead_days: 1
   era5_lag_days: 5
@@ -36,6 +37,9 @@ task:
   # Prior label days for champion rolling (14d/30d weather + neighbor lag2/7d).
   # Match M5 feature engineering; Stage C month assemble clips to label_date (not MonthEnd).
   lookback_days: 30
+
+cutoff_policy:
+  sentinel5p_max_age_days: 7
 
 paths:
   # Relative to utils/ (except local_cache → daily_pipeline/.cache)

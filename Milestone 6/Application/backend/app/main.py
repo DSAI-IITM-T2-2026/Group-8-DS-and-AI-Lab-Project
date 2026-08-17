@@ -95,6 +95,7 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
             minPredictionDate=settings.min_prediction_date,
             maxPredictionDate=settings.max_prediction_date,
             timezone=settings.timezone,
+            cutoffLocalTime=settings.cutoff_local_time,
             lookbackDays=settings.lookback_days,
             expectedFeatureCount=settings.expected_feature_count,
         )

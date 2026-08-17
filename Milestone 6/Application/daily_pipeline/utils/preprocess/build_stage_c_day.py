@@ -43,13 +43,19 @@ def _patch_flat_eo_listing(daily_cfg: dict) -> None:
     import numerical_nextday.data.gcs_features as gf
 
     bucket = daily_cfg["gcs"]["bucket"]
+    snapshots = (daily_cfg.get("_forecast_context") or {}).get("sourceSnapshots", {})
 
     def flat_list(nf, bucket_name, prefix, years=None):  # noqa: ANN001, ARG001
         s2_prefix = daily_cfg["gcs"]["prefixes"]["sentinel2"].rstrip("/")
         if prefix.rstrip("/") == s2_prefix:
             df = list_flat_s2(bucket_name, prefix)
+            source_key = "sentinel2"
         else:
             df = list_flat_s5p(bucket_name, prefix)
+            source_key = "sentinel5p"
+        allowed = set((snapshots.get(source_key) or {}).get("objectNames") or [])
+        if allowed and not df.empty:
+            df = df.loc[df["blob_name"].isin(allowed)].copy()
         if years and not df.empty:
             df = df.loc[df["year"].isin(years)].copy()
         if df.empty:
@@ -111,6 +117,10 @@ def run_stage_c_pipeline(
     era5_start_clip = pd.Timestamp(start) - pd.Timedelta(days=lag + lead + history)
     era5_end_clip = pd.Timestamp(as_of) - pd.Timedelta(days=lag + lead)
     firms_start_clip = pd.Timestamp(start)
+    forecast_context = daily_cfg.get("_forecast_context") or {}
+    firms_end_clip = pd.Timestamp(
+        forecast_context.get("firmsThroughDate", as_of)
+    ).normalize()
 
     logger.info(
         "Stage C build label_date=%s as_of=%s years=%s months=%s "
@@ -145,6 +155,7 @@ def run_stage_c_pipeline(
                 end_clip=end_clip,
                 era5_end_clip=era5_end_clip,
                 firms_start_clip=firms_start_clip,
+                firms_end_clip=firms_end_clip,
             )
         assemble_stage_a_year(
             m4_cfg,

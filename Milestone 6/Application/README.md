@@ -10,10 +10,18 @@ causal source data, creates and validates
 `final_processed/YYYY-MM-DD_test.parquet`, scores every supported grid cell with
 the champion model, and displays the daily risk map and ranked results.
 
-The newest supported date is California tomorrow. Tomorrow is selected by
-default and uses a preflight-only policy: a validated final parquet is reused,
-or all raw source objects must already exist. Missing tomorrow inputs produce a
-neutral unavailable result and never launch cloud preparation jobs.
+The newest supported date is tomorrow in California. All prediction dates and
+cutoffs use `America/Los_Angeles`. A tomorrow forecast becomes eligible at
+06:30 California time on the preceding day and remains provisional. It is
+read-only: the pipeline reuses only inputs present by that cutoff and never
+launches downloads or Earth Engine exports.
+
+Tomorrow requires exact ERA5 history through D−6, FIRMS neighbour history
+through D−2, the static DEM, the latest completed Sentinel-2 window ending no
+later than D−1, and the latest Sentinel-5P observation through D−1 with a
+maximum age of seven days. Each live parquet has an adjacent provenance JSON
+sidecar recording the cutoff and selected-source dates; legacy live parquets
+without that sidecar are reconstructed before reuse.
 
 ## Guides
 
@@ -133,9 +141,9 @@ backend at `http://127.0.0.1:8000`, so no frontend URL change is needed.
 2. Open the frontend and choose the date to predict.
 3. Select **Generate wildfire forecast**.
 4. The worker first checks for a valid final test parquet.
-5. If it is absent, the worker checks GCS for all required ERA5, FIRMS,
-   Sentinel-2, and Sentinel-5P inputs. Existing inputs are reused; only missing
-   inputs are prepared or scheduled.
+5. If it is absent, the worker checks GCS for ERA5, FIRMS, Sentinel-2,
+   Sentinel-5P, and DEM inputs. Tomorrow uses the read-only cutoff policy;
+   earlier dates retain the existing prepare-missing-inputs behaviour.
 6. The pipeline builds and validates the 86-feature parquet.
 7. The inference service scores the full supported California grid and the UI
    displays the map, top-25 cells, ranked list, probabilities, and cell details.

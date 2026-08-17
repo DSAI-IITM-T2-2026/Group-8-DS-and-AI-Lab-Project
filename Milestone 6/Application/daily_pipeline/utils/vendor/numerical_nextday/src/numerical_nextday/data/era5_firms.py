@@ -61,6 +61,7 @@ def build_era5_firms_month(
     start_clip: "pd.Timestamp | None" = None,
     era5_end_clip: "pd.Timestamp | None" = None,
     firms_start_clip: "pd.Timestamp | None" = None,
+    firms_end_clip: "pd.Timestamp | None" = None,
 ) -> Path | None:
     """Download/cache ERA5 daily + FIRMS cells for one calendar month.
 
@@ -100,8 +101,9 @@ def build_era5_firms_month(
         firms_start = max(firms_start, pd.Timestamp(firms_start_clip).normalize())
     elif start_clip is not None:
         firms_start = max(firms_start, pd.Timestamp(start_clip).normalize())
-    if end_clip is not None:
-        firms_end = min(firms_end, pd.Timestamp(end_clip).normalize())
+    firms_stop = firms_end_clip if firms_end_clip is not None else end_clip
+    if firms_stop is not None:
+        firms_end = min(firms_end, pd.Timestamp(firms_stop).normalize())
 
     raw_era5 = cache / "era5_raw"
     daily_tmp = cache / "_era5_daily_mvp"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 import io
+import json
 import logging
 import os
 from pathlib import Path
@@ -60,7 +61,8 @@ def _artifact_dict(
     feature_cols: list[str],
     created_at: datetime,
 ) -> dict:
-    return {
+    context = cfg.get("_forecast_context") or {}
+    artifact = {
         "objectUri": object_uri,
         "rowCount": int(len(frame)),
         "featureCount": len(feature_cols),
@@ -75,7 +77,58 @@ def _artifact_dict(
             )
         ).isoformat(),
         "createdAt": created_at.isoformat(),
+        "cutoffAt": context.get("cutoffAt"),
+        "timezone": context.get("timezone", cfg["task"].get("timezone")),
+        "forecastMode": context.get("forecastMode", "standard"),
+        "sourceSnapshots": context.get("sourceSnapshots", {}),
+        "provenanceUri": context.get("provenanceUri"),
     }
+    return artifact
+
+
+def write_artifact_provenance(
+    frame: pd.DataFrame,
+    label_date: date,
+    cfg: dict,
+    *,
+    object_uri: str,
+    feature_cols: list[str],
+    created_at: datetime,
+    storage_client: Any | None = None,
+) -> tuple[dict, str]:
+    """Write the immutable source/cutoff sidecar next to a live parquet."""
+    artifact = _artifact_dict(
+        frame,
+        label_date,
+        cfg,
+        object_uri=object_uri,
+        feature_cols=feature_cols,
+        created_at=created_at,
+    )
+    if object_uri.startswith("gs://"):
+        bucket_name, _, object_name = object_uri[5:].partition("/")
+        provenance_uri = f"gs://{bucket_name}/{object_name.removesuffix('.parquet')}.provenance.json"
+        artifact["provenanceUri"] = provenance_uri
+        payload = {**artifact, "orderedFeatures": feature_cols}
+        if storage_client is None:
+            from google.cloud import storage
+
+            storage_client = storage.Client(project=cfg["gcs"].get("project"))
+        provenance_name = provenance_uri[5:].partition("/")[2]
+        storage_client.bucket(bucket_name).blob(provenance_name).upload_from_string(
+            json.dumps(payload, indent=2, sort_keys=True),
+            content_type="application/json",
+        )
+    else:
+        path = Path(object_uri)
+        provenance_path = path.with_suffix(".provenance.json")
+        artifact["provenanceUri"] = str(provenance_path)
+        payload = {**artifact, "orderedFeatures": feature_cols}
+        provenance_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        provenance_uri = str(provenance_path)
+    return artifact, provenance_uri
 
 
 def _slice_historical_archive(source: str, label_date: date) -> pd.DataFrame | None:
@@ -229,6 +282,8 @@ def existing_final_artifact(
     cfg: dict,
     *,
     storage_client: Any | None = None,
+    require_provenance: bool = False,
+    expected_cutoff: str | None = None,
 ) -> dict | None:
     """Return metadata for a valid prepared parquet, otherwise request a rebuild.
 
@@ -265,12 +320,31 @@ def existing_final_artifact(
                 )
             else:
                 created_at = blob.updated or datetime.now().astimezone()
+                provenance: dict[str, Any] | None = None
+                provenance_name = object_name.removesuffix(".parquet") + ".provenance.json"
+                provenance_blob = storage_client.bucket(bucket_name).blob(provenance_name)
+                if provenance_blob.exists():
+                    try:
+                        provenance = json.loads(provenance_blob.download_as_text())
+                    except Exception as exc:
+                        logger.warning("Invalid provenance sidecar %s: %s", provenance_name, exc)
+                if require_provenance:
+                    valid_provenance = bool(
+                        provenance
+                        and provenance.get("labelDate") == label_date.isoformat()
+                        and provenance.get("cutoffAt") == expected_cutoff
+                        and provenance.get("timezone") == cfg["task"].get("timezone")
+                        and provenance.get("orderedFeatures") == feature_cols
+                    )
+                    if not valid_provenance:
+                        logger.info("Prepared parquet requires cutoff-aware reconstruction: %s", object_name)
+                        return None
                 logger.info(
                     "Reusing validated prepared parquet: gs://%s/%s",
                     bucket_name,
                     object_name,
                 )
-                return _artifact_dict(
+                artifact = _artifact_dict(
                     frame,
                     label_date,
                     cfg,
@@ -278,6 +352,16 @@ def existing_final_artifact(
                     feature_cols=feature_cols,
                     created_at=created_at,
                 )
+                if provenance:
+                    artifact.update({
+                        key: provenance.get(key)
+                        for key in (
+                            "cutoffAt", "timezone", "forecastMode",
+                            "sourceSnapshots", "provenanceUri",
+                        )
+                        if provenance.get(key) is not None
+                    })
+                return artifact
         else:
             logger.warning(
                 "Prepared parquet is empty and will be rebuilt: gs://%s/%s",

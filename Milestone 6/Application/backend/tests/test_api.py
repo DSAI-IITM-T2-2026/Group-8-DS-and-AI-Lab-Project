@@ -29,6 +29,8 @@ def test_config_and_date_validation(tmp_path: Path):
         config = client.get("/api/v1/pipeline/config")
         assert config.status_code == 200
         assert config.json()["minPredictionDate"] == "2019-01-01"
+        assert config.json()["cutoffLocalTime"] == "06:30"
+        assert config.json()["timezone"] == "America/Los_Angeles"
         california_today = datetime.now(ZoneInfo(configured.timezone)).date()
         assert config.json()["maxPredictionDate"] == (california_today + timedelta(days=1)).isoformat()
         accepted = client.post(

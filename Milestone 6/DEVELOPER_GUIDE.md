@@ -38,11 +38,19 @@ state. Queued cancellation prevents the worker from claiming the run. This
 stops local orchestration only; already-submitted Earth Engine exports are not
 deleted.
 
-The supported maximum label date is tomorrow in `America/Los_Angeles`. A
-tomorrow request first reuses a valid final parquet, then performs a read-only
-GCS source inventory. If any required object is missing, the run terminates as
-`unavailable`; it does not schedule downloads or Earth Engine exports. Today
-and historical dates retain the normal prepare-missing-inputs behavior.
+The supported maximum label date is tomorrow in `America/Los_Angeles`. The
+cutoff is 06:30 California time on D−1 and is offset-aware across daylight
+saving changes. Before the cutoff, the request is `unavailable`. After it, a
+tomorrow artifact is reused only when both its parquet and adjacent provenance
+JSON validate for the requested date and cutoff.
+
+Tomorrow inventory is read-only. ERA5 is exact through D−6 with complete
+rolling history; FIRMS is exact through D−2; DEM is static; Sentinel-2 selects
+the latest completed window ending no later than D−1; Sentinel-5P selects the
+latest observation through D−1 with a maximum age of seven days. Objects first
+created after the cutoff are excluded. Missing inputs return source-specific
+messages and do not schedule downloads or Earth Engine exports. Today and
+historical dates retain their normal preparation behaviour.
 
 The frontend also reads `GET /api/v1/model/evaluation`. This versioned response
 contains the champion model's held-out 2025 scorecard and must remain clearly
@@ -162,5 +170,6 @@ Keep frontend and backend response types aligned. The detailed contract is in
   a non-interactive service account with the required GCS/Earth Engine access.
 - **A run appears stuck:** inspect its file in `backend/.state/logs/`; external
   Earth Engine exports may legitimately take several minutes.
-- **Tomorrow is unavailable:** inspect the returned source inventory. This is a
-  terminal non-error state and intentionally starts no cloud preparation.
+- **Tomorrow is unavailable:** inspect `sourceInventory` for the exact source,
+  required-through date, selected-through date, age, selection mode, and
+  message. This terminal non-error state starts no cloud preparation.

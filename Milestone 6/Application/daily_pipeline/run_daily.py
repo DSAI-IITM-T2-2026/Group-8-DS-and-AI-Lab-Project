@@ -5,7 +5,7 @@ Date conventions (Milestone 4 / live prediction):
   label_date D          → day we predict / write *_test.parquet
   eo_asof_date          → D − 1  (S2 / S5P causal join)
   feature_end_date      → D − (era5_lag + lead) = D − 6  (ERA5; 7d history ending there)
-  FIRMS neighbor history → through D − 1 (y_fire on D is not a model input; export uses 0)
+  FIRMS neighbor history → through D − 2 (the neighbour feature uses a two-day lag)
 """
 
 from __future__ import annotations
@@ -28,6 +28,12 @@ from bootstrap import bootstrap  # noqa: E402
 bootstrap()
 
 from config_loader import load_daily_config, load_m4_config, pipeline_today  # noqa: E402
+from cutoff_policy import (  # noqa: E402
+    build_cutoff_inventory,
+    california_now,
+    forecast_cutoff_at,
+    unavailable_message,
+)
 from download.dem import publish_dem  # noqa: E402
 from download.era5 import download_era5_day  # noqa: E402
 from download.firms import export_firms_day, wait_for_firms_days  # noqa: E402
@@ -36,7 +42,11 @@ from download.sentinel5p import download_s5p_for_date, wait_for_s5p_days  # noqa
 from pipeline_events import emit_event  # noqa: E402
 from preprocess.build_stage_c_day import run_stage_c_pipeline  # noqa: E402
 from preprocess.export_inference_day import export_champion_day  # noqa: E402
-from preprocess.final_artifact import existing_final_artifact  # noqa: E402
+from preprocess.final_artifact import (  # noqa: E402
+    existing_final_artifact,
+    write_artifact_provenance,
+)
+from preprocess.export_inference_day import validate_champion_artifact  # noqa: E402
 
 logger = logging.getLogger("run_daily")
 
@@ -652,28 +662,28 @@ def cmd_export_day(args: argparse.Namespace, cfg: dict) -> int:
     t0 = time.perf_counter()
     emit_event("exporting", "running", "Validating and exporting the 86-feature parquet.")
     frame, destination = export_champion_day(label_date, history, cfg, upload=not args.local_only)
+    feature_cols = validate_champion_artifact(frame, label_date, cfg)
+    created_at = datetime.now().astimezone()
+    artifact, provenance_uri = write_artifact_provenance(
+        frame,
+        label_date,
+        cfg,
+        object_uri=destination,
+        feature_cols=feature_cols,
+        created_at=created_at,
+    )
     logger.info(
         "Timing export_day: %s → %s",
         _fmt_secs(time.perf_counter() - t0),
         destination,
     )
-    lag = int(cfg["task"].get("era5_lag_days", 5))
-    lead = int(cfg["task"].get("lead_days", 1))
     emit_event(
         "completed",
         "succeeded",
         "Prediction data is ready.",
-        artifact={
-            "objectUri": destination,
-            "rowCount": int(len(frame)),
-            "featureCount": 86,
-            "cellCount": int(frame["cell_id"].nunique()),
-            "labelDate": label_date.isoformat(),
-            "eoAsOfDate": (label_date - timedelta(days=1)).isoformat(),
-            "featureEndDate": (label_date - timedelta(days=lag + lead)).isoformat(),
-            "createdAt": datetime.now().astimezone().isoformat(),
-        },
+        artifact=artifact,
     )
+    logger.info("Wrote artifact provenance → %s", provenance_uri)
     return 0
 
 
@@ -742,6 +752,16 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             len(capped),
         )
     labels = capped
+    tomorrow = as_of + timedelta(days=1)
+    tomorrow_cutoff = forecast_cutoff_at(tomorrow, cfg)
+    tomorrow_context: dict | None = None
+    if tomorrow in labels and california_now(cfg) < tomorrow_cutoff:
+        emit_event(
+            "inventory",
+            "unavailable",
+            f"Tomorrow forecast becomes eligible at 06:30 California time on {tomorrow_cutoff.date()}.",
+        )
+        return 0
     logger.info("Running all for %d label date(s): %s … %s", len(labels), labels[0], labels[-1])
     wall0 = time.perf_counter()
 
@@ -759,7 +779,12 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
                 completed=0,
                 total=1,
             )
-            artifact = existing_final_artifact(label, cfg)
+            artifact = existing_final_artifact(
+                label,
+                cfg,
+                require_provenance=label == tomorrow,
+                expected_cutoff=tomorrow_cutoff.isoformat() if label == tomorrow else None,
+            )
             if artifact is None:
                 missing_or_invalid.append(label)
             else:
@@ -786,24 +811,30 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             "Prepared prediction data is missing or invalid; checking required source files.",
         )
 
-    tomorrow = as_of + timedelta(days=1)
     preflight_ready: set[date] = set()
     if tomorrow in labels:
-        inventory = preflight_source_inventory([tomorrow], cfg, as_of=as_of)
-        if any(item["missing"] > 0 for item in inventory.values()):
+        inventory = build_cutoff_inventory(tomorrow, cfg)
+        if any(not item.get("ready", False) for item in inventory.values()):
             emit_event(
                 "inventory",
                 "unavailable",
-                "Tomorrow's data is not available yet.",
+                unavailable_message(inventory),
                 inventory=inventory,
             )
             logger.info("Tomorrow preflight found missing source data; no cloud work was scheduled")
             return 0
         preflight_ready.add(tomorrow)
+        tomorrow_context = {
+            "cutoffAt": tomorrow_cutoff.isoformat(),
+            "timezone": cfg["task"]["timezone"],
+            "forecastMode": "provisional_tomorrow",
+            "sourceSnapshots": inventory,
+            "firmsThroughDate": (tomorrow - timedelta(days=2)).isoformat(),
+        }
         emit_event(
             "inventory",
             "running",
-            "All source data required for tomorrow is already available.",
+            "Causal source data for the provisional tomorrow forecast is ready.",
             inventory=inventory,
         )
 
@@ -817,6 +848,10 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
 
     for i, label in enumerate(labels, 1):
         logger.info("[%d/%d] label_date=%s", i, len(labels), label)
+        if label == tomorrow and tomorrow_context is not None:
+            cfg["_forecast_context"] = tomorrow_context
+        else:
+            cfg.pop("_forecast_context", None)
         rc = cmd_all_one(args, cfg, label, skip_download=True)
         if rc != 0:
             return rc
@@ -825,6 +860,7 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
         len(labels),
         _fmt_secs(time.perf_counter() - wall0),
     )
+    cfg.pop("_forecast_context", None)
     return 0
 
 
