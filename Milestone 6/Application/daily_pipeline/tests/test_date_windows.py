@@ -219,3 +219,66 @@ def test_tomorrow_complete_inventory_builds_without_download_scheduling(monkeypa
 
     assert run_daily.cmd_all(_all_args(target), config()) == 0
     assert built == [(target, True)]
+
+
+def test_tomorrow_fallback_is_reused_when_exact_remains_absent(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = as_of + run_daily.timedelta(days=1)
+    artifact = {
+        "labelDate": target.isoformat(),
+        "featureCount": 86,
+        "artifactQuality": "era5_fallback",
+        "immutableProvenanceUri": "gs://test/fallback.json",
+    }
+    inventory = {
+        "era5": {"ready": True, "ageDays": 1, "exactAvailable": False},
+    }
+    events = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: artifact)
+    monkeypatch.setattr(run_daily, "build_cutoff_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "emit_event", lambda *args, **kwargs: events.append((args, kwargs)))
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_all_one",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("fallback should be reused")),
+    )
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    assert events[-1][0][2] == "Existing prediction data is ready."
+
+
+def test_tomorrow_exact_arrival_rebuilds_and_supersedes_fallback(monkeypatch):
+    as_of = date(2026, 8, 13)
+    target = as_of + run_daily.timedelta(days=1)
+    artifact = {
+        "labelDate": target.isoformat(),
+        "featureCount": 86,
+        "artifactQuality": "era5_fallback",
+        "immutableProvenanceUri": "gs://test/fallback.json",
+    }
+    inventory = {
+        key: {"ready": True, "ageDays": 0}
+        for key in ("era5", "firms", "sentinel2", "sentinel5p", "dem")
+    }
+    inventory["era5"].update(
+        exactAvailable=True,
+        exactArrivedAfterCutoff=True,
+        selectedThroughDate="2026-08-08",
+    )
+    built = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: as_of)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: artifact)
+    monkeypatch.setattr(run_daily, "build_cutoff_inventory", lambda *_args, **_kwargs: inventory)
+    monkeypatch.setattr(run_daily, "emit_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_all_one",
+        lambda _args, cfg, label, **kwargs: built.append((label, dict(cfg["_forecast_context"]))) or 0,
+    )
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    assert built[0][1]["artifactQuality"] == "exact"
+    assert built[0][1]["availabilityPolicy"] == "late_exact_refresh"
+    assert built[0][1]["supersedesProvenanceUri"] == "gs://test/fallback.json"
+    assert built[0][1]["forcePreprocess"] is True

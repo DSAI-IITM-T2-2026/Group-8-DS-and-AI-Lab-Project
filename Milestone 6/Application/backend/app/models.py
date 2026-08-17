@@ -30,6 +30,8 @@ class SourceInventoryItem(BaseModel):
     ageDays: int | None = None
     mode: Literal["exact", "latest_causal", "imputed", "static"] | None = None
     ready: bool | None = None
+    exactAvailable: bool | None = None
+    exactArrivedAfterCutoff: bool | None = None
     message: str | None = None
 
 
@@ -47,6 +49,14 @@ class ArtifactSummary(BaseModel):
     forecastMode: str = "standard"
     sourceSnapshots: dict[str, SourceInventoryItem] = Field(default_factory=dict)
     provenanceUri: str | None = None
+    immutableProvenanceUri: str | None = None
+    artifactQuality: Literal["exact", "era5_fallback"] = "exact"
+    needsRefresh: bool = False
+    requiredFeatureEndDate: date | None = None
+    availabilityPolicy: Literal["cutoff_snapshot", "late_exact_refresh"] = "cutoff_snapshot"
+    refreshedAt: datetime | None = None
+    supersedesProvenanceUri: str | None = None
+    generation: str | None = None
 
 
 class PipelineRun(BaseModel):

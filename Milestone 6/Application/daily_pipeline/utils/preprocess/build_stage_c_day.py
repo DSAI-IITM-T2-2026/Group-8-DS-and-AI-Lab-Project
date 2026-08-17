@@ -37,6 +37,86 @@ def _years_in_range(start: date, end: date) -> list[int]:
     return list(range(start.year, end.year + 1))
 
 
+def stage_c_date_bounds(
+    label_date: date,
+    daily_cfg: dict,
+    m4_cfg: dict,
+    *,
+    current_day: date,
+) -> dict[str, date]:
+    """Return causal source clips while retaining the prediction-day row key.
+
+    A tomorrow forecast is keyed by D even though its newest observations are
+    earlier than D. Clipping the panel itself to the current day removes that D
+    row and makes export impossible. Source-specific clips remain causal.
+    """
+    lookback = int(daily_cfg["task"].get("lookback_days", 30))
+    lag = int(m4_cfg["task"]["era5_lag_days"])
+    lead = int(m4_cfg["task"]["lead_days"])
+    history = int(m4_cfg["task"]["history_days"])
+    source_as_of = min(label_date, current_day)
+    forecast_context = daily_cfg.get("_forecast_context") or {}
+    firms_through = date.fromisoformat(
+        str(forecast_context.get("firmsThroughDate", source_as_of))
+    )
+    selected_feature_end = date.fromisoformat(
+        str(
+            forecast_context.get(
+                "selectedFeatureEndDate",
+                label_date - timedelta(days=lag + lead),
+            )
+        )
+    )
+    return {
+        "panel_start": label_date - timedelta(days=lookback),
+        "panel_end": label_date,
+        "source_as_of": source_as_of,
+        "era5_start": label_date - timedelta(days=lookback + lag + lead + history),
+        "era5_end": selected_feature_end,
+        "firms_start": label_date - timedelta(days=lookback),
+        "firms_end": firms_through,
+    }
+
+
+def append_era5_fallback_target_rows(
+    stage_a: pd.DataFrame,
+    label_date: date,
+    selected_feature_end: date,
+) -> pd.DataFrame:
+    """Create D rows from the complete D-7 weather endpoint when D-6 is absent."""
+    out = stage_a.copy()
+    out["label_date"] = pd.to_datetime(out["label_date"]).dt.normalize()
+    out["feature_end_date"] = pd.to_datetime(out["feature_end_date"]).dt.normalize()
+    target = pd.Timestamp(label_date)
+    selected = pd.Timestamp(selected_feature_end)
+    if out["label_date"].eq(target).any():
+        return out
+
+    source = out.loc[out["feature_end_date"].eq(selected)].copy()
+    if source.empty:
+        raise ValueError(
+            f"ERA5 fallback rows for feature_end_date={selected_feature_end} are unavailable"
+        )
+    if source["cell_id"].duplicated().any():
+        raise ValueError("ERA5 fallback source contains duplicate cell rows")
+    expected_cells = out["cell_id"].nunique()
+    if source["cell_id"].nunique() != expected_cells:
+        raise ValueError(
+            "ERA5 fallback source does not cover the complete grid "
+            f"({source['cell_id'].nunique()} of {expected_cells} cells)"
+        )
+
+    source["label_date"] = target
+    source["eo_asof_date"] = target - pd.Timedelta(days=1)
+    source["feature_end_date"] = selected
+    source["y_fire"] = 0
+    if "era5_lag_days" in source.columns:
+        source["era5_lag_days"] = int(
+            ((target - pd.Timedelta(days=1)) - selected).days
+        )
+    return pd.concat([out, source], ignore_index=True)
+
+
 def _patch_flat_eo_listing(daily_cfg: dict) -> None:
     """Route M4 EO listing through flat parquet adapters when layout=flat_parquet."""
     from preprocess.adapters_gcs import list_flat_s2, list_flat_s5p
@@ -103,34 +183,32 @@ def run_stage_c_pipeline(
         write_splits,
     )
 
-    lookback = daily_cfg["task"].get("lookback_days", 30)
-    # Live prediction: panel through D is fine for row keys, but ERA5/FIRMS assemble
-    # must not require calendar days after today / after available as-of.
-    as_of = min(label_date, pipeline_today(daily_cfg))
-    start = label_date - timedelta(days=lookback)
-    years = _years_in_range(start, as_of)
-    months = _months_in_range(start, as_of)
-    end_clip = pd.Timestamp(as_of)
-    lag = int(m4_cfg["task"]["era5_lag_days"])
-    lead = int(m4_cfg["task"]["lead_days"])
-    history = int(m4_cfg["task"]["history_days"])
-    era5_start_clip = pd.Timestamp(start) - pd.Timedelta(days=lag + lead + history)
-    era5_end_clip = pd.Timestamp(as_of) - pd.Timedelta(days=lag + lead)
-    firms_start_clip = pd.Timestamp(start)
-    forecast_context = daily_cfg.get("_forecast_context") or {}
-    firms_end_clip = pd.Timestamp(
-        forecast_context.get("firmsThroughDate", as_of)
-    ).normalize()
+    bounds = stage_c_date_bounds(
+        label_date,
+        daily_cfg,
+        m4_cfg,
+        current_day=pipeline_today(daily_cfg),
+    )
+    start = bounds["panel_start"]
+    panel_end = bounds["panel_end"]
+    source_as_of = bounds["source_as_of"]
+    years = _years_in_range(start, panel_end)
+    months = _months_in_range(start, panel_end)
+    end_clip = pd.Timestamp(panel_end)
+    era5_start_clip = pd.Timestamp(bounds["era5_start"])
+    era5_end_clip = pd.Timestamp(bounds["era5_end"])
+    firms_start_clip = pd.Timestamp(bounds["firms_start"])
+    firms_end_clip = pd.Timestamp(bounds["firms_end"])
 
     logger.info(
-        "Stage C build label_date=%s as_of=%s years=%s months=%s "
+        "Stage C build label_date=%s source_as_of=%s years=%s months=%s "
         "labels %s…%s era5_from=%s era5_to=%s",
         label_date,
-        as_of,
+        source_as_of,
         years,
         months,
         start,
-        as_of,
+        panel_end,
         era5_start_clip.date(),
         era5_end_clip.date(),
     )
@@ -140,7 +218,7 @@ def run_stage_c_pipeline(
             m
             for m in months
             if (year > start.year or m >= start.month)
-            and (year < as_of.year or m <= as_of.month)
+            and (year < panel_end.year or m <= panel_end.month)
         ]
         if not year_months:
             year_months = months
@@ -171,6 +249,28 @@ def run_stage_c_pipeline(
     merge_stage_a(m4_cfg, years)
     cache = Path(m4_cfg["paths"]["shared_cache"])
     stage_a = pd.read_parquet(cache / "stage_a" / "all.parquet")
+    forecast_context = daily_cfg.get("_forecast_context") or {}
+    selected_feature_end = date.fromisoformat(
+        str(
+            forecast_context.get(
+                "selectedFeatureEndDate",
+                label_date
+                - timedelta(
+                    days=int(m4_cfg["task"]["era5_lag_days"])
+                    + int(m4_cfg["task"]["lead_days"])
+                ),
+            )
+        )
+    )
+    required_feature_end = label_date - timedelta(
+        days=int(m4_cfg["task"]["era5_lag_days"])
+        + int(m4_cfg["task"]["lead_days"])
+    )
+    if selected_feature_end < required_feature_end:
+        stage_a = append_era5_fallback_target_rows(
+            stage_a, label_date, selected_feature_end
+        )
+        stage_a.to_parquet(cache / "stage_a" / "all.parquet", index=False)
     write_splits(m4_cfg, stage_a, "stage_a")
 
     build_eo_cell_cache(m4_cfg, "s2", years, months=months, worker="daily", force=force)

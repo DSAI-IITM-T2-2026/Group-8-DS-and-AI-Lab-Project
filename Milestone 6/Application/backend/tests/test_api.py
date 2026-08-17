@@ -164,6 +164,53 @@ def test_unavailable_run_is_terminal(tmp_path: Path):
     assert result["errorCode"] is None
 
 
+def test_fallback_artifact_fields_survive_api_schema(tmp_path: Path):
+    app = create_app(settings(tmp_path), start_worker=False)
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/v1/pipeline-runs", json={"predictionDate": "2025-08-01"}
+        ).json()
+        app.state.store.update(
+            created["runId"],
+            status="succeeded",
+            stage="completed",
+            message="Prediction data is ready.",
+            artifact={
+                "objectUri": "gs://test/2025-08-01_test.parquet",
+                "rowCount": 437,
+                "featureCount": 86,
+                "cellCount": 437,
+                "labelDate": "2025-08-01",
+                "eoAsOfDate": "2025-07-31",
+                "featureEndDate": "2025-07-25",
+                "requiredFeatureEndDate": "2025-07-26",
+                "createdAt": "2025-07-31T14:00:00Z",
+                "forecastMode": "provisional_tomorrow",
+                "artifactQuality": "era5_fallback",
+                "needsRefresh": True,
+                "availabilityPolicy": "cutoff_snapshot",
+                "sourceSnapshots": {
+                    "era5": {
+                        "required": 38,
+                        "available": 37,
+                        "missing": 1,
+                        "ready": True,
+                        "mode": "latest_causal",
+                        "ageDays": 1,
+                        "exactAvailable": False,
+                    }
+                },
+            },
+        )
+        result = client.get(
+            f"/api/v1/pipeline-runs/{created['runId']}"
+        ).json()
+
+    assert result["artifact"]["artifactQuality"] == "era5_fallback"
+    assert result["artifact"]["needsRefresh"] is True
+    assert result["artifact"]["sourceSnapshots"]["era5"]["exactAvailable"] is False
+
+
 def test_risk_map_fails_safely_without_a_model(tmp_path: Path):
     with TestClient(create_app(settings(tmp_path), start_worker=False)) as client:
         response = client.get(

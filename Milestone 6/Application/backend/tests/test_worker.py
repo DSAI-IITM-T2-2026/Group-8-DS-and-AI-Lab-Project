@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 from app.store import RunStore
-from app.worker import EVENT_PREFIX, PipelineWorker, safe_error_code
+from app.worker import EVENT_PREFIX, PipelineWorker, safe_error_code, safe_error_message
 
 
 def test_worker_errors_are_classified_without_exposing_output():
@@ -11,6 +11,20 @@ def test_worker_errors_are_classified_without_exposing_output():
     assert safe_error_code("Timed out waiting for Sentinel-5P") == "external_data_timeout"
     assert safe_error_code("quota exceeded 429") == "cloud_quota_exceeded"
     assert safe_error_code("unexpected stack trace") == "pipeline_failed"
+
+
+def test_worker_surfaces_missing_prediction_day_without_exposing_traceback():
+    output = """Traceback (most recent call last):
+  File \"/app/daily_pipeline/run_daily.py\", line 722, in cmd_all_one
+ValueError: No rows for label_date=2026-08-18 in history panel
+"""
+    assert safe_error_code(output) == "prediction_day_row_missing"
+    assert safe_error_message(output) == (
+        "Feature preparation did not produce the required prediction-day row for "
+        "2026-08-18. The Stage C date window must include the prediction day before "
+        "parquet export."
+    )
+    assert "/app/" not in safe_error_message(output)
 
 
 def test_worker_preserves_unavailable_terminal_event(tmp_path, monkeypatch):

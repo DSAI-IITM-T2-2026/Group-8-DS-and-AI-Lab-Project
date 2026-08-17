@@ -30,10 +30,15 @@ Folder notes: `[utils/README.md](utils/README.md)`.
 
 `--start-date` / `--end-date` are **label dates** (inclusive). Labels are capped
 at California **tomorrow**, the model's one-day horizon. Tomorrow is
-preflight-only: the command reuses a valid final parquet or requires every raw
-source object to be present, and returns an `unavailable` pipeline event
-without scheduling cloud work when anything is missing. ERA5 uses **daily**
-`era5/YYYY/era5_YYYY_MM_DD.nc` when present, or **monthly** under `era5/raw/YYYY/`.
+read-only: the command never launches CDS downloads or Earth Engine exports.
+It uses exact ERA5 through `D−6` when available, otherwise the complete `D−7`
+endpoint as a maximum one-day fallback. If neither endpoint has complete
+rolling history, the run is unavailable. Every Generate/Retry rechecks an
+existing fallback and rebuilds it when exact `D−6` appears.
+
+Open-month ERA5 readiness comes from exact daily objects or actual dates in a
+hydrated derived cache, never from the mere presence of a partial monthly
+object.
 
 ```bash
 # Inclusive label dates (each day: download → preprocess → export)
@@ -64,11 +69,19 @@ Milestone 4/5 date math (LightGBM artifact stays valid):
 |------|---------|-------------------------|
 | **label_date** | D | **2026-08-10** → `…/final_processed/2026-08-10_test.parquet` |
 | **eo_asof** (S2 / S5P) | D − 1 | **2026-08-09** (one causal snapshot, not a 7-day EO mean) |
-| **ERA5 feature_end** | (D−1) − 5 = **D − 6** | **2026-08-04**; `*_7d` ≈ Jul 29–Aug 4 |
+| **ERA5 feature_end** | Exact **D−6**; fallback **D−7** | **2026-08-04** exact, or **2026-08-03** fallback |
 | **FIRMS on D** | **not a model input** | `y_fire` column kept as **0** for live forecast |
-| **Neighbor `fire_*`** | prior `y_fire`, lag2 through D−2 | FIRMS downloaded through **D−1** only |
+| **Neighbor `fire_*`** | prior `y_fire`, lag2 through D−2 | FIRMS required only through **D−2** |
 
-Export asserts: 86 features, single `label_date`, `eo_asof = D−1`, `feature_end = D−6`, ~437 high/medium cells.
+Export asserts: 86 ordered features, single `label_date`, `eo_asof = D−1`, a
+truthful selected ERA5 endpoint (`D−6` or `D−7`), finite weather values, and
+the configured high/medium cell set. A fallback target row keeps `y_fire=0`
+only as the unknown target-label placeholder; weather values are never zero-filled.
+
+Each active parquet has an adjacent canonical provenance sidecar and an
+immutable version record. Fallback records use `artifactQuality=era5_fallback`
+and `needsRefresh=true`. A later exact rebuild overwrites the canonical parquet
+with a new GCS generation and records which fallback provenance it superseded.
 
 With `lookback_days: 30` for D = 2026-08-10 … 2026-08-12:
 

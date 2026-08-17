@@ -103,4 +103,36 @@ describe("App tomorrow workflow", () => {
     expect(screen.getByText("stopped")).toBeInTheDocument();
     expect(screen.queryByText("Preparation needs attention")).not.toBeInTheDocument();
   });
+
+  it("clearly labels a successful one-day ERA5 fallback", async () => {
+    localStorage.setItem("wildfire-iq-pipeline-run", "run-1");
+    const fallbackRun = {
+      runId: "run-1", predictionDate: "2026-08-17", status: "succeeded", stage: "completed",
+      message: "Prediction data is ready.", progressCompleted: 1, progressTotal: 1,
+      sourceInventory: {}, createdAt: "2026-08-16T14:00:00Z", finishedAt: "2026-08-16T14:01:00Z",
+      artifact: {
+        objectUri: "gs://test/final_processed/2026-08-17_test.parquet", rowCount: 437,
+        featureCount: 86, cellCount: 437, labelDate: "2026-08-17", eoAsOfDate: "2026-08-16",
+        featureEndDate: "2026-08-10", requiredFeatureEndDate: "2026-08-11",
+        createdAt: "2026-08-16T14:01:00Z", forecastMode: "provisional_tomorrow",
+        artifactQuality: "era5_fallback", needsRefresh: true,
+        sourceSnapshots: { era5: { required: 38, available: 37, missing: 1, scheduled: 0, pending: 0, ready: true, requiredThroughDate: "2026-08-11", selectedThroughDate: "2026-08-10", ageDays: 1, mode: "latest_causal", exactAvailable: false } },
+      },
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith("/pipeline/config")) return jsonResponse(config);
+      if (url.endsWith("/model/evaluation")) return jsonResponse(evaluation);
+      if (url.endsWith("/pipeline-runs/run-1")) return jsonResponse(fallbackRun);
+      if (url.includes("/risk-map") || url.includes("/risk-cells") || url.includes("/validation")) return jsonResponse({ code: "not_ready" });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<App />);
+
+    expect((await screen.findAllByText("Weather fallback forecast")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/one day older than the required 2026-08-11 endpoint/)).toBeInTheDocument();
+    expect(screen.getByText(/will be regenerated when exact ERA5 data becomes available/)).toBeInTheDocument();
+    expect(screen.getByText(/Required 2026-08-11 · selected 2026-08-10/)).toBeInTheDocument();
+  });
 });

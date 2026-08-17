@@ -22,6 +22,8 @@ export interface SourceInventoryItem {
   ageDays?: number;
   mode?: "exact" | "latest_causal" | "imputed" | "static";
   ready?: boolean;
+  exactAvailable?: boolean;
+  exactArrivedAfterCutoff?: boolean;
   message?: string;
 }
 
@@ -39,6 +41,14 @@ export interface ArtifactSummary {
   forecastMode?: string;
   sourceSnapshots?: Record<string, SourceInventoryItem>;
   provenanceUri?: string;
+  immutableProvenanceUri?: string;
+  artifactQuality?: "exact" | "era5_fallback";
+  needsRefresh?: boolean;
+  requiredFeatureEndDate?: string;
+  availabilityPolicy?: "cutoff_snapshot" | "late_exact_refresh";
+  refreshedAt?: string;
+  supersedesProvenanceUri?: string;
+  generation?: string;
 }
 
 export interface PipelineRun {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import subprocess
 import threading
@@ -51,6 +52,8 @@ def pipeline_lock(pipeline_root):
 
 def safe_error_code(output: str) -> str:
     lowered = output.lower()
+    if re.search(r"no rows for label_date=\d{4}-\d{2}-\d{2} in history panel", lowered):
+        return "prediction_day_row_missing"
     if "cds credentials not found" in lowered or ("cds_api_key" in lowered and "not found" in lowered):
         return "cds_authentication_failed"
     if "earth engine init failed" in lowered or "default credentials" in lowered:
@@ -62,6 +65,32 @@ def safe_error_code(output: str) -> str:
     if "quota" in lowered or "429" in lowered:
         return "cloud_quota_exceeded"
     return "pipeline_failed"
+
+
+def safe_error_message(output: str) -> str:
+    """Return an actionable failure message without exposing raw log output."""
+    missing_day = re.search(
+        r"No rows for label_date=(\d{4}-\d{2}-\d{2}) in history panel",
+        output,
+        flags=re.IGNORECASE,
+    )
+    if missing_day:
+        return (
+            "Feature preparation did not produce the required prediction-day row for "
+            f"{missing_day.group(1)}. The Stage C date window must include the prediction "
+            "day before parquet export."
+        )
+    messages = {
+        "cds_authentication_failed": "ERA5 access failed because CDS credentials are unavailable.",
+        "cloud_authentication_failed": "Cloud access failed because application credentials are unavailable.",
+        "earth_engine_task_failed": "An Earth Engine data-preparation task failed.",
+        "external_data_timeout": "A required external data task did not finish before the timeout.",
+        "cloud_quota_exceeded": "A cloud data provider rejected the request because its quota was exceeded.",
+    }
+    return messages.get(
+        safe_error_code(output),
+        "The preparation pipeline failed. Review the server log for the underlying error.",
+    )
 
 
 class PipelineWorker:
@@ -194,7 +223,12 @@ class PipelineWorker:
                     self.store.update(run_id, status="failed", stage="completed", message="The pipeline ended without a verified artifact.", errorCode="artifact_missing")
             else:
                 output = "\n".join(lines[-80:])
-                self.store.update(run_id, status="failed", message="The preparation pipeline failed. Review the server log and retry after correcting the dependency.", errorCode=safe_error_code(output))
+                self.store.update(
+                    run_id,
+                    status="failed",
+                    message=safe_error_message(output),
+                    errorCode=safe_error_code(output),
+                )
         except RuntimeError as exc:
             current = self.store.get(run_id) or {}
             if current.get("status") == "interrupted":

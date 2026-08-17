@@ -35,6 +35,7 @@ def _assert_inference_contract(
     *,
     era5_lag: int = 5,
     lead: int = 1,
+    expected_feature_end: date | None = None,
 ) -> None:
     """Cheap checks that match Milestone 5 prepared_champion_day expectations."""
     if pruned.empty:
@@ -60,13 +61,19 @@ def _assert_inference_contract(
     eo = pd.to_datetime(pruned["eo_asof_date"]).dt.normalize()
     feat = pd.to_datetime(pruned["feature_end_date"]).dt.normalize()
     expected_eo = pd.Timestamp(label_date) - pd.Timedelta(days=1)
-    expected_feat = pd.Timestamp(label_date) - pd.Timedelta(days=era5_lag + lead)
+    expected_feat = pd.Timestamp(
+        expected_feature_end
+        or (label_date - timedelta(days=era5_lag + lead))
+    )
     if not eo.eq(expected_eo).all():
         raise ValueError(f"eo_asof_date must be {expected_eo.date()} (D−1)")
     if not feat.eq(expected_feat).all():
-        raise ValueError(f"feature_end_date must be {expected_feat.date()} (D−6)")
-    if not (eo - feat).dt.days.eq(era5_lag).all():
-        raise ValueError(f"eo_asof − feature_end must equal era5_lag={era5_lag}")
+        raise ValueError(f"feature_end_date must be selected endpoint {expected_feat.date()}")
+    expected_gap = int((expected_eo - expected_feat).days)
+    if not (eo - feat).dt.days.eq(expected_gap).all():
+        raise ValueError(
+            f"eo_asof − feature_end must equal selected weather age={expected_gap}"
+        )
 
     n_cells = pruned["cell_id"].nunique()
     if n_cells < 100:
@@ -89,12 +96,19 @@ def validate_champion_artifact(
     feature_cols = list(contract["feature_prune"]["kept_features"])
     lag = int(daily_cfg["task"].get("era5_lag_days", 5))
     lead = int(daily_cfg["task"].get("lead_days", 1))
+    context = daily_cfg.get("_forecast_context") or {}
+    selected_feature_end = context.get("selectedFeatureEndDate")
     _assert_inference_contract(
         frame,
         label_date,
         feature_cols,
         era5_lag=lag,
         lead=lead,
+        expected_feature_end=(
+            date.fromisoformat(str(selected_feature_end))
+            if selected_feature_end
+            else None
+        ),
     )
 
     cell_ids = frame["cell_id"].astype(str)
@@ -127,6 +141,15 @@ def export_champion_day(
     use_neighbor = contract.get("use_neighbor_fire_features", True)
     lag = int(daily_cfg["task"].get("era5_lag_days", 5))
     lead = int(daily_cfg["task"].get("lead_days", 1))
+    context = daily_cfg.get("_forecast_context") or {}
+    selected_feature_end = date.fromisoformat(
+        str(
+            context.get(
+                "selectedFeatureEndDate",
+                label_date - timedelta(days=lag + lead),
+            )
+        )
+    )
 
     hist = history.copy()
     hist["label_date"] = pd.to_datetime(hist["label_date"]).dt.normalize()
@@ -171,7 +194,7 @@ def export_champion_day(
     # Ensure date IDs match M4 (in case Stage C omitted them).
     day_frame["label_date"] = day_ts
     day_frame["eo_asof_date"] = day_ts - pd.Timedelta(days=1)
-    day_frame["feature_end_date"] = day_ts - pd.Timedelta(days=lag + lead)
+    day_frame["feature_end_date"] = pd.Timestamp(selected_feature_end)
     day_frame["y_fire"] = (
         pd.to_numeric(day_frame.get("y_fire", 0), errors="coerce").fillna(0).astype("int8")
     )
@@ -213,7 +236,7 @@ def export_champion_day(
         "n_features": len(feature_cols),
         "n_cells": int(pruned["cell_id"].nunique()),
         "eo_asof_date": (label_date - timedelta(days=1)).isoformat(),
-        "feature_end_date": (label_date - timedelta(days=lag + lead)).isoformat(),
+        "feature_end_date": selected_feature_end.isoformat(),
         "local_path": str(local_path),
         "gcs_object": f"final_processed/{out_name}",
     }

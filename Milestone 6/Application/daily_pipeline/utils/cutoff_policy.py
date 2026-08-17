@@ -51,11 +51,12 @@ def _snapshot(
     ready: bool,
     message: str,
     selected_start: date | None = None,
+    exact_available: bool | None = None,
 ) -> dict[str, Any]:
     age = None
     if required_through is not None and selected_through is not None:
         age = max(0, (required_through - selected_through).days)
-    return {
+    snapshot = {
         "required": required,
         "available": available,
         "missing": max(0, required - available),
@@ -69,6 +70,9 @@ def _snapshot(
         "ready": ready,
         "message": message,
     }
+    if exact_available is not None:
+        snapshot["exactAvailable"] = exact_available
+    return snapshot
 
 
 def _list_blobs(client: Any, bucket: str, prefix: str) -> list[Any]:
@@ -93,17 +97,68 @@ def _exact_blobs(
     return len(ready), ready
 
 
+def _derived_era5_coverage(
+    cfg: dict[str, Any],
+    start: date,
+    end: date,
+    cutoff_at: datetime,
+) -> tuple[set[date], set[date]]:
+    """Read actual dates from locally hydrated ERA5 parquet caches.
+
+    Returns dates present by the original cutoff and dates written later. This
+    avoids treating an open-month NetCDF object's mere existence as coverage.
+    """
+    try:
+        import pandas as pd
+
+        from paths import resolve_path
+    except Exception:
+        return set(), set()
+
+    try:
+        cache_root = resolve_path(cfg, "local_cache") / "m4_shared_cache" / "era5_daily"
+    except Exception:
+        return set(), set()
+    cutoff_days: set[date] = set()
+    later_days: set[date] = set()
+    current = date(start.year, start.month, 1)
+    while current <= end:
+        path = cache_root / f"year={current.year:04d}" / f"month={current.month:02d}.parquet"
+        if path.is_file():
+            try:
+                dates = pd.to_datetime(pd.read_parquet(path, columns=["date"])["date"])
+                present = {
+                    value
+                    for value in dates.dt.date.dropna().unique()
+                    if start <= value <= end
+                }
+                modified = datetime.fromtimestamp(
+                    path.stat().st_mtime, tz=cutoff_at.tzinfo
+                )
+                (cutoff_days if modified <= cutoff_at else later_days).update(present)
+            except Exception:
+                # An unreadable or schema-incompatible cache cannot establish
+                # readiness; the GCS daily-object checks remain authoritative.
+                pass
+        if current.month == 12:
+            current = date(current.year + 1, 1, 1)
+        else:
+            current = date(current.year, current.month + 1, 1)
+    return cutoff_days, later_days
+
+
 def build_cutoff_inventory(
     label_date: date,
     cfg: dict[str, Any],
     *,
     storage_client: Any | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Select causal inputs that were present by the forecast cutoff.
+    """Select causal inputs for a tomorrow forecast.
 
-    ERA5 and FIRMS remain exact because silently treating missing weather or fire
-    history as zero changes the trained feature semantics. EO sources may use
-    their trained causal fallback windows.
+    EO and FIRMS remain fixed to the original cutoff snapshot. ERA5 may use a
+    one-day older endpoint, and an exact endpoint that arrives after the cutoff
+    is intentionally accepted as a late exact refresh. Missing weather values
+    are never replaced with zero.
     """
     if storage_client is None:
         from google.cloud import storage
@@ -130,21 +185,89 @@ def build_cutoff_inventory(
         for i in range((feature_end - era5_start).days + 1)
     ]
     era5_prefix = prefixes["era5"].rstrip("/")
-    era5_blobs = {
+    all_era5_blobs = {
         blob.name: blob
         for blob in _list_blobs(storage_client, bucket, era5_prefix)
+    }
+    era5_blobs = {
+        blob.name: blob
+        for blob in all_era5_blobs.values()
         if _available_by(blob, cutoff_at)
     }
-    era5_count = 0
+    era5_available_days: set[date] = set()
+    cutoff_month = (cutoff_at.year, cutoff_at.month)
     for day in era5_days:
         daily = f"{era5_prefix}/{day.year:04d}/era5_{day.year:04d}_{day.month:02d}_{day.day:02d}.nc"
         monthly = (
             f"{era5_prefix}/{day.year:04d}/era5_{day.year:04d}_{day.month:02d}.nc",
             f"{era5_prefix}/raw/{day.year:04d}/era5_{day.year:04d}_{day.month:02d}.nc",
         )
-        if daily in era5_blobs or any(name in era5_blobs for name in monthly):
-            era5_count += 1
-    era5_ready = era5_count == len(era5_days)
+        # A monthly object is sufficient only after that calendar month has
+        # closed. Open-month objects may be partial (for example, ending on
+        # D-7 while inventory requires D-6), so exact daily coverage is
+        # required unless a future sidecar records the monthly coverage date.
+        closed_month = (day.year, day.month) < cutoff_month
+        if daily in era5_blobs or (
+            closed_month and any(name in era5_blobs for name in monthly)
+        ):
+            era5_available_days.add(day)
+    derived_by_cutoff, derived_later = _derived_era5_coverage(
+        cfg, era5_start, feature_end, cutoff_at
+    )
+    era5_available_days.update(derived_by_cutoff)
+    # Exact D-6 is the only source input allowed to arrive after the original
+    # cutoff. It upgrades a provisional fallback artifact on Generate/Retry.
+    exact_daily = (
+        f"{era5_prefix}/{feature_end.year:04d}/"
+        f"era5_{feature_end.year:04d}_{feature_end.month:02d}_{feature_end.day:02d}.nc"
+    )
+    exact_blob = all_era5_blobs.get(exact_daily)
+    exact_available = exact_blob is not None or feature_end in derived_by_cutoff or feature_end in derived_later
+    exact_arrived_after_cutoff = bool(
+        (exact_blob and _blob_time(exact_blob) and _blob_time(exact_blob) > cutoff_at)
+        or feature_end in derived_later
+    )
+    if exact_available:
+        era5_available_days.add(feature_end)
+    era5_count = len(era5_available_days)
+    fallback_max_age = int(
+        cfg.get("cutoff_policy", {}).get("era5_fallback_max_age_days", 1)
+    )
+    era5_selected_through = None
+    for day in era5_days:
+        if day not in era5_available_days:
+            break
+        era5_selected_through = day
+    era5_age = (
+        (feature_end - era5_selected_through).days
+        if era5_selected_through is not None
+        else None
+    )
+    era5_ready = era5_age is not None and era5_age <= fallback_max_age
+    if era5_ready and era5_age == 0:
+        era5_mode = "exact"
+        if exact_arrived_after_cutoff:
+            era5_message = (
+                f"ERA5 history is complete through {feature_end}; exact data arrived "
+                "after the original cutoff and will refresh the forecast."
+            )
+        else:
+            era5_message = f"ERA5 history is complete through {feature_end}."
+    elif era5_ready:
+        era5_mode = "latest_causal"
+        era5_message = (
+            f"Using ERA5 through {era5_selected_through}, one day older than the "
+            f"required {feature_end} endpoint."
+        )
+    elif feature_end not in era5_available_days:
+        era5_mode = "latest_causal"
+        era5_message = (
+            f"ERA5 is unavailable: neither the required {feature_end} endpoint nor "
+            f"the allowed one-day fallback is complete."
+        )
+    else:
+        era5_mode = "exact"
+        era5_message = f"ERA5 rolling history is incomplete through {feature_end}."
 
     firms_start = label_date - timedelta(days=lookback)
     firms_end = label_date - timedelta(days=2)
@@ -201,9 +324,10 @@ def build_cutoff_inventory(
         "era5": _snapshot(
             required=len(era5_days), available=era5_count,
             required_through=feature_end,
-            selected_through=feature_end if era5_ready else None,
-            mode="exact", ready=era5_ready,
-            message=(f"ERA5 history is complete through {feature_end}." if era5_ready else f"ERA5 history is incomplete through {feature_end}."),
+            selected_through=era5_selected_through,
+            mode=era5_mode, ready=era5_ready,
+            message=era5_message,
+            exact_available=exact_available,
         ),
         "firms": _snapshot(
             required=len(firms_names), available=firms_count,
@@ -239,6 +363,7 @@ def build_cutoff_inventory(
     # implementation field, while provenance retains the exact object roster.
     inventory["sentinel2"]["objectNames"] = [item[2].name for item in s2_candidates]
     inventory["sentinel5p"]["objectNames"] = [item[1].name for item in s5p_available]
+    inventory["era5"]["exactArrivedAfterCutoff"] = exact_arrived_after_cutoff
     return inventory
 
 

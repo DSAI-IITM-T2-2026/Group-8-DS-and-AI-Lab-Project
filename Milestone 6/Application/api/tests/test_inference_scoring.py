@@ -116,6 +116,37 @@ def test_prepared_contract_rejects_duplicate_cells(monkeypatch):
         risk_service.validate_prepared_frame(frame, date(2025, 8, 1), FEATURES)
 
 
+def test_prepared_contract_accepts_only_exact_or_one_day_era5_fallback(monkeypatch):
+    configure_contract(monkeypatch)
+    fallback = prepared_contract_frame(FEATURES)
+    fallback["feature_end_date"] = pd.Timestamp("2025-07-25")
+
+    validated = risk_service.validate_prepared_frame(
+        fallback, date(2025, 8, 1), FEATURES
+    )
+    assert validated["feature_end_date"].eq(pd.Timestamp("2025-07-25")).all()
+
+    too_old = prepared_contract_frame(FEATURES)
+    too_old["feature_end_date"] = pd.Timestamp("2025-07-24")
+    with pytest.raises(DataUnresolvableError):
+        risk_service.validate_prepared_frame(
+            too_old, date(2025, 8, 1), FEATURES
+        )
+
+
+def test_prepared_contract_rejects_mixed_exact_and_fallback_dates(monkeypatch):
+    configure_contract(monkeypatch)
+    mixed = prepared_contract_frame(FEATURES)
+    mixed["feature_end_date"] = [
+        pd.Timestamp("2025-07-26"),
+        pd.Timestamp("2025-07-25"),
+    ]
+    with pytest.raises(DataUnresolvableError):
+        risk_service.validate_prepared_frame(
+            mixed, date(2025, 8, 1), FEATURES
+        )
+
+
 class CachedRegistry:
     is_loaded = True
     unavailable_reason = None

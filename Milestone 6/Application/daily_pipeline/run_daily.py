@@ -4,7 +4,7 @@
 Date conventions (Milestone 4 / live prediction):
   label_date D          → day we predict / write *_test.parquet
   eo_asof_date          → D − 1  (S2 / S5P causal join)
-  feature_end_date      → D − (era5_lag + lead) = D − 6  (ERA5; 7d history ending there)
+  feature_end_date      → D − 6 exact, or D − 7 one-day ERA5 fallback
   FIRMS neighbor history → through D − 2 (the neighbour feature uses a two-day lag)
 """
 
@@ -644,7 +644,9 @@ def cmd_preprocess(args: argparse.Namespace, cfg: dict) -> int:
     m4_cfg = load_m4_config(cfg)
     t0 = time.perf_counter()
     emit_event("preprocessing", "running", "Building the causal Stage C feature panel.")
-    run_stage_c_pipeline(args.label_date, cfg, m4_cfg, force=args.force)
+    context = cfg.get("_forecast_context") or {}
+    force = bool(args.force or context.get("forcePreprocess"))
+    run_stage_c_pipeline(args.label_date, cfg, m4_cfg, force=force)
     logger.info("Timing preprocess: %s", _fmt_secs(time.perf_counter() - t0))
     return 0
 
@@ -755,6 +757,8 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
     tomorrow = as_of + timedelta(days=1)
     tomorrow_cutoff = forecast_cutoff_at(tomorrow, cfg)
     tomorrow_context: dict | None = None
+    tomorrow_inventory: dict | None = None
+    superseded_provenance_uri: str | None = None
     if tomorrow in labels and california_now(cfg) < tomorrow_cutoff:
         emit_event(
             "inventory",
@@ -787,6 +791,31 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             )
             if artifact is None:
                 missing_or_invalid.append(label)
+            elif (
+                label == tomorrow
+                and artifact.get("artifactQuality") == "era5_fallback"
+            ):
+                # A fallback is reusable only after checking whether exact D-6
+                # has appeared. This is the only refresh check and runs on each
+                # Generate/Retry request; no background scheduler is involved.
+                tomorrow_inventory = build_cutoff_inventory(tomorrow, cfg)
+                era5_snapshot = tomorrow_inventory.get("era5") or {}
+                if (
+                    era5_snapshot.get("ready")
+                    and era5_snapshot.get("exactAvailable")
+                    and int(era5_snapshot.get("ageDays") or 0) == 0
+                ):
+                    superseded_provenance_uri = (
+                        artifact.get("immutableProvenanceUri")
+                        or artifact.get("provenanceUri")
+                    )
+                    missing_or_invalid.append(label)
+                    logger.info(
+                        "Exact ERA5 is now available; rebuilding fallback artifact for %s",
+                        label,
+                    )
+                else:
+                    reused.append((label, artifact))
             else:
                 reused.append((label, artifact))
 
@@ -813,7 +842,7 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
 
     preflight_ready: set[date] = set()
     if tomorrow in labels:
-        inventory = build_cutoff_inventory(tomorrow, cfg)
+        inventory = tomorrow_inventory or build_cutoff_inventory(tomorrow, cfg)
         if any(not item.get("ready", False) for item in inventory.values()):
             emit_event(
                 "inventory",
@@ -824,17 +853,41 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             logger.info("Tomorrow preflight found missing source data; no cloud work was scheduled")
             return 0
         preflight_ready.add(tomorrow)
+        era5_snapshot = inventory["era5"]
+        is_fallback = int(era5_snapshot.get("ageDays") or 0) == 1
+        late_exact_refresh = bool(
+            era5_snapshot.get("exactArrivedAfterCutoff")
+            and not is_fallback
+        )
+        selected_feature_end = era5_snapshot.get("selectedThroughDate")
         tomorrow_context = {
             "cutoffAt": tomorrow_cutoff.isoformat(),
             "timezone": cfg["task"]["timezone"],
             "forecastMode": "provisional_tomorrow",
             "sourceSnapshots": inventory,
             "firmsThroughDate": (tomorrow - timedelta(days=2)).isoformat(),
+            "selectedFeatureEndDate": selected_feature_end,
+            "artifactQuality": "era5_fallback" if is_fallback else "exact",
+            "needsRefresh": is_fallback,
+            "availabilityPolicy": (
+                "late_exact_refresh" if late_exact_refresh else "cutoff_snapshot"
+            ),
+            "refreshedAt": (
+                datetime.now().astimezone().isoformat()
+                if late_exact_refresh and superseded_provenance_uri
+                else None
+            ),
+            "supersedesProvenanceUri": superseded_provenance_uri,
+            "forcePreprocess": bool(late_exact_refresh),
         }
         emit_event(
             "inventory",
             "running",
-            "Causal source data for the provisional tomorrow forecast is ready.",
+            (
+                "Exact ERA5 is available; refreshing the provisional tomorrow forecast."
+                if late_exact_refresh
+                else "Causal source data for the provisional tomorrow forecast is ready."
+            ),
             inventory=inventory,
         )
 

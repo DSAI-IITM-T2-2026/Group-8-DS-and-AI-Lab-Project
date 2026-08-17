@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score a verified 06:30 California-time replay panel with the unchanged model."""
+"""Score a verified one-day ERA5 fallback replay with the unchanged model."""
 
 from __future__ import annotations
 
@@ -53,6 +53,26 @@ def main() -> int:
         snapshots = record.get("sourceSnapshots") or {}
         if not snapshots or any(not source.get("ready") for source in snapshots.values()):
             raise ValueError(f"Incomplete source snapshot for {day}.")
+        era5 = snapshots.get("era5") or {}
+        if (
+            era5.get("mode") != "latest_causal"
+            or era5.get("ageDays") != 1
+            or era5.get("exactAvailable") is not False
+        ):
+            raise ValueError(
+                f"Replay provenance for {day} is not a one-day ERA5 fallback."
+            )
+        required = pd.Timestamp(era5.get("requiredThroughDate"))
+        selected = pd.Timestamp(era5.get("selectedThroughDate"))
+        if required - selected != pd.Timedelta(days=1):
+            raise ValueError(f"ERA5 fallback dates are invalid for {day}.")
+
+    feature_end = pd.to_datetime(panel["feature_end_date"]).dt.normalize()
+    expected_feature_end = panel["label_date"] - pd.Timedelta(days=7)
+    if not feature_end.eq(expected_feature_end).all():
+        raise ValueError(
+            "Replay panel must be rebuilt with the D-7 ERA5 endpoint for every day."
+        )
 
     registry = ModelRegistry(args.model)
     scored = registry.score(panel)
@@ -60,7 +80,9 @@ def main() -> int:
     positives = int(truth.sum())
     captured = int(truth[scored.alert_top_25].sum())
     result = {
-        "policy": "06:30 California time causal replay",
+        "policy": "06:30 California-time causal replay with one-day ERA5 fallback",
+        "artifactQuality": "era5_fallback",
+        "era5FallbackAgeDays": 1,
         "timezone": "America/Los_Angeles",
         "period": {"start": str(date(2023, 1, 1)), "end": str(date(2025, 12, 31))},
         "modelRetrained": False,

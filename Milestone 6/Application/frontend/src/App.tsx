@@ -56,6 +56,16 @@ function sourceSummary(item?: SourceInventoryItem) {
   return `${item.available} available · ${item.missing} to prepare`;
 }
 
+function sourceDates(key: string, item?: SourceInventoryItem) {
+  if (key !== "era5" || !item?.requiredThroughDate) return null;
+  return (
+    <span className="source-dates">
+      Required {item.requiredThroughDate}
+      {item.selectedThroughDate ? ` · selected ${item.selectedThroughDate}` : " · no usable endpoint"}
+    </span>
+  );
+}
+
 function californiaTime(now: Date, timezone: string) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
@@ -189,7 +199,7 @@ export function App() {
             ) : null}
 
             {pipeline.run?.status === "unavailable" ? (
-              <><div className="data-unavailable-panel"><ClockCountdown /><div><strong>Provisional tomorrow forecast is unavailable</strong><p>{pipeline.run.message}</p></div></div><div className="source-grid source-grid--unavailable">{SOURCES.map(([key, name, detail]) => { const item = pipeline.run?.sourceInventory[key]; return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small><p>{sourceSummary(item)}</p></div></div>; })}</div></>
+              <><div className="data-unavailable-panel"><ClockCountdown /><div><strong>Provisional tomorrow forecast is unavailable</strong><p>{pipeline.run.message}</p></div></div><div className="source-grid source-grid--unavailable">{SOURCES.map(([key, name, detail]) => { const item = pipeline.run?.sourceInventory[key]; return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small>{sourceDates(key, item)}<p>{sourceSummary(item)}</p></div></div>; })}</div></>
             ) : null}
 
             {wasCancelled ? (
@@ -209,14 +219,21 @@ export function App() {
                 <div className="source-grid">
                   {SOURCES.map(([key, name, detail]) => {
                     const item = pipeline.run?.sourceInventory[key] ?? pipeline.run?.artifact?.sourceSnapshots?.[key];
-                    return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small><p>{sourceSummary(item)}</p></div></div>;
+                    return <div className="source-card" key={key}><CloudArrowDown /><div><strong>{name}</strong><small>{detail}</small>{sourceDates(key, item)}<p>{sourceSummary(item)}</p></div></div>;
                   })}
                 </div>
               </div>
             ) : null}
 
             {pipeline.run?.status === "succeeded" && pipeline.run.artifact ? (
-              <div className="success-panel"><div className="success-icon"><FileArrowDown weight="fill" /></div><div className="success-copy"><small>{pipeline.run.artifact.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Model input ready"}</small><h2>{pipeline.run.artifact.labelDate}_test.parquet</h2><p>The causal feature contract passed. Generated {new Date(pipeline.run.artifact.createdAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time{pipeline.run.artifact.cutoffAt ? ` · cutoff ${new Date(pipeline.run.artifact.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}` : ""}.</p><code>{pipeline.run.artifact.objectUri}</code></div><div className="success-metrics"><div><strong>{pipeline.run.artifact.featureCount}</strong><small>features</small></div><div><strong>{pipeline.run.artifact.cellCount}</strong><small>cells</small></div><div><strong>{pipeline.run.artifact.rowCount}</strong><small>rows</small></div></div></div>
+              <>
+                {pipeline.run.artifact.artifactQuality === "era5_fallback" ? (
+                  <div className="weather-quality-notice weather-quality-notice--fallback" role="status"><WarningCircle weight="fill" /><div><strong>Weather fallback forecast</strong><p>ERA5 through {pipeline.run.artifact.featureEndDate}—one day older than the required {pipeline.run.artifact.requiredFeatureEndDate} endpoint.</p><small>This forecast will be regenerated when exact ERA5 data becomes available.</small></div></div>
+                ) : pipeline.run.artifact.availabilityPolicy === "late_exact_refresh" ? (
+                  <div className="weather-quality-notice weather-quality-notice--exact" role="status"><CheckCircle weight="fill" /><div><strong>Exact weather data applied</strong><p>ERA5 through {pipeline.run.artifact.featureEndDate} replaced the earlier weather fallback forecast.</p>{pipeline.run.artifact.refreshedAt ? <small>Refreshed {new Date(pipeline.run.artifact.refreshedAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time.</small> : null}</div></div>
+                ) : null}
+                <div className="success-panel"><div className="success-icon"><FileArrowDown weight="fill" /></div><div className="success-copy"><small>{pipeline.run.artifact.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Model input ready"}</small><h2>{pipeline.run.artifact.labelDate}_test.parquet</h2><p>The causal feature contract passed. Generated {new Date(pipeline.run.artifact.createdAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time{pipeline.run.artifact.cutoffAt ? ` · cutoff ${new Date(pipeline.run.artifact.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}` : ""}.</p><code>{pipeline.run.artifact.objectUri}</code></div><div className="success-metrics"><div><strong>{pipeline.run.artifact.featureCount}</strong><small>features</small></div><div><strong>{pipeline.run.artifact.cellCount}</strong><small>cells</small></div><div><strong>{pipeline.run.artifact.rowCount}</strong><small>rows</small></div></div></div>
+              </>
             ) : null}
           </section>
         ) : null}
@@ -226,6 +243,11 @@ export function App() {
             predictionDate={inferenceDate}
             cutoffAt={pipeline.run?.artifact?.cutoffAt}
             forecastMode={pipeline.run?.artifact?.forecastMode}
+            artifactQuality={pipeline.run?.artifact?.artifactQuality}
+            availabilityPolicy={pipeline.run?.artifact?.availabilityPolicy}
+            featureEndDate={pipeline.run?.artifact?.featureEndDate}
+            requiredFeatureEndDate={pipeline.run?.artifact?.requiredFeatureEndDate}
+            refreshedAt={pipeline.run?.artifact?.refreshedAt}
             geometry={inference.geometry}
             riskMap={inference.riskMap}
             prediction={inference.prediction}

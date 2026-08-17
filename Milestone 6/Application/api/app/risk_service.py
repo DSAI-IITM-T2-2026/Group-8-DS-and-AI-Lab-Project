@@ -137,7 +137,8 @@ def validate_prepared_frame(frame: pd.DataFrame, label_date: date, feature_colum
 
     expected_label = pd.Timestamp(label_date)
     expected_eo = expected_label - timedelta(days=1)
-    expected_feature_end = expected_label - timedelta(days=6)
+    exact_feature_end = expected_label - timedelta(days=6)
+    fallback_feature_end = expected_label - timedelta(days=7)
     if set(table["label_date"].unique()) != {expected_label}:
         raise DataUnresolvableError(
             "The prepared parquet does not contain exactly the requested label date.",
@@ -147,9 +148,13 @@ def validate_prepared_frame(frame: pd.DataFrame, label_date: date, feature_colum
         raise DataUnresolvableError(
             "The prepared parquet has an invalid EO as-of date.", code="invalid_feature_data"
         )
-    if not table["feature_end_date"].eq(expected_feature_end).all():
+    selected_feature_ends = set(table["feature_end_date"].unique())
+    if len(selected_feature_ends) != 1 or not selected_feature_ends.issubset(
+        {exact_feature_end, fallback_feature_end}
+    ):
         raise DataUnresolvableError(
-            "The prepared parquet has an invalid ERA5 feature-end date.",
+            "The prepared parquet must use the exact D−6 ERA5 endpoint or the "
+            "approved one-day D−7 fallback.",
             code="invalid_feature_data",
         )
 

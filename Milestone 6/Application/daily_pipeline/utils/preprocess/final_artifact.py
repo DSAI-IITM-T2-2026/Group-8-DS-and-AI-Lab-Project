@@ -62,6 +62,17 @@ def _artifact_dict(
     created_at: datetime,
 ) -> dict:
     context = cfg.get("_forecast_context") or {}
+    required_feature_end = label_date - timedelta(
+        days=int(cfg["task"].get("era5_lag_days", 5))
+        + int(cfg["task"].get("lead_days", 1))
+    )
+    selected_feature_end = date.fromisoformat(
+        str(context.get("selectedFeatureEndDate", required_feature_end))
+    )
+    era5_snapshot = (context.get("sourceSnapshots") or {}).get("era5") or {}
+    artifact_quality = context.get("artifactQuality") or (
+        "era5_fallback" if int(era5_snapshot.get("ageDays") or 0) > 0 else "exact"
+    )
     artifact = {
         "objectUri": object_uri,
         "rowCount": int(len(frame)),
@@ -69,19 +80,22 @@ def _artifact_dict(
         "cellCount": int(frame["cell_id"].nunique()),
         "labelDate": label_date.isoformat(),
         "eoAsOfDate": (label_date - timedelta(days=1)).isoformat(),
-        "featureEndDate": (
-            label_date
-            - timedelta(
-                days=int(cfg["task"].get("era5_lag_days", 5))
-                + int(cfg["task"].get("lead_days", 1))
-            )
-        ).isoformat(),
+        "featureEndDate": selected_feature_end.isoformat(),
+        "requiredFeatureEndDate": required_feature_end.isoformat(),
         "createdAt": created_at.isoformat(),
         "cutoffAt": context.get("cutoffAt"),
         "timezone": context.get("timezone", cfg["task"].get("timezone")),
         "forecastMode": context.get("forecastMode", "standard"),
         "sourceSnapshots": context.get("sourceSnapshots", {}),
         "provenanceUri": context.get("provenanceUri"),
+        "immutableProvenanceUri": context.get("immutableProvenanceUri"),
+        "artifactQuality": artifact_quality,
+        "needsRefresh": bool(
+            context.get("needsRefresh", artifact_quality == "era5_fallback")
+        ),
+        "availabilityPolicy": context.get("availabilityPolicy", "cutoff_snapshot"),
+        "refreshedAt": context.get("refreshedAt"),
+        "supersedesProvenanceUri": context.get("supersedesProvenanceUri"),
     }
     return artifact
 
@@ -96,7 +110,7 @@ def write_artifact_provenance(
     created_at: datetime,
     storage_client: Any | None = None,
 ) -> tuple[dict, str]:
-    """Write the immutable source/cutoff sidecar next to a live parquet."""
+    """Write immutable version provenance plus the active adjacent sidecar."""
     artifact = _artifact_dict(
         frame,
         label_date,
@@ -109,13 +123,26 @@ def write_artifact_provenance(
         bucket_name, _, object_name = object_uri[5:].partition("/")
         provenance_uri = f"gs://{bucket_name}/{object_name.removesuffix('.parquet')}.provenance.json"
         artifact["provenanceUri"] = provenance_uri
+        version_key = created_at.astimezone().strftime("%Y%m%dT%H%M%S%f%z")
+        immutable_name = (
+            f"{object_name.removesuffix('.parquet')}.provenance/"
+            f"{version_key}-{artifact['artifactQuality']}.json"
+        )
+        immutable_uri = f"gs://{bucket_name}/{immutable_name}"
+        artifact["immutableProvenanceUri"] = immutable_uri
         payload = {**artifact, "orderedFeatures": feature_cols}
         if storage_client is None:
             from google.cloud import storage
 
             storage_client = storage.Client(project=cfg["gcs"].get("project"))
+        target_bucket = storage_client.bucket(bucket_name)
+        target_bucket.blob(immutable_name).upload_from_string(
+            json.dumps(payload, indent=2, sort_keys=True),
+            content_type="application/json",
+            if_generation_match=0,
+        )
         provenance_name = provenance_uri[5:].partition("/")[2]
-        storage_client.bucket(bucket_name).blob(provenance_name).upload_from_string(
+        target_bucket.blob(provenance_name).upload_from_string(
             json.dumps(payload, indent=2, sort_keys=True),
             content_type="application/json",
         )
@@ -123,7 +150,15 @@ def write_artifact_provenance(
         path = Path(object_uri)
         provenance_path = path.with_suffix(".provenance.json")
         artifact["provenanceUri"] = str(provenance_path)
+        immutable_dir = path.with_suffix(".provenance")
+        immutable_dir.mkdir(parents=True, exist_ok=True)
+        version_key = created_at.astimezone().strftime("%Y%m%dT%H%M%S%f%z")
+        immutable_path = immutable_dir / f"{version_key}-{artifact['artifactQuality']}.json"
+        artifact["immutableProvenanceUri"] = str(immutable_path)
         payload = {**artifact, "orderedFeatures": feature_cols}
+        immutable_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
         provenance_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
         )
@@ -307,10 +342,25 @@ def existing_final_artifact(
     if blob.exists():
         blob.reload()
         if blob.size:
+            provenance: dict[str, Any] | None = None
+            provenance_name = object_name.removesuffix(".parquet") + ".provenance.json"
+            provenance_blob = storage_client.bucket(bucket_name).blob(provenance_name)
+            if provenance_blob.exists():
+                try:
+                    provenance = json.loads(provenance_blob.download_as_text())
+                except Exception as exc:
+                    logger.warning("Invalid provenance sidecar %s: %s", provenance_name, exc)
             payload = blob.download_as_bytes()
             try:
                 frame = pd.read_parquet(io.BytesIO(payload))
-                feature_cols = validate_champion_artifact(frame, label_date, cfg)
+                validation_cfg = dict(cfg)
+                if provenance and provenance.get("featureEndDate"):
+                    validation_cfg["_forecast_context"] = {
+                        "selectedFeatureEndDate": provenance["featureEndDate"]
+                    }
+                feature_cols = validate_champion_artifact(
+                    frame, label_date, validation_cfg
+                )
             except Exception as exc:
                 logger.warning(
                     "Prepared parquet failed validation and will be rebuilt: gs://%s/%s (%s)",
@@ -320,14 +370,6 @@ def existing_final_artifact(
                 )
             else:
                 created_at = blob.updated or datetime.now().astimezone()
-                provenance: dict[str, Any] | None = None
-                provenance_name = object_name.removesuffix(".parquet") + ".provenance.json"
-                provenance_blob = storage_client.bucket(bucket_name).blob(provenance_name)
-                if provenance_blob.exists():
-                    try:
-                        provenance = json.loads(provenance_blob.download_as_text())
-                    except Exception as exc:
-                        logger.warning("Invalid provenance sidecar %s: %s", provenance_name, exc)
                 if require_provenance:
                     valid_provenance = bool(
                         provenance
@@ -358,9 +400,16 @@ def existing_final_artifact(
                         for key in (
                             "cutoffAt", "timezone", "forecastMode",
                             "sourceSnapshots", "provenanceUri",
+                            "immutableProvenanceUri", "artifactQuality",
+                            "needsRefresh", "requiredFeatureEndDate",
+                            "featureEndDate", "availabilityPolicy",
+                            "refreshedAt", "supersedesProvenanceUri",
                         )
                         if provenance.get(key) is not None
                     })
+                generation = getattr(blob, "generation", None)
+                if generation is not None:
+                    artifact["generation"] = str(generation)
                 return artifact
         else:
             logger.warning(

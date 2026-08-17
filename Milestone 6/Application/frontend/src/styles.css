@@ -141,7 +141,15 @@ input[type="date"]:focus { border-color: #3b8a71; box-shadow: 0 0 0 4px #dff0ea;
 .source-card strong, .source-card small { display: block; }
 .source-card strong { font-size: 12px; }
 .source-card small { margin-top: 3px; color: #849197; font-size: 9px; }
+.source-card .source-dates { display: block; margin-top: 7px; color: #3c665b; font-size: 9px; font-weight: 700; line-height: 1.45; }
 .source-card p { margin: 9px 0 0; font-size: 10px; color: #526268; }
+.weather-quality-notice { margin-top: 15px; padding: 17px 20px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid; border-radius: 14px; }
+.weather-quality-notice > svg { width: 23px; height: 23px; flex: 0 0 auto; }
+.weather-quality-notice strong { display: block; font-size: 14px; }
+.weather-quality-notice p { margin: 4px 0 3px; font-size: 11px; line-height: 1.5; }
+.weather-quality-notice small { font-size: 10px; }
+.weather-quality-notice--fallback { border-color: #e5c58e; background: #fff8e9; color: #75511f; }
+.weather-quality-notice--exact { border-color: #a8d2c2; background: #edf8f3; color: #245e4c; }
 .success-panel { margin-top: 15px; padding: 25px; display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; border-radius: 17px; color: white; background: linear-gradient(115deg, #286c58, #1b4544); box-shadow: 0 18px 45px rgba(28,82,68,.2); }
 .success-icon { width: 55px; height: 55px; display: grid; place-items: center; background: rgba(255,255,255,.12); border-radius: 14px; }
 .success-icon svg { width: 29px; height: 29px; }
@@ -157,6 +165,10 @@ input[type="date"]:focus { border-color: #3b8a71; box-shadow: 0 0 0 4px #dff0ea;
 .next-phase h2 { margin: 0 0 5px; color: #425158; font-size: 15px; }
 .next-phase p { margin: 0; font-size: 11px; line-height: 1.5; }
 .results-section { margin-top: 55px; }
+.results-weather-context { margin: 12px 0 14px; padding: 10px 13px; display: flex; align-items: center; gap: 8px; border: 1px solid; border-radius: 10px; font-size: 10px; line-height: 1.45; }
+.results-weather-context svg { width: 17px; height: 17px; flex: 0 0 auto; }
+.results-weather-context--fallback { border-color: #e5c58e; background: #fff8e9; color: #75511f; }
+.results-weather-context--exact { border-color: #a8d2c2; background: #edf8f3; color: #245e4c; }
 .results-loading { min-height: 110px; padding: 24px; display: flex; align-items: center; gap: 16px; }
 .results-loading strong { display: block; font-size: 14px; }
 .results-loading p { margin: 5px 0 0; color: #718087; font-size: 11px; }

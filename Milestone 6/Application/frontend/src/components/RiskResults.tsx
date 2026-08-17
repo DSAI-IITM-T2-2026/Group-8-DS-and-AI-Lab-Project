@@ -6,6 +6,11 @@ interface RiskResultsProps {
   predictionDate: string;
   cutoffAt?: string;
   forecastMode?: string;
+  artifactQuality?: "exact" | "era5_fallback";
+  availabilityPolicy?: "cutoff_snapshot" | "late_exact_refresh";
+  featureEndDate?: string;
+  requiredFeatureEndDate?: string;
+  refreshedAt?: string;
   geometry?: RegionGeometryResponse;
   riskMap?: RiskMapResponse;
   prediction?: PredictionResponse;
@@ -138,6 +143,12 @@ export function RiskResults(props: RiskResultsProps) {
         <div><small>{props.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Step 03"}</small><h2>Prediction results</h2>{props.cutoffAt ? <p className="results-time-context">Data cutoff: {new Date(props.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time · America/Los_Angeles</p> : <p className="results-time-context">California time · America/Los_Angeles</p>}</div>
         {resultsReady ? <span className="status-pill status-pill--succeeded">Model scored</span> : null}
       </div>
+
+      {props.artifactQuality === "era5_fallback" ? (
+        <div className="results-weather-context results-weather-context--fallback"><WarningCircle weight="fill" /><span><strong>Weather fallback forecast</strong> · ERA5 selected {props.featureEndDate}; required {props.requiredFeatureEndDate}. Automatic refresh is pending exact weather data.</span></div>
+      ) : props.availabilityPolicy === "late_exact_refresh" ? (
+        <div className="results-weather-context results-weather-context--exact"><CheckCircle weight="fill" /><span><strong>Exact weather data applied</strong>{props.refreshedAt ? ` · refreshed ${new Date(props.refreshedAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time` : ""}.</span></div>
+      ) : null}
 
       {props.isLoading ? (
         <div className="results-loading card"><span className="loading-ring" /><div><strong>Scoring the prepared grid</strong><p>Applying the calibrated classifier and daily ranker blend for {props.predictionDate}.</p></div></div>

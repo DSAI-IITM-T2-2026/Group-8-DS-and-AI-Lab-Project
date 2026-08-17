@@ -159,6 +159,51 @@ def test_local_provenance_records_cutoff_and_ordered_features(tmp_path):
     assert artifact["forecastMode"] == "provisional_tomorrow"
     assert payload["orderedFeatures"] == FEATURES
     assert payload["cutoffAt"] == "2026-08-11T06:30:00-07:00"
+    assert Path(payload["immutableProvenanceUri"]).is_file()
+    assert payload["artifactQuality"] == "exact"
+
+
+def test_local_fallback_provenance_records_refresh_contract(tmp_path):
+    cfg = config(tmp_path)
+    cfg["task"]["timezone"] = "America/Los_Angeles"
+    cfg["_forecast_context"] = {
+        "cutoffAt": "2026-08-17T06:30:00-07:00",
+        "timezone": "America/Los_Angeles",
+        "forecastMode": "provisional_tomorrow",
+        "selectedFeatureEndDate": "2026-08-11",
+        "artifactQuality": "era5_fallback",
+        "needsRefresh": True,
+        "availabilityPolicy": "cutoff_snapshot",
+        "sourceSnapshots": {
+            "era5": {
+                "requiredThroughDate": "2026-08-12",
+                "selectedThroughDate": "2026-08-11",
+                "ageDays": 1,
+                "mode": "latest_causal",
+                "ready": True,
+                "exactAvailable": False,
+            }
+        },
+    }
+    target = tmp_path / "2026-08-18_test.parquet"
+    frame = prepared_frame(date(2026, 8, 18))
+    frame["feature_end_date"] = pd.Timestamp("2026-08-11")
+    frame.to_parquet(target, index=False)
+
+    artifact, _ = write_artifact_provenance(
+        frame,
+        date(2026, 8, 18),
+        cfg,
+        object_uri=str(target),
+        feature_cols=FEATURES,
+        created_at=datetime(2026, 8, 17, 14, tzinfo=timezone.utc),
+    )
+
+    assert artifact["artifactQuality"] == "era5_fallback"
+    assert artifact["needsRefresh"] is True
+    assert artifact["featureEndDate"] == "2026-08-11"
+    assert artifact["requiredFeatureEndDate"] == "2026-08-12"
+    assert Path(artifact["immutableProvenanceUri"]).is_file()
 
 
 def test_missing_parquet_does_not_download(tmp_path):

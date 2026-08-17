@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+import os
 from pathlib import Path
 import sys
+
+import pandas as pd
 
 UTILS = Path(__file__).resolve().parents[1] / "utils"
 if str(UTILS) not in sys.path:
@@ -131,6 +134,74 @@ def test_objects_created_after_cutoff_are_excluded():
     objects["dem/dem.parquet"].updated = objects["dem/dem.parquet"].time_created
     inventory = build_cutoff_inventory(target, cfg, storage_client=Client(objects))
     assert inventory["dem"]["ready"] is False
+
+
+def test_open_month_era5_uses_one_day_fallback_not_monthly_presence():
+    target = date(2026, 8, 18)
+    cfg, objects = ready_objects(target)
+    endpoint = "era5/2026/era5_2026_08_12.nc"
+    del objects[endpoint]
+    created = forecast_cutoff_at(target, cfg).astimezone(timezone.utc) - timedelta(minutes=1)
+    monthly = Blob("era5/2026/era5_2026_08.nc", created)
+    objects[monthly.name] = monthly
+
+    inventory = build_cutoff_inventory(target, cfg, storage_client=Client(objects))
+
+    assert inventory["era5"]["ready"] is True
+    assert inventory["era5"]["selectedThroughDate"] == "2026-08-11"
+    assert inventory["era5"]["requiredThroughDate"] == "2026-08-12"
+    assert inventory["era5"]["ageDays"] == 1
+    assert inventory["era5"]["mode"] == "latest_causal"
+    assert inventory["era5"]["exactAvailable"] is False
+    assert "one day older" in inventory["era5"]["message"]
+
+
+def test_era5_rejects_two_day_old_endpoint():
+    target = date(2026, 8, 18)
+    cfg, objects = ready_objects(target)
+    del objects["era5/2026/era5_2026_08_12.nc"]
+    del objects["era5/2026/era5_2026_08_11.nc"]
+
+    inventory = build_cutoff_inventory(target, cfg, storage_client=Client(objects))
+
+    assert inventory["era5"]["ready"] is False
+    assert inventory["era5"]["selectedThroughDate"] == "2026-08-10"
+    assert inventory["era5"]["ageDays"] == 2
+
+
+def test_exact_era5_after_cutoff_is_selected_for_late_refresh():
+    target = date(2026, 8, 18)
+    cfg, objects = ready_objects(target)
+    endpoint = objects["era5/2026/era5_2026_08_12.nc"]
+    endpoint.time_created = forecast_cutoff_at(target, cfg) + timedelta(hours=2)
+    endpoint.updated = endpoint.time_created
+
+    inventory = build_cutoff_inventory(target, cfg, storage_client=Client(objects))
+
+    assert inventory["era5"]["ready"] is True
+    assert inventory["era5"]["selectedThroughDate"] == "2026-08-12"
+    assert inventory["era5"]["exactAvailable"] is True
+    assert inventory["era5"]["exactArrivedAfterCutoff"] is True
+
+
+def test_open_month_uses_actual_derived_cache_coverage(tmp_path):
+    target = date(2026, 8, 18)
+    cfg, objects = ready_objects(target)
+    del objects["era5/2026/era5_2026_08_12.nc"]
+    del objects["era5/2026/era5_2026_08_11.nc"]
+    cfg["paths"]["local_cache"] = str(tmp_path)
+    cache = tmp_path / "m4_shared_cache" / "era5_daily" / "year=2026"
+    cache.mkdir(parents=True)
+    derived = cache / "month=08.parquet"
+    pd.DataFrame({"date": [pd.Timestamp("2026-08-11")]}).to_parquet(derived)
+    before_cutoff = forecast_cutoff_at(target, cfg).timestamp() - 60
+    os.utime(derived, (before_cutoff, before_cutoff))
+
+    inventory = build_cutoff_inventory(target, cfg, storage_client=Client(objects))
+
+    assert inventory["era5"]["ready"] is True
+    assert inventory["era5"]["selectedThroughDate"] == "2026-08-11"
+    assert inventory["era5"]["exactAvailable"] is False
 
 
 def test_sentinel5p_rejects_observation_older_than_seven_days():
