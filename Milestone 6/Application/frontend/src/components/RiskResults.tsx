@@ -128,6 +128,7 @@ export function RiskResults(props: RiskResultsProps) {
   const selected = ranked.find((item) => item.areaId === props.selectedCellId);
   const selectedValidation = props.validation?.items.find((item) => item.areaId === props.selectedCellId);
   const validationAvailable = props.validation?.status === "available";
+  const resultsReady = !props.isLoading && Boolean(props.geometry && props.riskMap);
 
   useEffect(() => { setMapMode("risk"); }, [props.predictionDate]);
 
@@ -135,7 +136,7 @@ export function RiskResults(props: RiskResultsProps) {
     <section className="results-section" aria-live="polite">
       <div className="section-heading">
         <div><small>{props.forecastMode === "provisional_tomorrow" ? "Provisional tomorrow forecast" : "Step 03"}</small><h2>Prediction results</h2>{props.cutoffAt ? <p className="results-time-context">Data cutoff: {new Date(props.cutoffAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} California time · America/Los_Angeles</p> : <p className="results-time-context">California time · America/Los_Angeles</p>}</div>
-        {props.riskMap ? <span className="status-pill status-pill--succeeded">Model scored</span> : null}
+        {resultsReady ? <span className="status-pill status-pill--succeeded">Model scored</span> : null}
       </div>
 
       {props.isLoading ? (
@@ -150,7 +151,7 @@ export function RiskResults(props: RiskResultsProps) {
         </div>
       ) : null}
 
-      {props.geometry && props.riskMap ? (
+      {resultsReady && props.geometry && props.riskMap ? (
         <div className="results-grid">
           <article className="card map-card">
             <div className="results-card-heading"><div><MapPin /><span><small>{mapMode === "risk" ? "Daily priority map" : "Post-event validation"}</small><strong>California model grid</strong></span></div><p>{props.riskMap.items.length} scored cells</p></div>
@@ -178,7 +179,7 @@ export function RiskResults(props: RiskResultsProps) {
         </div>
       ) : null}
 
-      {mapMode === "validation" && props.validation?.summary ? (
+      {resultsReady && mapMode === "validation" && props.validation?.summary ? (
         <div className="validation-summary" aria-label="Selected-day validation summary">
           <div><small>FIRMS-observed cells</small><strong>{props.validation.summary.observedFireCells}</strong></div>
           <div><small>Captured in Top-25</small><strong>{props.validation.summary.capturedInTop25}</strong></div>
@@ -188,7 +189,7 @@ export function RiskResults(props: RiskResultsProps) {
         </div>
       ) : null}
 
-      {selected ? (
+      {resultsReady && selected ? (
         <article className="card cell-detail">
           <div className="cell-summary">
             <div className="cell-title"><Fire weight="fill" /><div><small>Selected grid cell</small><h3>{selected.areaId}</h3></div></div>

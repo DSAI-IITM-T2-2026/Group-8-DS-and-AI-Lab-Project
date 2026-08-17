@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise,
   CalendarBlank,
@@ -56,6 +56,17 @@ function sourceSummary(item?: SourceInventoryItem) {
   return `${item.available} available · ${item.missing} to prepare`;
 }
 
+function californiaTime(now: Date, timezone: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(now);
+}
+
 export function App() {
   const service = useMemo(() => new HttpPipelineService(appConfig.apiBaseUrl), []);
   const inferenceService = useMemo(() => new HttpInferenceService(appConfig.apiBaseUrl), []);
@@ -69,6 +80,13 @@ export function App() {
   const hasError = pipeline.error || pipeline.run?.status === "failed" || (pipeline.run?.status === "interrupted" && !wasCancelled);
   const isTomorrow = pipeline.selectedDate === pipeline.config?.maxPredictionDate;
   const cutoffDate = pipeline.selectedDate ? dateShift(pipeline.selectedDate, -1) : "";
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const timezone = pipeline.config?.timezone ?? "America/Los_Angeles";
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="app-shell">
@@ -77,9 +95,11 @@ export function App() {
           <img src="/assets/wildfire-iq-shield.png?v=2" alt="" />
           <span><strong>WILDFIRE <em>IQ</em></strong><small>California Forecasting Studio</small></span>
         </a>
-        <div className="system-state"><span /> Pipeline workspace <b>Local / VM</b></div>
       </header>
-      <div className="california-time-notice"><ClockCountdown weight="fill" /> All prediction dates and data cutoffs use California time.</div>
+      <div className="california-time-notice">
+        <span className="time-policy"><ClockCountdown weight="fill" /> All prediction dates and data cutoffs use California time.</span>
+        <span className="california-live-clock"><i aria-hidden="true" /><small>California now</small><time dateTime={currentTime.toISOString()}>{californiaTime(currentTime, timezone)}</time></span>
+      </div>
 
       <main id="top">
         <section className="hero">

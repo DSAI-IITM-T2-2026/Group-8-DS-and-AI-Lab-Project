@@ -44,6 +44,7 @@ describe("App tomorrow workflow", () => {
     await waitFor(() => expect(input).toHaveValue("2026-08-17"));
     expect(screen.getByRole("button", { name: /tomorrow/i })).toHaveClass("is-selected");
     expect(screen.getByText("All prediction dates and data cutoffs use California time.")).toBeInTheDocument();
+    expect(screen.getByText("California now")).toBeInTheDocument();
     expect(screen.getByText(/Data cutoff: 06:30 California time/)).toBeInTheDocument();
   });
 

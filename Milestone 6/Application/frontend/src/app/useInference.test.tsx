@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useInference } from "./useInference";
 
@@ -48,11 +48,34 @@ describe("useInference", () => {
     const service = {
       getGeometry: vi.fn().mockResolvedValue(geometry),
       getRiskMap: vi.fn().mockRejectedValue(new Error("Model unavailable")),
-      getDailyValidation: vi.fn(),
+      getDailyValidation: vi.fn().mockResolvedValue(validation),
       getPrediction: vi.fn(),
     } as any;
     const { result } = renderHook(() => useInference(service, "2025-08-01"));
     await waitFor(() => expect(result.current.error?.message).toBe("Model unavailable"));
     expect(result.current.riskMap).toBeUndefined();
+  });
+
+  it("publishes the initial map, validation, and cell detail together", async () => {
+    let resolvePrediction: (value: { regionId: string }) => void = () => undefined;
+    const detail = new Promise<{ regionId: string }>((resolve) => { resolvePrediction = resolve; });
+    const service = {
+      getGeometry: vi.fn().mockResolvedValue(geometry),
+      getRiskMap: vi.fn().mockResolvedValue(riskMap),
+      getDailyValidation: vi.fn().mockResolvedValue(validation),
+      getPrediction: vi.fn().mockReturnValue(detail),
+    } as any;
+    const { result } = renderHook(() => useInference(service, "2025-08-01"));
+
+    await waitFor(() => expect(service.getPrediction).toHaveBeenCalled());
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.riskMap).toBeUndefined();
+    expect(result.current.validation).toBeUndefined();
+
+    await act(async () => resolvePrediction({ regionId: "cell-a" }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.riskMap).toBe(riskMap);
+    expect(result.current.validation).toBe(validation);
+    expect(result.current.prediction?.regionId).toBe("cell-a");
   });
 });

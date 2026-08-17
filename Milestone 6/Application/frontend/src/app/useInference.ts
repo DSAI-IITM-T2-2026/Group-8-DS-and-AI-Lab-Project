@@ -19,48 +19,56 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
   const [validationError, setValidationError] = useState<string>();
+  const [loadedDate, setLoadedDate] = useState<string>();
   const geometryRef = useRef<RegionGeometryResponse | undefined>(undefined);
 
   const load = useCallback(async () => {
     if (!predictionDate) return;
     setIsLoading(true);
     setError(undefined);
+    setRiskMap(undefined);
     setPrediction(undefined);
     setValidation(undefined);
+    setSelectedCellId(undefined);
     setValidationError(undefined);
+    setIsLoadingValidation(true);
+    setIsLoadingDetail(true);
     try {
-      const [nextGeometry, nextRiskMap] = await Promise.all([
+      const validationRequest = service.getDailyValidation(predictionDate)
+        .then((value) => ({ value, error: undefined }))
+        .catch((caught) => ({ value: undefined, error: errorDetails(caught).message }));
+      const [nextGeometry, nextRiskMap, validationResult] = await Promise.all([
         geometryRef.current ? Promise.resolve(geometryRef.current) : service.getGeometry(),
         service.getRiskMap(predictionDate),
+        validationRequest,
       ]);
       geometryRef.current = nextGeometry;
-      setGeometry(nextGeometry);
-      setRiskMap(nextRiskMap);
-      setIsLoadingValidation(true);
-      try {
-        setValidation(await service.getDailyValidation(predictionDate));
-      } catch (caught) {
-        setValidationError(errorDetails(caught).message);
-      } finally {
-        setIsLoadingValidation(false);
-      }
       const firstCellId = nextRiskMap.items[0]?.areaId;
-      setSelectedCellId(firstCellId);
+      let nextPrediction: PredictionResponse | undefined;
       if (firstCellId) {
-        setIsLoadingDetail(true);
         try {
-          setPrediction(await service.getPrediction(firstCellId, predictionDate));
+          nextPrediction = await service.getPrediction(firstCellId, predictionDate);
         } catch (caught) {
           setError(errorDetails(caught));
-        } finally {
-          setIsLoadingDetail(false);
         }
       }
+      // Publish the complete initial result together so the map, ranking,
+      // validation toggle, and selected-cell explanation do not pop in apart.
+      setGeometry(nextGeometry);
+      setRiskMap(nextRiskMap);
+      setValidation(validationResult.value);
+      setValidationError(validationResult.error);
+      setSelectedCellId(firstCellId);
+      setPrediction(nextPrediction);
+      setLoadedDate(predictionDate);
     } catch (caught) {
       setError(errorDetails(caught));
       setRiskMap(undefined);
+      setLoadedDate(predictionDate);
     } finally {
       setIsLoading(false);
+      setIsLoadingValidation(false);
+      setIsLoadingDetail(false);
     }
   }, [predictionDate, service]);
 
@@ -71,6 +79,8 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
   const selectCell = useCallback(async (cellId: string) => {
     if (!predictionDate) return;
     setSelectedCellId(cellId);
+    setError(undefined);
+    setPrediction(undefined);
     setIsLoadingDetail(true);
     try {
       setPrediction(await service.getPrediction(cellId, predictionDate));
@@ -81,14 +91,16 @@ export function useInference(service: HttpInferenceService, predictionDate?: str
     }
   }, [predictionDate, service]);
 
+  const isTransitioning = Boolean(predictionDate && loadedDate !== predictionDate);
+
   return {
     geometry,
-    riskMap,
+    riskMap: isTransitioning ? undefined : riskMap,
     prediction,
     validation,
     selectedCellId,
     error,
-    isLoading,
+    isLoading: isLoading || isTransitioning,
     isLoadingDetail,
     isLoadingValidation,
     validationError,

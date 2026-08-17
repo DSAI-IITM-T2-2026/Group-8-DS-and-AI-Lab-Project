@@ -21,6 +21,14 @@ const riskMap = {
 } as const;
 
 describe("RiskResults", () => {
+  it("does not show stale map content while a complete result is loading", () => {
+    render(<RiskResults predictionDate="2025-08-01" geometry={geometry as any} riskMap={riskMap as any} selectedCellId="cell-a" isLoading isLoadingDetail isLoadingValidation onRetry={vi.fn()} onSelectCell={vi.fn()} />);
+    expect(screen.getByText("Scoring the prepared grid")).toBeInTheDocument();
+    expect(screen.queryByLabelText("California wildfire daily priority grid")).not.toBeInTheDocument();
+    expect(screen.queryByText("Model scored")).not.toBeInTheDocument();
+    expect(screen.queryByText("Strongest model drivers")).not.toBeInTheDocument();
+  });
+
   it("renders daily priority, calibrated probability, and top-25 state", () => {
     const select = vi.fn();
     render(<RiskResults predictionDate="2025-08-01" geometry={geometry as any} riskMap={riskMap as any} selectedCellId="cell-a" isLoading={false} isLoadingDetail={false} isLoadingValidation={false} onRetry={vi.fn()} onSelectCell={select} />);

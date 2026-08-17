@@ -10,8 +10,14 @@ button, input { font: inherit; }
 button { cursor: pointer; }
 .app-shell { min-height: 100vh; }
 .topbar { height: 78px; padding: 0 clamp(24px, 5vw, 76px); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.9); border-bottom: 1px solid #dfe6e8; backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 10; }
-.california-time-notice { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 9px 18px; background: #244f45; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; position: sticky; top: 78px; z-index: 9; }
-.california-time-notice svg { width: 16px; height: 16px; }
+.california-time-notice { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 7px clamp(24px, 5vw, 76px); background: #244f45; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; position: sticky; top: 78px; z-index: 9; }
+.time-policy, .california-live-clock { display: inline-flex; align-items: center; }
+.time-policy { gap: 8px; }
+.california-time-notice svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.california-live-clock { gap: 7px; padding: 5px 10px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(255,255,255,.09); white-space: nowrap; }
+.california-live-clock i { width: 7px; height: 7px; border-radius: 50%; background: #ffb05c; box-shadow: 0 0 0 3px rgba(255,176,92,.15); }
+.california-live-clock small { color: #bcd5cd; font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.california-live-clock time { min-width: 145px; font-variant-numeric: tabular-nums; }
 .cutoff-note, .run-time-context, .results-time-context { color: #46665f; font-size: 12px; }
 .cutoff-note { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; }
 .run-time-context { margin: -8px 0 18px; font-weight: 700; }
@@ -22,9 +28,6 @@ button { cursor: pointer; }
 .brand strong { font-size: 18px; letter-spacing: -.4px; }
 .brand em { color: #d9553f; font-style: normal; }
 .brand small { color: #77858c; font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; }
-.system-state { display: flex; gap: 9px; align-items: center; font-size: 12px; color: #6d7a80; }
-.system-state > span { width: 8px; height: 8px; border-radius: 50%; background: #36a278; box-shadow: 0 0 0 4px #dff2ea; }
-.system-state b { padding: 7px 10px; border-radius: 20px; background: #eef2f2; color: #45545a; font-weight: 600; }
 main { max-width: 1240px; margin: auto; padding: 68px 32px 48px; }
 .hero { max-width: 800px; margin-bottom: 42px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1.8px; color: #c7523f; }
@@ -197,8 +200,8 @@ input[type="date"]:focus { border-color: #3b8a71; box-shadow: 0 0 0 4px #dff0ea;
 .validation-summary > div { padding: 17px; border: 1px solid #dce5e4; border-radius: 13px; background: #f7faf9; }
 .validation-summary small { display: block; min-height: 24px; color: #78888d; font-size: 9px; font-weight: 700; line-height: 1.35; text-transform: uppercase; letter-spacing: .7px; }
 .validation-summary strong { display: block; margin-top: 6px; color: #2b715c; font-size: 23px; }
-.ranking-card { display: flex; flex-direction: column; max-height: 645px; }
-.ranking-list { min-height: 0; overflow: auto; display: grid; gap: 6px; padding-right: 4px; }
+.ranking-card { min-height: 0; display: flex; flex-direction: column; overflow: hidden; contain: size; }
+.ranking-list { flex: 1; min-height: 0; overflow: auto; display: grid; gap: 6px; padding-right: 4px; }
 .ranking-list button { width: 100%; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 10px; border: 1px solid transparent; border-radius: 10px; background: #f5f8f7; color: #26373d; text-align: left; }
 .ranking-list button:hover, .ranking-list button.is-selected { border-color: #9cc4b7; background: #eaf3f0; }
 .ranking-list button > b { color: #31725f; font-size: 12px; }
@@ -242,7 +245,7 @@ footer { padding: 30px; text-align: center; color: #94a0a4; font-size: 10px; }
   .success-panel { grid-template-columns: auto 1fr; }
   .success-metrics { grid-column: 1 / -1; justify-content: center; }
   .results-grid { grid-template-columns: 1fr; }
-  .ranking-card { max-height: 520px; }
+  .ranking-card { height: auto; max-height: 520px; contain: none; }
   .cell-detail { grid-template-columns: 1fr; }
   .feature-detail { padding: 18px 0 0; border-left: 0; border-top: 1px solid #e3e8e9; }
   .cell-summary { grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -254,9 +257,11 @@ footer { padding: 30px; text-align: center; color: #94a0a4; font-size: 10px; }
 }
 @media (max-width: 620px) {
   .topbar { height: 68px; padding: 0 18px; }
-  .california-time-notice { top: 68px; }
+  .california-time-notice { top: 68px; padding: 7px 14px; gap: 10px; font-size: 10px; }
+  .california-live-clock { padding: 4px 8px; }
+  .california-live-clock small { display: none; }
+  .california-live-clock time { min-width: 128px; }
   .brand img { width: 48px; height: 52px; }
-  .system-state { display: none; }
   main { padding: 45px 18px 35px; }
   .hero h1 { font-size: clamp(34px, 10.5vw, 43px); letter-spacing: -2.2px; overflow-wrap: anywhere; }
   .hero p { font-size: 14px; }
