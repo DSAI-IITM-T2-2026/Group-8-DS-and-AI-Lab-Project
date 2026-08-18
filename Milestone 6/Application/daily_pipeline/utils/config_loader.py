@@ -43,7 +43,20 @@ def load_daily_config(config_path: Path | None = None) -> dict[str, Any]:
 
 def load_feature_contract(cfg: dict[str, Any]) -> dict[str, Any]:
     path = resolve_path(cfg, "contracts")
-    return json.loads(path.read_text(encoding="utf-8"))
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    features = (contract.get("feature_prune") or {}).get("kept_features")
+    if (
+        not isinstance(features, list)
+        or len(features) != 86
+        or any(not isinstance(name, str) or not name for name in features)
+        or len(set(features)) != 86
+    ):
+        raise ValueError(
+            "Feature contract mismatch: expected feature_prune.kept_features "
+            "with exactly 86 unique feature names. Rebuild the application from "
+            "the maintained champion contract before preparing data."
+        )
+    return contract
 
 
 def load_m4_config(cfg: dict[str, Any]) -> dict[str, Any]:

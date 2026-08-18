@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import logging
 import sys
 import uuid
@@ -113,9 +114,41 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
                 },
             )
 
+    def validate_model_contract() -> None:
+        """Reject preparation when the configured scorer cannot consume its output."""
+        contract_path = (
+            settings.pipeline_root
+            / "utils"
+            / "contracts"
+            / "champion_86_features.json"
+        )
+        registry = get_model_registry()
+        if not contract_path.is_file() or not registry.is_loaded:
+            return
+        try:
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            prepared_features = list(contract["feature_prune"]["kept_features"])
+        except (OSError, KeyError, TypeError, ValueError):
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "feature_contract_mismatch",
+                    "message": "The deployed feature contract is stale or invalid. Rebuild the application before retrying.",
+                },
+            )
+        if prepared_features != registry.feature_columns:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "model_contract_mismatch",
+                    "message": "The configured model does not match the deployed 86-feature preparation contract.",
+                },
+            )
+
     @app.post("/api/v1/pipeline-runs", response_model=PipelineRun, status_code=status.HTTP_202_ACCEPTED)
     def create_run(payload: PipelineRunCreate) -> PipelineRun:
         validate_date(payload.predictionDate)
+        validate_model_contract()
         run, _ = store.create_or_reuse(payload.predictionDate.isoformat())
         return PipelineRun.model_validate(run)
 

@@ -27,7 +27,12 @@ from bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
-from config_loader import load_daily_config, load_m4_config, pipeline_today  # noqa: E402
+from config_loader import (  # noqa: E402
+    load_daily_config,
+    load_feature_contract,
+    load_m4_config,
+    pipeline_today,
+)
 from cutoff_policy import (  # noqa: E402
     build_cutoff_inventory,
     california_now,
@@ -737,6 +742,11 @@ def cmd_all_one(args: argparse.Namespace, cfg: dict, label_date: date, *, skip_d
 
 
 def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
+    # Fail before any cloud work when a stale deployment contains the wrong
+    # champion feature contract. Lightweight date-window tests intentionally
+    # omit application paths, so only validate configured production runs.
+    if cfg.get("paths", {}).get("contracts"):
+        load_feature_contract(cfg)
     labels = resolve_label_dates(args)
     emit_event("validating", "running", "Validated the requested prediction date.")
     as_of = pipeline_today(cfg)
@@ -756,9 +766,9 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
     labels = capped
     tomorrow = as_of + timedelta(days=1)
     tomorrow_cutoff = forecast_cutoff_at(tomorrow, cfg)
-    tomorrow_context: dict | None = None
-    tomorrow_inventory: dict | None = None
-    superseded_provenance_uri: str | None = None
+    forecast_contexts: dict[date, dict] = {}
+    cutoff_inventories: dict[date, dict] = {}
+    superseded_provenance_uris: dict[date, str] = {}
     if tomorrow in labels and california_now(cfg) < tomorrow_cutoff:
         emit_event(
             "inventory",
@@ -791,21 +801,25 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             )
             if artifact is None:
                 missing_or_invalid.append(label)
-            elif (
-                label == tomorrow
-                and artifact.get("artifactQuality") == "era5_fallback"
-            ):
-                # A fallback is reusable only after checking whether exact D-6
-                # has appeared. This is the only refresh check and runs on each
-                # Generate/Retry request; no background scheduler is involved.
-                tomorrow_inventory = build_cutoff_inventory(tomorrow, cfg)
-                era5_snapshot = tomorrow_inventory.get("era5") or {}
+            elif artifact.get("artifactQuality") == "era5_fallback" or artifact.get("needsRefresh"):
+                # Refresh follows immutable artifact provenance, not whether
+                # the requested date is still called "tomorrow". A fallback
+                # requested again after midnight must still recheck exact D-6.
+                current_inventory = build_cutoff_inventory(label, cfg)
+                era5_snapshot = current_inventory.get("era5") or {}
                 if (
                     era5_snapshot.get("ready")
                     and era5_snapshot.get("exactAvailable")
                     and int(era5_snapshot.get("ageDays") or 0) == 0
                 ):
-                    superseded_provenance_uri = (
+                    # Preserve the original cutoff-selected EO/FIRMS/DEM inputs
+                    # and upgrade only ERA5. This makes refresh deterministic
+                    # and prevents post-cutoff satellite objects from leaking in.
+                    original_inventory = artifact.get("sourceSnapshots") or {}
+                    refresh_inventory = dict(original_inventory or current_inventory)
+                    refresh_inventory["era5"] = era5_snapshot
+                    cutoff_inventories[label] = refresh_inventory
+                    superseded_provenance_uris[label] = (
                         artifact.get("immutableProvenanceUri")
                         or artifact.get("provenanceUri")
                     )
@@ -841,8 +855,10 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
         )
 
     preflight_ready: set[date] = set()
-    if tomorrow in labels:
-        inventory = tomorrow_inventory or build_cutoff_inventory(tomorrow, cfg)
+    for label in labels:
+        if label != tomorrow and label not in cutoff_inventories:
+            continue
+        inventory = cutoff_inventories.get(label) or build_cutoff_inventory(label, cfg)
         if any(not item.get("ready", False) for item in inventory.values()):
             emit_event(
                 "inventory",
@@ -850,22 +866,22 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
                 unavailable_message(inventory),
                 inventory=inventory,
             )
-            logger.info("Tomorrow preflight found missing source data; no cloud work was scheduled")
+            logger.info("Cutoff preflight found missing source data; no cloud work was scheduled")
             return 0
-        preflight_ready.add(tomorrow)
+        preflight_ready.add(label)
         era5_snapshot = inventory["era5"]
         is_fallback = int(era5_snapshot.get("ageDays") or 0) == 1
         late_exact_refresh = bool(
-            era5_snapshot.get("exactArrivedAfterCutoff")
+            (era5_snapshot.get("exactArrivedAfterCutoff") or label in superseded_provenance_uris)
             and not is_fallback
         )
         selected_feature_end = era5_snapshot.get("selectedThroughDate")
-        tomorrow_context = {
-            "cutoffAt": tomorrow_cutoff.isoformat(),
+        forecast_contexts[label] = {
+            "cutoffAt": forecast_cutoff_at(label, cfg).isoformat(),
             "timezone": cfg["task"]["timezone"],
             "forecastMode": "provisional_tomorrow",
             "sourceSnapshots": inventory,
-            "firmsThroughDate": (tomorrow - timedelta(days=2)).isoformat(),
+            "firmsThroughDate": (label - timedelta(days=2)).isoformat(),
             "selectedFeatureEndDate": selected_feature_end,
             "artifactQuality": "era5_fallback" if is_fallback else "exact",
             "needsRefresh": is_fallback,
@@ -874,10 +890,10 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
             ),
             "refreshedAt": (
                 datetime.now().astimezone().isoformat()
-                if late_exact_refresh and superseded_provenance_uri
+                if late_exact_refresh and label in superseded_provenance_uris
                 else None
             ),
-            "supersedesProvenanceUri": superseded_provenance_uri,
+            "supersedesProvenanceUri": superseded_provenance_uris.get(label),
             "forcePreprocess": bool(late_exact_refresh),
         }
         emit_event(
@@ -901,8 +917,8 @@ def cmd_all(args: argparse.Namespace, cfg: dict) -> int:
 
     for i, label in enumerate(labels, 1):
         logger.info("[%d/%d] label_date=%s", i, len(labels), label)
-        if label == tomorrow and tomorrow_context is not None:
-            cfg["_forecast_context"] = tomorrow_context
+        if label in forecast_contexts:
+            cfg["_forecast_context"] = forecast_contexts[label]
         else:
             cfg.pop("_forecast_context", None)
         rc = cmd_all_one(args, cfg, label, skip_download=True)

@@ -282,3 +282,59 @@ def test_tomorrow_exact_arrival_rebuilds_and_supersedes_fallback(monkeypatch):
     assert built[0][1]["availabilityPolicy"] == "late_exact_refresh"
     assert built[0][1]["supersedesProvenanceUri"] == "gs://test/fallback.json"
     assert built[0][1]["forcePreprocess"] is True
+
+
+def test_today_fallback_refreshes_exact_without_download_and_keeps_original_sources(monkeypatch):
+    target = date(2026, 8, 18)
+    original_s2 = {
+        "ready": True,
+        "selectedThroughDate": "2026-08-17",
+        "objectNames": ["sentinel2/original-cutoff-window.parquet"],
+    }
+    artifact = {
+        "labelDate": target.isoformat(),
+        "featureCount": 86,
+        "artifactQuality": "era5_fallback",
+        "needsRefresh": True,
+        "immutableProvenanceUri": "gs://test/fallback-audit.json",
+        "sourceSnapshots": {
+            "era5": {"ready": True, "ageDays": 1},
+            "firms": {"ready": True},
+            "sentinel2": original_s2,
+            "sentinel5p": {"ready": True},
+            "dem": {"ready": True},
+        },
+    }
+    current_inventory = {
+        key: {"ready": True, "ageDays": 0}
+        for key in ("era5", "firms", "sentinel2", "sentinel5p", "dem")
+    }
+    current_inventory["era5"].update(
+        exactAvailable=True,
+        exactArrivedAfterCutoff=True,
+        selectedThroughDate="2026-08-12",
+    )
+    current_inventory["sentinel2"]["objectNames"] = ["sentinel2/newer-object.parquet"]
+    built = []
+    monkeypatch.setattr(run_daily, "pipeline_today", lambda _: target)
+    monkeypatch.setattr(run_daily, "existing_final_artifact", lambda *_, **__: artifact)
+    monkeypatch.setattr(run_daily, "build_cutoff_inventory", lambda *_args, **_kwargs: current_inventory)
+    monkeypatch.setattr(run_daily, "emit_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_download_for_labels",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("refresh must be read-only")),
+    )
+    monkeypatch.setattr(
+        run_daily,
+        "cmd_all_one",
+        lambda _args, cfg, label, **kwargs: built.append((label, dict(cfg["_forecast_context"]))) or 0,
+    )
+
+    assert run_daily.cmd_all(_all_args(target), config()) == 0
+    context = built[0][1]
+    assert context["selectedFeatureEndDate"] == "2026-08-12"
+    assert context["artifactQuality"] == "exact"
+    assert context["availabilityPolicy"] == "late_exact_refresh"
+    assert context["supersedesProvenanceUri"] == "gs://test/fallback-audit.json"
+    assert context["sourceSnapshots"]["sentinel2"] == original_s2

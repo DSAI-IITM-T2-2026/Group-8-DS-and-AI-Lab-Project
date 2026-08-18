@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app import main as main_module
 from app.settings import Settings
 
 
@@ -57,6 +58,28 @@ def test_active_run_is_reused_and_terminal_run_can_rebuild(tmp_path: Path):
         app.state.store.update(first["runId"], status="succeeded", stage="completed", message="done")
         third = client.post("/api/v1/pipeline-runs", json=payload).json()
         assert third["runId"] != first["runId"]
+
+
+def test_model_contract_mismatch_is_rejected_before_pipeline_work(tmp_path: Path, monkeypatch):
+    configured = settings(tmp_path)
+    contract_dir = configured.pipeline_root / "utils" / "contracts"
+    contract_dir.mkdir(parents=True)
+    (contract_dir / "champion_86_features.json").write_text(
+        '{"feature_prune":{"kept_features":["prepared"]}}'
+    )
+
+    class Registry:
+        is_loaded = True
+        feature_columns = ["model"]
+
+    monkeypatch.setattr(main_module, "get_model_registry", lambda: Registry())
+    with TestClient(create_app(configured, start_worker=False)) as client:
+        response = client.post(
+            "/api/v1/pipeline-runs", json={"predictionDate": "2025-08-01"}
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "model_contract_mismatch"
 
 
 def test_run_listing_and_not_found(tmp_path: Path):

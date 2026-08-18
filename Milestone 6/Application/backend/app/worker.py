@@ -52,6 +52,8 @@ def pipeline_lock(pipeline_root):
 
 def safe_error_code(output: str) -> str:
     lowered = output.lower()
+    if "feature contract mismatch" in lowered:
+        return "feature_contract_mismatch"
     if re.search(r"no rows for label_date=\d{4}-\d{2}-\d{2} in history panel", lowered):
         return "prediction_day_row_missing"
     if "cds credentials not found" in lowered or ("cds_api_key" in lowered and "not found" in lowered):
@@ -81,6 +83,7 @@ def safe_error_message(output: str) -> str:
             "day before parquet export."
         )
     messages = {
+        "feature_contract_mismatch": "The deployed model feature contract is stale or invalid. Rebuild the application before retrying.",
         "cds_authentication_failed": "ERA5 access failed because CDS credentials are unavailable.",
         "cloud_authentication_failed": "Cloud access failed because application credentials are unavailable.",
         "earth_engine_task_failed": "An Earth Engine data-preparation task failed.",
